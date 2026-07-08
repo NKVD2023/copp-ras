@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card mb-5">
+    <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
+        <h4 class="fw-bold text-dark mb-4">{{ template.name }}</h4>
+        <ul class="nav nav-tabs" id="excelSheetsTabs" role="tablist">
+            {% for sheet in template.schema %}
+            <li class="nav-item"><button class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab"
+                    data-bs-target="#sheet-{{ loop.index }}" type="button">{{ sheet.sheet_title }}</button></li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="card-body p-4 p-md-5">
+        {% if is_locked %}
+        <div
+            class="alert bg-danger bg-opacity-10 border-danger border-opacity-25 text-danger small shadow-sm mb-5 p-3 rounded">
+            <strong>Срок сдачи отчета истек.</strong> Форма переведена в режим "Только чтение". Редактирование
+            заблокировано.
+        </div>
+        {% endif %}
+
+        <form id="reportForm">
+            <div class="tab-content">
+                {% for sheet in template.schema %}
+                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="sheet-{{ loop.index }}"
+                    role="tabpanel">
+                    <div class="row g-4 mt-1">
+                        {% for field in sheet.fields %}
+                        
+                        <div class="col-12">
+                            <label class="form-label text-dark small fw-bold">{{ field.label }} {% if field.required
+                                %}<span class="text-danger">*</span>{% endif %}</label>
+                            
+                            {% if field.type == 'text' %}
+                                <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                            {% else %}
+                                <input type="{{ field.type }}" class="form-control" name="{{ field.name }}"
+                                    value="{{ submission.data.get(field.name, '') if submission else '' }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                            {% endif %}
+                            
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <hr class="border-secondary opacity-10 my-5">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted small">{% if is_locked %}Просмотр исторической записи.{% else %}Данные
+                    сохраняются в единый документ.{% endif %}</span>
+                {% if not is_locked %}<button type="button" onclick="submitFullForm()"
+                    class="btn btn-copp px-5 py-2">Сохранить данные</button>{% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- <div class="card p-2 border-0 shadow-sm mt-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3">Мой профиль ({{ current_user.username }})</h6>
+        <form action="{{ url_for('admin.change_my_password') }}" method="POST">
+            <div class="mb-3">
+                <label class="form-label small text-muted">Новый пароль</label>
+                <input type="text" name="new_password" class="form-control" required autocomplete="off"
+                    placeholder="Введите новый пароль">
+            </div>
+            <button type="submit" class="btn btn-custom-outline w-100">Обновить пароль</button>
+        </form>
+    </div>
+</div> -->
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+    function submitFullForm() {
+        const form = document.getElementById('reportForm');
+        if (!form.reportValidity()) {
+            return;
+        }
+        
+        const formData = new FormData(form);
+        fetch("{{ url_for('reports.fill_report', template_id=template.id) }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(formData.entries())) }).then(res => res.json()).then(res => { if (res.status === 'success') window.location.href = "/"; });
+    }
+</script>
+{% endblock %}

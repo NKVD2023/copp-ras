@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ЦОПП РАС</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg py-3">
+        <div class="container">
+            <a class="brand-container text-decoration-none" href="/"
+                style="display: flex; flex-direction: row; align-items: center; gap: 15px;">
+
+                <img src="{{ url_for('static', filename='img/logoblue2.png') }}" alt="Логотип" height="45"
+                    style="min-width: 45px; object-fit: contain;">
+
+                <div style="display: flex; flex-direction: column; justify-content: center;">
+                    <span class="brand-main lh-1 mb-1" style="font-size: 1.1rem; white-space: nowrap;">Республики
+                        Крым</span>
+                    <span class="brand-sub lh-1" style="font-size: 0.65rem; white-space: nowrap;">Региональная
+                        Аналитическая Система</span>
+                </div>
+
+            </a>
+            <div class="d-flex align-items-center">
+                {% if current_user.is_authenticated %}
+                <div class="d-flex flex-column align-items-end me-4">
+                    <span class="navbar-text p-0 small fw-bold">{{ current_user.username }}</span>
+
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="exit-btn px-3">Выйти</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-5 mb-5">
+        {% block content %}
+        <h4 class="fw-bold text-dark mb-4">Требуют заполнения</h4>
+        <div class="row g-6">
+            {% for template in unfilled_templates %}
+            {% set alpha = 0 %}
+            {% set text_color = "text-muted" %}
+            {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
+            {% if days_left is not none %}
+            {% if days_left < 0 %} {% set alpha=0.15 %} {% set text_color="text-danger fw-bold" %} {% elif days_left
+                <=14 %} {% set alpha=(14 - days_left) * 0.01 %} {% if days_left <=3 %}{% set
+                text_color="text-danger fw-bold" %}{% endif %} {% endif %} {% endif %} <div class="col-md-4">
+                <div class="card hoverable h-100 p-2"
+                    style="background-color: rgba(220, 53, 69, {{ alpha }}); border-color: rgba(220, 53, 69, {{ alpha * 2 }});">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="mb-2"><span class="badge bg-light text-dark border">{{ template.period or
+                                    'Период не указан' }}</span></div>
+                            <h5 class="card-title fw-bold text-dark mb-2">{{ template.short_name or template.name }}
+                            </h5>
+                            <p class="text-muted small mb-4 line-clamp-2" title="{{ template.name }}">{{ template.name
+                                }}</p>
+                        </div>
+                        <div class="border-top pt-3 border-secondary border-opacity-25">
+                            {% if template.deadline %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 small">
+                                <span class="fw-medium text-dark">Срок сдачи:</span>
+                                <span class="{{ text_color }}">{{ template.deadline.strftime('%d.%m.%Y') }}
+                                    {% if days_left is not none %}({% if days_left < 0 %}Просрочено{% elif days_left==0
+                                        %}Сегодня{% else %}Осталось дней: {{ days_left }}{% endif %}){% endif %} </span>
+                            </div>
+                            {% endif %}
+                            <a href="{{ url_for('reports.fill_report', template_id=template.id) }}"
+                                class="btn btn-copp w-100">Открыть отчет</a>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="text-center py-4 text-muted bg-white rounded border small">Нет активных форм для заполнения.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if filled_templates %}
+    <hr class="my-5 border-secondary border-2 opacity-10">
+    <h5 class="fw-bold text-secondary mb-4">Заполненные</h5>
+    <div class="row g-4 opacity-75">
+        {% for template in filled_templates %}
+        <div class="col-md-4">
+            <div class="card h-100 p-2 border-success border-opacity-25">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <span
+                            class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 mb-2">Заполнено</span>
+                        <h6 class="card-title fw-bold text-dark mb-1">{{ template.short_name or template.name }}</h6>
+                        <p class="text-muted small mb-3">Период: {{ template.period or '-' }}</p>
+                    </div>
+                    <div><a href="{{ url_for('reports.fill_report', template_id=template.id) }}"
+                            class="btn btn-sm btn-outline-secondary w-100">Просмотреть данные</a></div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm mt-3">
+                <div class="card-body p-2">
+                    <h6 class="fw-bold mb-3">Мой профиль ({{ current_user.username }})</h6>
+                    <form action="{{ url_for('admin.change_my_password') }}" method="POST">
+                        <div class="mb-2"> <label class="form-label small text-muted">Новый пароль</label>
+                            <input type="text" name="new_password" class="form-control form-control-sm" required
+                                autocomplete="off" placeholder="Введите новый пароль">
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-custom-outline w-100 mt-2">Обновить пароль</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    {% endblock %}
+</body>
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+</html>

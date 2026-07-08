@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/constructor.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="card col-lg-10 mx-auto mb-5 border-0 shadow-sm">
+    <div class="card-body p-4 p-md-5">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <h4 class="fw-bold text-dark m-0">
+                {% if template %}Редактирование формы{% else %}Конструктор структуры формы{% endif %}
+            </h4>
+            <a href="{{ url_for('admin.dashboard') }}#reportsTab" class="btn btn-outline-secondary btn-sm px-3">Отмена</a>
+        </div>
+
+        <div class="row g-3 form-group-bottom-margin">
+            <div class="col-md-7">
+                <label class="form-label small text-muted">Полное имя отчета</label>
+                <textarea id="templateName" class="form-control long-name-field"
+                    placeholder="Введите полное наименование...">{{ template.name if template else '' }}</textarea>
+            </div>
+
+            <div class="col-md-5">
+                <label class="form-label small text-muted">Короткое имя отчета</label>
+                <input type="text" id="templateShortName" class="form-control" placeholder="" value="{{ template.short_name if template else '' }}">
+            </div>
+        </div>
+
+        <div class="row g-4 mb-5 pb-4 border-bottom">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-dark">Период отчета</label>
+                <input type="text" id="templatePeriod" class="form-control bg-light" autocomplete="off" value="{{ template.period if template else '' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-dark">Срок сдачи</label>
+                <input type="date" id="templateDeadline" class="form-control bg-light" value="{{ template.deadline.strftime('%Y-%m-%d') if template and template.deadline else '' }}">
+            </div>
+        </div>
+
+        <div class="bg-light p-4 rounded mb-5 border">
+            <label class="form-label small fw-bold text-dark mb-3">Предварительное назначение прав доступа:</label>
+            <div class="form-check mb-3 pb-3 border-bottom border-2" style="border-color: #e2e8f0 !important;">
+                <input class="form-check-input shadow-sm border-secondary" type="checkbox" id="selectAllConstructor"
+                    onchange="toggleSelectAllConstructor(this)">
+                <label class="form-check-label fw-bold text-primary-copp w-100 ms-1" style="cursor: pointer;"
+                    for="selectAllConstructor">
+                    Выбрать всех / Снять выделение
+                </label>
+            </div>
+            <div class="row px-2">
+                {% for user in users %}
+                <div class="form-check col-md-4 mb-2">
+                    <input class="form-check-input user-cb" type="checkbox"
+                        value="{{ user.id }}" id="u-cb-{{ user.id }}" {% if template and user in template.assigned_users %}checked{% endif %}>
+                    <label class="form-check-label small" for="u-cb-{{ user.id }}">{{ user.username }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+            <h5 class="fw-bold text-dark mb-0">Структура отчета</h5>
+            <div class="d-flex gap-2">
+                <input type="text" id="newSheetTitle" class="form-control form-control-sm"
+                    placeholder="Название листа" style="width: 250px;">
+                <button onclick="addSheet()" class="btn btn-sm btn-outline-dark px-3">Добавить лист</button>
+            </div>
+        </div>
+
+        <div id="sheetsWrapper" class="mb-5"></div>
+
+        <button onclick="saveFullReportTemplate()" class="btn btn-copp w-100 py-3 fw-bold">
+            {% if template %}Сохранить изменения{% else %}Сохранить как черновик{% endif %}
+        </button>
+    </div>
+</div>
+
+<script>
+    // Функция для галочки "Выбрать всех / Снять выделение"
+    function toggleSelectAllConstructor(masterCheckbox) {
+        const checkboxes = document.querySelectorAll('.user-cb');
+        checkboxes.forEach(cb => {
+            cb.checked = masterCheckbox.checked;
+        });
+    }
+
+    // ==========================================
+    // ИСПРАВЛЕНИЕ: УМНАЯ РАСПАКОВКА ДАННЫХ ИЗ БАЗЫ
+    // ==========================================
+    let rawSchema = {% if template %}{{ template.schema | tojson | safe }}{% else %}[]{% endif %};
+    let reportStructure = [];
+
+    // База данных может отдать схему как текст, поэтому мы ее распаковываем (JSON.parse)
+    if (typeof rawSchema === 'string') {
+        try {
+            reportStructure = JSON.parse(rawSchema);
+            // Защита от двойной запаковки
+            if (typeof reportStructure === 'string') {
+                reportStructure = JSON.parse(reportStructure);
+            }
+        } catch (e) {
+            console.error("Ошибка чтения структуры отчета:", e);
+            reportStructure = [];
+        }
+    } else {
+        reportStructure = rawSchema || [];
+    }
+    // ==========================================
+
+    function addSheet() {
+        const title = document.getElementById('newSheetTitle').value.trim();
+        if (!title) return;
+        reportStructure.push({ sheet_title: title, fields: [] });
+        document.getElementById('newSheetTitle').value = '';
+        renderStructure();
+    }
+
+    function removeSheet(sIdx) { 
+        reportStructure.splice(sIdx, 1); 
+        renderStructure(); 
+    }
+
+    function addFieldToSheet(sIdx) {
+        const labelInput = document.getElementById(`label-${sIdx}`);
+        const typeInput = document.getElementById(`type-${sIdx}`);
+        const reqInput = document.getElementById(`req-${sIdx}`);
+        const label = labelInput.value.trim();
+        if (!label) return alert("Заполните заголовок показателя!");
+
+        const name = `s${sIdx}_c${Date.now().toString().slice(-6)}`;
+        reportStructure[sIdx].fields.push({ name, label, type: typeInput.value, required: reqInput.checked });
+        labelInput.value = '';
+        renderStructure();
+    }
+
+    function updateFieldLabel(sIdx, fIdx, newLabel) {
+        if (!newLabel.trim()) {
+            alert("Заголовок не может быть пустым!");
+            renderStructure();
+            return;
+        }
+        reportStructure[sIdx].fields[fIdx].label = newLabel.trim();
+    }
+
+    function removeField(sIdx, fIdx) { 
+        reportStructure[sIdx].fields.splice(fIdx, 1); 
+        renderStructure(); 
+    }
+
+    function renderStructure() {
+        const container = document.getElementById('sheetsWrapper');
+        if (reportStructure.length === 0) { 
+            container.innerHTML = '<div class="text-center py-5 text-muted bg-light rounded border small">Добавьте первый лист для начала работы.</div>'; 
+            return; 
+        }
+
+        container.innerHTML = reportStructure.map((sheet, sIdx) => `
+            <div class="card mb-4 border-primary-subtle shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3"><span class="fw-bold text-primary-copp">Лист: ${sheet.sheet_title}</span><button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0">Удалить лист</button></div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        ${sheet.fields.map((f, fIdx) => `
+                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom gap-3">
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    <span class="text-muted me-2 small fw-bold" style="min-width: 20px;">${fIdx + 1}.</span>
+                                    <textarea class="form-control form-control-sm" rows="2" onchange="updateFieldLabel(${sIdx}, ${fIdx}, this.value)" style="background: #f8f9fa; border: 1px solid #dee2e6; resize: vertical; min-height: 40px;">${f.label.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                    ${f.required ? '<span class="text-danger ms-2 fw-bold" title="Обязательное поле">*</span>' : ''}
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="badge bg-light border text-muted font-monospace" style="min-width: 90px; text-align: center;">${f.name}</span>
+                                    <button onclick="removeField(${sIdx}, ${fIdx})" class="btn btn-sm btn-link text-danger p-0 text-decoration-none fw-bold">Удалить</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="row g-2 align-items-center bg-light p-3 rounded border border-light-subtle">
+                        <div class="col-md-5"><textarea id="label-${sIdx}" class="form-control form-control-sm" placeholder="Заголовок столбца" rows="2" style="resize: vertical; min-height: 40px;"></textarea></div>
+                        <div class="col-md-3"><select id="type-${sIdx}" class="form-select form-select-sm"><option value="number">Числовое</option><option value="text">Текстовое</option></select></div>
+                        <div class="col-md-2 d-flex justify-content-center"><div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="req-${sIdx}" checked><label class="form-check-label small text-dark" for="req-${sIdx}">Обязательно</label></div></div>
+                        <div class="col-md-2"><button onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-dark w-100">Добавить</button></div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function saveFullReportTemplate() {
+        const name = document.getElementById('templateName').value.trim();
+        const shortName = document.getElementById('templateShortName').value.trim();
+        const period = document.getElementById('templatePeriod').value.trim();
+        const deadline = document.getElementById('templateDeadline').value;
+        
+        if (!name || !shortName) return alert('Требуется указать наименования отчета.');
+        if (reportStructure.length === 0) return alert('Требуется создать хотя бы один лист!');
+        
+        const userIds = Array.from(document.querySelectorAll('.user-cb:checked')).map(cb => parseInt(cb.value));
+        
+        const editTemplateId = {% if template %}{{ template.id }}{% else %}null{% endif %};
+        const fetchUrl = editTemplateId ? `/admin/edit_constructor/${editTemplateId}` : "{{ url_for('admin.constructor') }}";
+
+        fetch(fetchUrl, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ name, short_name: shortName, period, deadline, schema: reportStructure, user_ids: userIds }) 
+        })
+        .then(res => res.json())
+        .then(data => { 
+            if (data.status === 'success') {
+                window.location.href = "{{ url_for('admin.dashboard') }}#reportsTab"; 
+            } 
+        })
+        .catch(err => {
+            console.error("Ошибка при сохранении:", err);
+            alert("Произошла ошибка при сохранении. Проверьте консоль.");
+        });
+    }
+
+    renderStructure();
+</script>
+{% endblock %}

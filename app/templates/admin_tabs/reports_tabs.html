@@ -1,0 +1,400 @@
+<div class="d-flex justify-content-end mb-4 gap-2">
+    <button type="button" class="btn btn-outline-success px-4" data-bs-toggle="modal" data-bs-target="#importTemplateModal">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel me-1 mb-1" viewBox="0 0 16 16"><path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/></svg>
+        Создать отчет из Excel
+    </button>
+    <a href="{{ url_for('admin.constructor') }}" class="btn btn-copp px-4">Создать новый отчет</a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="input-group shadow-sm">
+            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+            <input type="text" id="reportSearch" class="form-control border-start-0 ps-0" placeholder="Поиск отчетов"
+                autocomplete="off">
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for t in templates %}
+    <div class="col-md-6 report-item">
+        <div class="card hoverable h-100 p-2 border-0 shadow-sm {% if not t.is_published %}bg-light opacity-75{% endif %}">
+            <div class="card-body d-flex flex-column justify-content-between">
+
+                <div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="badge bg-light border text-dark">{{ t.period or 'Период не указан' }}</span>
+                        {% if t.is_published %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Опубликовано</span>
+                        {% else %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Черновик</span>
+                        {% endif %}
+                    </div>
+
+                    <h5 class="card-title fw-bold text-dark mb-2">{{ t.short_name or t.name }}</h5>
+                    <p class="text-muted small mb-4 line-clamp-2" title="{{ t.name }}">{{ t.name }}</p>
+                    <div class="small text-muted mb-1">Количество листов: {{ t.schema|length }}</div>
+                    {% if t.deadline %}
+                    <div class="small text-muted mb-3">Срок сдачи: <span class="fw-medium text-dark">{{ t.deadline.strftime('%d.%m.%Y') }}</span></div>
+                    {% endif %}
+                    
+                    <div class="mb-3 mt-3">
+                        {% set debtors = debtors_map[t.id] if debtors_map is defined else [] %}
+                        {% if debtors %}
+                        <div class="accordion accordion-flush border rounded shadow-sm" id="debtorsAccordion-{{ t.id }}">
+                            <div class="accordion-item rounded">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed py-2 px-3 small text-danger fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#debtorsCollapse-{{ t.id }}" style="font-size: 0.85rem; box-shadow: none; background-color: #f8d7da1a;">
+                                        Не сдали отчет ({{ debtors|length }})
+                                    </button>
+                                </h2>
+                                <div id="debtorsCollapse-{{ t.id }}" class="accordion-collapse collapse" data-bs-parent="#debtorsAccordion-{{ t.id }}">
+                                    <div class="accordion-body p-2 bg-light border-top" style="font-size: 0.8rem; max-height: 150px; overflow-y: auto;">
+                                        <ul class="mb-0 ps-3 text-muted">
+                                            {% for debtor in debtors %}
+                                            <li class="mb-1">
+                                                <strong class="text-dark">{{ debtor.username }}</strong>
+                                                {% if debtor.description %}<br><span style="font-size: 0.9em;">{{ debtor.description }}</span>{% endif %}
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-success small fw-bold mb-2"><i class="bi bi-check-circle me-1"></i>Все пользователи сдали отчет</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-2 mt-3 border-top pt-3">
+                    <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST">
+                        <button type="submit" class="btn btn-sm {% if t.is_published %}btn-custom-danger{% else %}btn-custom-outline{% endif %} w-100 py-2">
+                            <i class="bi {% if t.is_published %}bi-eye-slash{% else %}bi-eye{% endif %} me-1"></i>
+                            {% if t.is_published %}Снять с публикации{% else %}Опубликовать{% endif %}
+                        </button>
+                    </form>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-custom-outline w-50 py-2" data-bs-toggle="modal" data-bs-target="#edit-meta-{{ t.id }}">
+                            <i class="bi bi-pencil me-1"></i>Изменить
+                        </button>
+                        
+                        <button type="button" class="btn btn-sm btn-custom-outline w-50 py-2" data-bs-toggle="modal" data-bs-target="#clone-{{ t.id }}">
+                            <i class="bi bi-copy me-1"></i>Копировать
+                        </button>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-custom-outline w-100 py-2" data-bs-toggle="modal" data-bs-target="#access-{{ t.id }}">
+                        <i class="bi bi-people me-1"></i>Назначить исполнителей
+                    </button>
+
+                    <a href="{{ url_for('reports.view_data', template_id=t.id) }}" class="btn btn-sm btn-custom-outline w-100 py-2 mt-1">
+                        <i class="bi bi-bar-chart-fill me-1"></i>Сводные данные
+                    </a>
+
+
+                    {% if current_user.role == 'admin' %}
+                    <form action="{{ url_for('admin.delete_template', template_id=t.id) }}" method="POST" onsubmit="return confirm('ВНИМАНИЕ!\n\nВы точно хотите удалить этот отчет?\nВсе данные, которые уже заполнили учреждения, будут навсегда удалены!');">
+                        <button type="submit" class="btn btn-sm {% if t.is_published %}btn-custom-danger{% else %}btn-custom-outline{% endif %} w-100 py-2">
+                            <i class="bi bi-trash3-fill me-1"></i>Удалить отчет
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="edit-meta-{{ t.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <form action="{{ url_for('admin.edit_template_meta', template_id=t.id) }}" method="POST">
+                    <div class="modal-header border-bottom-0 pt-4 px-4">
+                        <h6 class="modal-title fw-bold text-dark m-0">Редактирование формы</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body px-4 py-0">
+                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Краткое наименование</label><input type="text" name="short_name" class="form-control" value="{{ t.short_name }}" required autocomplete="off"></div>
+                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Полное наименование</label><input type="text" name="name" class="form-control" value="{{ t.name }}" required autocomplete="off"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Период</label><input type="text" name="period" class="form-control bg-light" value="{{ t.period or '' }}" autocomplete="off"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Дедлайн</label><input type="date" name="deadline" class="form-control bg-light" value="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '' }}"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Сохранить изменения</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="clone-{{ t.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <form action="{{ url_for('admin.clone_template', template_id=t.id) }}" method="POST">
+                    <div class="modal-header border-bottom-0 pt-4 px-4">
+                        <h6 class="modal-title fw-bold text-dark m-0">Запуск нового периода</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body px-4 py-0">
+                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Краткое наименование</label><input type="text" name="new_short_name" class="form-control" value="{{ t.short_name }}" required autocomplete="off"></div>
+                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Полное наименование</label><input type="text" name="new_name" class="form-control" value="{{ t.name }}" required autocomplete="off"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый период</label><input type="text" name="new_period" class="form-control bg-light" required autocomplete="off"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый дедлайн</label><input type="date" name="new_deadline" class="form-control bg-light" required></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
+                        <button type="submit" class="btn btn-copp w-100 py-2 fw-bold">Запустить копию как Черновик</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="access-{{ t.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <form action="{{ url_for('admin.assign_template_users', template_id=t.id) }}" method="POST">
+                    <div class="modal-header border-bottom-0 pt-4 px-4">
+                        <h6 class="modal-title fw-bold text-dark m-0">Доступ к форме: {{ t.short_name }}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    
+                    <div class="modal-body px-4 py-2" style="overflow-y: auto; max-height: 60vh;">
+                        <p class="small text-muted mb-3">Выберите пользователей, которые должны заполнить этот отчет:</p>
+                        
+                        <div class="form-check mb-3 pb-3 border-bottom border-2" style="border-color: #e2e8f0 !important;">
+                            <input class="form-check-input shadow-sm border-secondary" type="checkbox" id="selectAll-{{ t.id }}" onchange="toggleSelectAll(this, '{{ t.id }}')">
+                            <label class="form-check-label fw-bold text-primary-copp w-100 ms-1" style="cursor: pointer;" for="selectAll-{{ t.id }}">
+                                Выбрать всех / Снять выделение
+                            </label>
+                        </div>
+
+                        <div class="row px-2">
+                            {% set target_users = fill_users if fill_users is defined else users %}
+                            {% for u in target_users %}
+                                {% if u.role == 'user' %}
+                                <div class="form-check col-12 mb-2 border-bottom pb-2">
+                                    <input class="form-check-input shadow-sm user-checkbox-{{ t.id }}" type="checkbox" name="user_ids" value="{{ u.id }}" {% if u in t.assigned_users %}checked{% endif %} id="user-{{ t.id }}-{{ u.id }}">
+                                    <label class="form-check-label w-100 ms-1" style="cursor: pointer;" for="user-{{ t.id }}-{{ u.id }}">
+                                        <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ u.username }}</div>
+                                        {% if u.description %}<div class="text-muted small">{{ u.description }}</div>{% endif %}
+                                    </label>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
+                        <button type="submit" class="btn btn-copp w-100 py-2 fw-bold">Сохранить доступы</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="import-{{ t.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pt-4 px-4">
+                    <h6 class="modal-title fw-bold text-dark m-0">Импорт из Excel: {{ t.short_name }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-2">
+                    <p class="small text-muted mb-3">Загрузите заполненный Excel-файл (.xlsx). Данные будут привязаны к выбранной организации.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-dark fw-bold">Организация</label>
+                        <select class="form-select" id="import-user-{{ t.id }}">
+                            <option value="" selected disabled>Выберите организацию...</option>
+                            {% set target_users_import = fill_users if fill_users is defined else users %}
+                            {% for u in target_users_import %}
+                                {% if u.role == 'user' %}
+                                <option value="{{ u.id }}">{{ u.username }}{% if u.description %} — {{ u.description }}{% endif %}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-dark fw-bold">Файл Excel (.xlsx)</label>
+                        <input type="file" class="form-control" id="import-file-{{ t.id }}" accept=".xlsx">
+                    </div>
+
+                    <div id="import-result-{{ t.id }}"></div>
+                </div>
+                <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
+                    <button type="button" class="btn btn-copp w-100 py-2 fw-bold" onclick="importExcel({{ t.id }})" id="import-btn-{{ t.id }}">
+                        Импортировать данные
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Модальное окно создания шаблона из Excel -->
+<div class="modal fade" id="importTemplateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pt-4 px-4">
+                <h6 class="modal-title fw-bold text-dark m-0">Создать отчет из Excel</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-2">
+                <p class="small text-muted mb-3">Загрузите произвольный Excel-файл (.xlsx или .xls). Система автоматически прочитает листы и столбцы, создаст черновик отчета и перенаправит вас в конструктор для настройки полей.</p>
+
+                <div class="mb-3">
+                    <label class="form-label small text-dark fw-bold">Файл Excel (.xlsx, .xls)</label>
+                    <input type="file" class="form-control" id="import-template-file" accept=".xlsx,.xls">
+                </div>
+
+                <div id="import-template-result"></div>
+            </div>
+            <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
+                <button type="button" class="btn btn-copp w-100 py-2 fw-bold" onclick="importTemplateFromExcel()" id="import-template-btn">
+                    Загрузить и создать
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function importTemplateFromExcel() {
+        const fileInput = document.getElementById('import-template-file');
+        const resultDiv = document.getElementById('import-template-result');
+        const btn = document.getElementById('import-template-btn');
+
+        if (!fileInput.files.length) {
+            resultDiv.innerHTML = '<div class="alert alert-warning small py-2">Выберите файл .xlsx или .xls.</div>';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Создание...';
+        resultDiv.innerHTML = '';
+
+        fetch('/admin/constructor/import_excel', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                resultDiv.innerHTML = '<div class="alert alert-success small py-2">Успешно! Перенаправление...</div>';
+                setTimeout(() => {
+                    window.location.href = `/admin/edit_constructor/${data.template_id}`;
+                }, 500);
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = 'Загрузить и создать';
+                resultDiv.innerHTML = `<div class="alert alert-danger small py-2"><strong>Ошибка:</strong> ${data.message}</div>`;
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = 'Загрузить и создать';
+            resultDiv.innerHTML = `<div class="alert alert-danger small py-2"><strong>Ошибка сети:</strong> ${err.message}</div>`;
+        });
+    }
+
+    function toggleSelectAll(masterCheckbox, templateId) {
+        const checkboxes = document.querySelectorAll(`.user-checkbox-${templateId}`);
+        checkboxes.forEach(cb => {
+            cb.checked = masterCheckbox.checked;
+        });
+    }
+
+    function importExcel(templateId) {
+        const userSelect = document.getElementById(`import-user-${templateId}`);
+        const fileInput = document.getElementById(`import-file-${templateId}`);
+        const resultDiv = document.getElementById(`import-result-${templateId}`);
+        const btn = document.getElementById(`import-btn-${templateId}`);
+
+        // Валидация
+        if (!userSelect.value) {
+            resultDiv.innerHTML = '<div class="alert alert-warning small py-2">Выберите организацию.</div>';
+            return;
+        }
+        if (!fileInput.files.length) {
+            resultDiv.innerHTML = '<div class="alert alert-warning small py-2">Выберите файл .xlsx для импорта.</div>';
+            return;
+        }
+
+        // Формируем запрос
+        const formData = new FormData();
+        formData.append('user_id', userSelect.value);
+        formData.append('file', fileInput.files[0]);
+
+        // Блокируем кнопку
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Импорт...';
+        resultDiv.innerHTML = '';
+
+        fetch(`/import_excel/${templateId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = 'Импортировать данные';
+
+            if (data.status === 'success') {
+                let html = `<div class="alert alert-success small py-2"><strong>Успешно!</strong> ${data.message}</div>`;
+                if (data.warnings && data.warnings.length > 0) {
+                    html += '<div class="alert alert-warning small py-2"><strong>Предупреждения:</strong><ul class="mb-0 ps-3 mt-1">';
+                    data.warnings.forEach(w => { html += `<li>${w}</li>`; });
+                    html += '</ul></div>';
+                }
+                resultDiv.innerHTML = html;
+                // Сброс формы
+                fileInput.value = '';
+            } else {
+                let html = `<div class="alert alert-danger small py-2"><strong>Ошибка:</strong> ${data.message}</div>`;
+                if (data.warnings && data.warnings.length > 0) {
+                    html += '<div class="alert alert-warning small py-2"><strong>Предупреждения:</strong><ul class="mb-0 ps-3 mt-1">';
+                    data.warnings.forEach(w => { html += `<li>${w}</li>`; });
+                    html += '</ul></div>';
+                }
+                resultDiv.innerHTML = html;
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = 'Импортировать данные';
+            resultDiv.innerHTML = `<div class="alert alert-danger small py-2"><strong>Ошибка сети:</strong> ${err.message}</div>`;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById('reportSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value.toLowerCase();
+                const reportItems = document.querySelectorAll('.report-item');
+
+                reportItems.forEach(function (item) {
+                    const textContent = item.textContent.toLowerCase();
+                    if (textContent.includes(query)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>

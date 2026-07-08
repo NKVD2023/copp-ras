@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5 col-lg-4">
+        <div class="text-center mb-4">
+            <div class="brand-container d-inline-block">
+                <!-- <span class="brand-main fs-3">ЦОПП Республики Крым</span> -->
+                <!-- <span class="brand-sub fs-6">РЕГИОНАЛЬНАЯ АНАЛИТИЧЕСКАЯ СИСТЕМА</span> -->
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-dark mb-4 text-center">Авторизация в системе</h5>
+
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-danger py-2 small border-0">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Идентификатор организации</label>
+                        <input type="text" name="username" class="form-control" required placeholder=""
+                            autocomplete="off">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-muted small">Пароль</label>
+                        <input type="password" name="password" class="form-control" required placeholder="">
+                    </div>
+                    <button type="submit" class="btn btn-copp w-100 py-2 fw-bold">Войти</button>
+                </form>
+            </div>
+        </div>
+        <!-- <p class="text-center text-muted mt-4" style="font-size: 0.75rem;">
+            &copy; 2026 Разработано ЦОПП РК <br> Все права защищены
+        </p> -->
+    </div>
+</div>
+{% endblock %}

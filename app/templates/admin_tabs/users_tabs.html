@@ -1,0 +1,116 @@
+   <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card p-2 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-4">Регистрация учетной записи</h6>
+                        <form action="{{ url_for('admin.create_user') }}" method="POST">
+                            <div class="mb-3"><label class="form-label small text-muted">Идентификатор
+                                    (Логин)</label><input type="text" name="username" class="form-control" required
+                                    autocomplete="off"></div>
+                            <div class="mb-3"><label class="form-label small text-muted">Пароль доступа</label><input
+                                    type="text" name="password" class="form-control" required autocomplete="off"></div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Описание</label>
+                                <input type="text" name="description" class="form-control" autocomplete="off">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label small text-muted">Тип пользователя (Роль)</label>
+                                <select name="role" class="form-select">
+                                    <option value="user">Пользователь (Заполнение данных)</option>
+                                    <option value="viewer">Наблюдатель (Только просмотр)</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-copp w-100">Создать аккаунт</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card p-2 border-0 shadow-sm mt-4">
+                <!-- <div class="my-profile"> -->
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Мой профиль ({{ current_user.username }})</h6>
+                        <form action="{{ url_for('admin.change_my_password') }}" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Новый пароль</label>
+                                <input type="text" name="new_password" class="form-control" required autocomplete="off"
+                                    placeholder="Введите новый пароль">
+                            </div>
+                            <button type="submit" class="btn btn-custom-outline w-100">Обновить пароль</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-2 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-4">Управление правами и пользователями</h6>
+                        <div class="accordion" id="usersAccordion">
+                            {% for user in users %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button
+                                        class="accordion-button collapsed d-flex justify-content-between align-items-center"
+                                        type="button" data-bs-toggle="collapse" data-bs-target="#u-{{ user.id }}">
+
+                                        <div class="me-auto d-flex flex-column">
+                                            <span>Пользователь: <strong>{{ user.username }}</strong></span>
+                                            {% if user.description %}
+                                            <span class="text-muted mt-1" style="font-size: 0.85em;">{{ user.description
+                                                }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <!-- <span class="badge bg-light text-dark border me-3 shadow-sm">{% if user.role ==
+                                            'viewer' %}Наблюдатель{% elif user.role == 'admin' %}Администратор{% else
+                                            %}Заполнение{% endif %}</span> -->
+                                    </button>
+
+                                </h2>
+
+                                <div id="u-{{ user.id }}" class="accordion-collapse collapse"
+                                    data-bs-parent="#usersAccordion">
+                                    <div class="accordion-body bg-white">
+                                        <form action="{{ url_for('admin.reset_password', user_id=user.id) }}"
+                                            method="POST" class="d-flex gap-2 mb-4">
+                                            <input type="text" name="new_password" class="form-control form-control-sm"
+                                                placeholder="Новый пароль" required autocomplete="off">
+                                            <button type="submit"
+                                                class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Изменить
+                                                пароль</button>
+                                        </form>
+                                        {% if user.role == 'user' %}
+                                        <h6 class="fw-bold text-dark small mb-3">Назначенные отчеты (Черновики и
+                                            Опубликованные):</h6>
+                                        <form action="{{ url_for('admin.assign_access') }}" method="POST">
+                                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                                            <div class="row px-2 mb-3">
+                                                {% for t in templates %}
+                                                <div class="form-check col-md-6 mb-2">
+                                                    <input class="form-check-input" type="checkbox" name="template_ids"
+                                                        value="{{ t.id }}" {% if t in user.assigned_templates
+                                                        %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
+                                                    <label class="form-check-label small"
+                                                        for="access-{{ user.id }}-{{ t.id }}">{{ t.short_name }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            <button type="submit" class="btn btn-sm btn-outline-copp mb-3">Сохранить
+                                                доступы</button>
+                                        </form>
+                                        {% endif %}
+                                        <div class="border-top pt-3">
+                                            <form action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                                                method="POST"
+                                                onsubmit="return confirm('Вы уверены, что хотите полностью удалить этого пользователя?');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Удалить
+                                                    учетную запись безвозвратно</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>

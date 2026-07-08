@@ -1,0 +1,12 @@
+.form-control:focus {
+    border-color: #0071DC;
+    border-style: none;
+    outline: none;
+    
+    /* Эффект свечения */
+    /* 0 0 0 - смещение, 0.25rem - радиус размытия, rgba(0, 113, 220, 0.25) - цвет и прозрачность */
+    box-shadow: 0 0 0 0.25rem rgba(57, 159, 255, 0.25);
+    
+    /* Добавляем плавность появления эффекта */
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}

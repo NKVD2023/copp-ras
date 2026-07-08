@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-dark m-0">Панель управления администратора</h3>
+</div>
+<ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#usersTab"
+            type="button">Пользователи и доступы</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#reportsTab"
+            type="button">Управление отчетами</button></li>
+    <li class="nav-item"><button class="nav-link font-monospace text-secondary" data-bs-toggle="tab"
+            data-bs-target="#databaseTab" type="button">База данных</button></li>
+    <li class="nav-item"><button class="nav-link text-info" data-bs-toggle="tab" data-bs-target="#logsTab"
+            type="button">Журнал действий</button></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="usersTab" role="tabpanel">
+     {% include 'admin_tabs/users_tabs.html' %}
+    </div>
+
+    <div class="tab-pane fade" id="reportsTab" role="tabpanel">
+        {% include 'admin_tabs/reports_tabs.html' %}
+    </div>
+
+    <div class="tab-pane fade" id="databaseTab" role="tabpanel">
+        {% include 'admin_tabs/db_tabs.html' %}
+    </div>
+    
+    <div class="tab-pane fade" id="logsTab" role="tabpanel">
+        {% include 'admin_tabs/logs_tabs.html' %}
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Сохранение и восстановление активных вкладок
+        const navLists = document.querySelectorAll('.nav-tabs, .nav-pills');
+        
+        navLists.forEach(nav => {
+            const navId = nav.id || 'defaultNav';
+            const storageKey = 'activeTab_' + navId;
+            
+            // Если это главные табы и есть хэш в URL - отдаем приоритет хэшу
+            let targetHash = null;
+            if (navId === 'adminTabs' && window.location.hash) {
+                targetHash = window.location.hash;
+            } else {
+                targetHash = localStorage.getItem(storageKey);
+            }
+            
+            // Восстанавливаем вкладку
+            if (targetHash) {
+                let tabTrigger = nav.querySelector(`[data-bs-target="${targetHash}"]`);
+                if (tabTrigger) {
+                    tabTrigger.click();
+                }
+            }
+            
+            // Слушаем клики по вкладкам для сохранения
+            const tabs = nav.querySelectorAll('button[data-bs-toggle="tab"], button[data-bs-toggle="pill"]');
+            tabs.forEach(tabEl => {
+                tabEl.addEventListener('shown.bs.tab', function (event) {
+                    const target = event.target.getAttribute("data-bs-target");
+                    if (target) {
+                        localStorage.setItem(storageKey, target);
+                        
+                        // Если это главные табы, обновляем URL без скачка страницы
+                        if (navId === 'adminTabs') {
+                            history.replaceState(null, null, target);
+                        }
+                    }
+                });
+            });
+        });
+    });
+</script>
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+{% endblock %}

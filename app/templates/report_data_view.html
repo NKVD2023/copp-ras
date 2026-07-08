@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Сводные таблицы мониторинга</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% if config.ENABLE_CHARTS %}
+    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/html2canvas.min.js') }}"></script>
+    {% endif %}
+
+    <style>
+        /* 1. Настраиваем тело страницы как Flex-контейнер на весь экран */
+        html,
+        body {
+            height: 100vh;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* Строго запрещаем прокрутку всей страницы */
+            background-color: var(--bg-body);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 2. Шапка не должна сжиматься */
+        .navbar {
+            flex-shrink: 0;
+        }
+
+        /* 3. Основной контейнер занимает всё оставшееся место */
+        .full-view-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            width: 100%;
+            overflow: hidden;
+            /* Не даем вылезти за пределы */
+        }
+
+        .view-header {
+            background: var(--bg-card);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .nav-tabs {
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        /* 4. Контейнер табов тоже растягивается */
+        .tab-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Переопределяем логику Bootstrap для активного таба */
+        .tab-pane.active {
+            display: flex !important;
+            flex-direction: column;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        /* 5. Сама таблица с прокруткой */
+        .table-responsive-custom {
+            flex-grow: 1;
+            overflow: auto;
+            /* Прокрутка появится ТОЛЬКО здесь */
+            background: var(--bg-card);
+            width: 100%;
+        }
+
+        .table-custom {
+            margin-bottom: 0;
+            width: 100%;
+            border-collapse: collapse;
+            /* Убирает рамки и отступы между ячейками */
+        }
+
+        .table-custom thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            z-index: 10;
+            border-bottom: 2px solid var(--border-color) !important;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .table-custom tfoot td {
+            position: sticky;
+            bottom: 0;
+            background-color: #f8fafc;
+            z-index: 10;
+            border-top: 2px solid var(--border-color) !important;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+        }
+
+        .table-custom .sticky-col {
+            position: sticky;
+            left: 0;
+            background-color: #ffffff;
+            z-index: 11;
+            border-right: 2px solid var(--border-color) !important;
+        }
+
+        .table-custom thead th.sticky-col,
+        .table-custom tfoot td.sticky-col {
+            z-index: 12;
+            background-color: #f8fafc;
+        }
+
+        /* Плейсхолдер для пустых ячеек */
+        td[contenteditable="true"]:empty::before {
+            content: "Данные не предоставлены";
+            color: #adb5bd;
+            font-style: italic;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg py-2">
+        <div class="container-fluid px-4">
+            <a class="brand-container d-flex align-items-center text-decoration-none" href="/" style="gap: 15px;">
+                <div class="d-flex flex-column justify-content-center">
+                    <span class="brand-main lh-1 mb-1" style="font-size: 1.1rem;">ЦОПП Республики Крым</span>
+                    <span class="brand-sub lh-1" style="font-size: 0.65rem;">Региональная Аналитическая Система</span>
+                </div>
+            </a>
+            <div class="d-flex align-items-center">
+
+                <a href="{{ url_for('reports.export_excel', template_id=template.id) }}"
+                    class="btn btn-sm btn-success px-4 me-2 shadow-sm text-white"
+                    style="background-color: #198754; border: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        class="bi bi-file-earmark-excel me-1 mb-1" viewBox="0 0 16 16">
+                        <path
+                            d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z" />
+                        <path
+                            d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z" />
+                    </svg>
+                    Скачать в Excel
+                </a>
+
+                <button type="button" class="btn btn-sm btn-primary px-4 me-2 shadow-sm text-white" onclick="saveAllChanges()" id="saveChangesBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-1 mb-1" viewBox="0 0 16 16">
+                      <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                    </svg>
+                    Сохранить изменения
+                </button>
+
+
+                {% if config.ENABLE_CHARTS %}
+                <button onclick="openInfographics()" class="btn btn-sm btn-copp px-4 me-3">Аналитика данных</button>
+                {% endif %}
+                <a href="/" class="btn btn-sm btn-outline-secondary px-3">Вернуться</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="full-view-container">
+        <div class="view-header">
+            <h5 class="fw-bold text-dark m-0">{{ template.name }}</h5>
+            <!-- <p class="text-muted small m-0">{{ template.name }}</p> -->
+        </div>
+
+        <ul class="nav nav-tabs" id="dataSheetsTabs" role="tablist">
+            {% for sheet in template.schema %}
+            <li class="nav-item">
+                <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ loop.index }}"
+                    data-bs-toggle="tab" data-bs-target="#panel-{{ loop.index }}" type="button">Лист: {{
+                    sheet.sheet_title }}</button>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="tab-content" id="dataSheetsTabsContent">
+            {% for sheet in template.schema %}
+            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="panel-{{ loop.index }}"
+                role="tabpanel">
+                <div class="table-responsive-custom">
+                    <table class="table table-hover table-bordered table-custom align-middle small">
+                        <thead>
+                            <tr>
+                                <th class="p-3 sticky-col">Организация</th>
+                                {% for field in sheet.fields %}
+                                <th class="p-3 text-center"
+                                    style="min-width: 250px; max-width: 450px; white-space: normal;">{{ field.label }}
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sub in submissions %}
+                            <tr>
+                                <td class="p-3 fw-bold sticky-col">{{ sub.user.username }}</td>
+                                {% for field in sheet.fields %}
+                                <td class="p-3 text-center text-dark" 
+                                    contenteditable="true" 
+                                    data-user-id="{{ sub.user.id }}"
+                                    data-field-name="{{ field.name }}"
+                                    title="Кликните для редактирования">{{ sub.data.get(field.name, '') }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="{{ sheet.fields|length + 1 }}"
+                                    class="text-center py-5 text-muted bg-white">Нет привязанных организаций.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="p-3 sticky-col text-dark">Итого</td>
+                                {% for field in sheet.fields %}
+                                <td class="p-3 text-center text-primary-copp">
+                                    {% if field.type == 'number' %}
+                                    {% set ns = namespace(total=0, has_data=false) %}
+                                    {% for sub in submissions %}
+                                    {% set val = sub.data.get(field.name) %}
+                                    {% if val is not none and val != '' %}
+                                    {% set ns.total = ns.total + val|float(0) %}
+                                    {% set ns.has_data = true %}
+                                    {% endif %}
+                                    {% endfor %}
+                                    {{ ns.total if ns.has_data else '0' }}
+                                    {% else %} - {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+    {% if config.ENABLE_CHARTS %}
+    <div class="modal fade" id="infoModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pt-4 px-4">
+                    <h5 class="fw-bold text-dark m-0">Аналитическая выгрузка</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 bg-light" id="chartCaptureArea">
+                    <div class="bg-white p-4 rounded border shadow-sm text-center">
+                        <h5 class="fw-bold text-primary-copp mb-1">{{ template.short_name }}</h5>
+                        <p class="text-muted small mb-4">Сводные показатели</p>
+                        <canvas id="mainChart" height="100"></canvas>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pb-4 px-4">
+                    <button onclick="downloadInfographic()" class="btn btn-dark px-4 py-2">Скачать как изображение
+                        (.png)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let myChart = null;
+        function openInfographics() {
+            const labels = []; const data = [];
+            const activeTabPane = document.querySelector('.tab-pane.active');
+            if (!activeTabPane) return;
+
+            const footers = activeTabPane.querySelectorAll('tfoot td.text-primary-copp');
+            const headers = activeTabPane.querySelectorAll('thead th');
+
+            footers.forEach((td, index) => {
+                const val = parseFloat(td.innerText);
+                if (!isNaN(val) && val > 0) {
+                    let labelText = headers[index + 1].innerText;
+                    if (labelText.length > 40) labelText = labelText.substring(0, 40) + '...';
+                    labels.push(labelText); data.push(val);
+                }
+            });
+            if (labels.length === 0) return alert("Нет числовых данных для графика на этом листе.");
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'Показатели', data: data, backgroundColor: '#0d47a1', borderRadius: 4 }] },
+                options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+            });
+            new bootstrap.Modal(document.getElementById('infoModal')).show();
+        }
+        function downloadInfographic() {
+            html2canvas(document.getElementById('chartCaptureArea'), { scale: 2 }).then(canvas => {
+                const link = document.createElement('a'); link.download = 'Chart.png'; link.href = canvas.toDataURL('image/png'); link.click();
+            });
+        }
+    </script>
+    {% endif %}
+
+    <script>
+        function saveAllChanges() {
+            const btn = document.getElementById('saveChangesBtn');
+            const cells = document.querySelectorAll('td[contenteditable="true"]');
+            const updates = [];
+            const cellsToUpdate = [];
+            
+            cells.forEach(cell => {
+                const newValue = cell.innerText.trim();
+                const originalValue = cell.getAttribute('data-original-value') || (cell.getAttribute('data-initial') || '');
+                
+                // Set initial on first read if not set
+                if (!cell.hasAttribute('data-initial')) {
+                    cell.setAttribute('data-initial', newValue);
+                }
+                
+                // Compare with original or initial
+                const baseValue = cell.hasAttribute('data-original-value') ? originalValue : cell.getAttribute('data-initial');
+
+                if (newValue !== baseValue) {
+                    updates.push({
+                        user_id: cell.getAttribute('data-user-id'),
+                        field_name: cell.getAttribute('data-field-name'),
+                        value: newValue
+                    });
+                    cellsToUpdate.push(cell);
+                }
+            });
+            
+            if (updates.length === 0) {
+                alert('Нет изменений для сохранения.');
+                return;
+            }
+            
+            const originalBtnHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Сохранение...';
+            
+            fetch('/inline_update/{{ template.id }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updates)
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHTML;
+                
+                if (data.status === 'success') {
+                    cellsToUpdate.forEach(cell => {
+                        cell.style.backgroundColor = '#d1e7dd';
+                        cell.setAttribute('data-original-value', cell.innerText.trim());
+                        setTimeout(() => { cell.style.backgroundColor = ''; }, 1000);
+                    });
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHTML;
+                alert('Ошибка сети: ' + err);
+            });
+        }
+        
+        // Highlight cell when user types to show it has unsaved changes
+        document.addEventListener('input', function(e) {
+            if(e.target && e.target.hasAttribute('contenteditable')) {
+                if(!e.target.hasAttribute('data-initial')) {
+                    e.target.setAttribute('data-initial', e.target.innerText.trim());
+                }
+                
+                const newValue = e.target.innerText.trim();
+                const baseValue = e.target.hasAttribute('data-original-value') ? e.target.getAttribute('data-original-value') : e.target.getAttribute('data-initial');
+                
+                if (newValue !== baseValue) {
+                    e.target.style.backgroundColor = '#fff3cd'; // Желтый - изменен, не сохранен
+                } else {
+                    e.target.style.backgroundColor = ''; // Возвращаем обычный фон, если стерли изменения
+                }
+            }
+        });
+        
+        document.addEventListener('focusin', function(e) {
+            if(e.target && e.target.hasAttribute('contenteditable')) {
+                if(!e.target.hasAttribute('data-original-value') && !e.target.hasAttribute('data-initial')) {
+                    e.target.setAttribute('data-initial', e.target.innerText.trim());
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,325 @@
+/* ==========================================================================
+   ОСНОВНЫЕ ПЕРЕМЕННЫЕ (Цвета, отступы, тени, анимации)
+   ========================================================================== */
+:root {
+    /* Цвета фона */
+    --bg-body: #f6f6f5;        /* Основной фон страницы */
+    --bg-card: #ffffff;        /* Фон для карточек и панелей */
+
+    /* Фирменные цвета (ЦОПП) */
+    --primary-color: #00334e;  /* Главный синий цвет */
+    --primary-hover: #007fbd;  /* Синий цвет при наведении (светлее) */
+
+    /* Цвета текста */
+    --text-main: #2c3e50;      /* Основной темный текст */
+    --text-muted: #7f8c8d;     /* Второстепенный серый текст */
+    
+    /* Обводки и границы */
+    --border-color: #e2e8f0;   /* Цвет тонких рамок */
+
+    /* Скругления (Border-radius) */
+    --radius-card: 16px;       /* Скругление карточек */
+    --radius-btn: 10px;        /* Скругление кнопок */
+    --radius-input: 10px;       /* Скругление полей ввода */
+
+    /* Тени */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 12px 32px rgba(13, 46, 97, 0.12);
+    --shadow-hover: 0 8px 24px rgba(14, 44, 88, 0.274); /* Тень при наведении на карточку */
+
+    /* Анимации и плавность */
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* ==========================================================================
+   БАЗОВЫЕ НАСТРОЙКИ СТРАНИЦЫ (Глобальные теги)
+   ========================================================================== */
+html {
+    overflow-y: scroll;        /* Старый, но 100% надежный способ скрыть прыжки экрана */
+    scrollbar-gutter: stable;  /* Современный способ: резервирует место под скролл */
+}
+
+body {
+    background-color: var(--bg-body) !important;
+    font-family: 'Inter', '-apple-system', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased; /* Сглаживание шрифтов на Mac/iOS */
+}
+
+/* ==========================================================================
+   НАВИГАЦИОННАЯ ПАНЕЛЬ (Шапка / Navbar)
+   ========================================================================== */
+.navbar {
+    background-color: var(--bg-card) !important;
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.navbar-brand {
+    color: var(--primary-color) !important;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.navbar-text {
+    color: var(--text-main) !important;
+    font-weight: 500;
+}
+
+/* Логотип и название (Бренд-контейнер) */
+.brand-container {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    text-decoration: none !important;
+}
+
+.brand-container:hover .brand-main {
+    color: var(--primary-hover);
+}
+
+.brand-main {
+    color: var(--primary-color);
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: -0.2px;
+    text-transform: uppercase;
+}
+
+.brand-sub {
+    color: var(--text-main);
+    font-weight: 400;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+}
+
+/* ==========================================================================
+   КАРТОЧКИ (Cards)
+   ========================================================================== */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+    overflow: hidden;
+}
+
+.card.hoverable:hover {
+    transform: translateY(-4px); /* Карточка слегка приподнимается */
+    box-shadow: var(--shadow-hover);
+}
+
+.card-header {
+    background-color: #70c6d1;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.5rem 1.5rem 1rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* ==========================================================================
+   КНОПКИ (Buttons)
+   ========================================================================== */
+/* Базовая кнопка */
+.btn {
+    border-radius: var(--radius-btn);
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    transition: var(--transition);
+    border: none;
+}
+
+/* Основная акцентная кнопка (ЦОПП) */
+.btn-copp {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 4px rgba(13, 71, 161, 0.2);
+}
+
+.btn-copp:hover {
+    background-color: var(--primary-hover);
+    color: white;
+    box-shadow: 0 4px 12px rgba(13, 71, 161, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Контурная кнопка (ЦОПП) */
+.btn-outline-copp {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-outline-copp:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Базовый вид для кастомных кнопок списков (серо-белые) */
+/* --- БАЗОВЫЙ ВИД ДЛЯ ВСЕХ КНОПОК В КАРТОЧКАХ --- */
+.btn-custom-outline, 
+.btn-custom-danger {
+    color: var(--text-muted); 
+    border: 1px solid var(--border-color);
+    background-color: transparent;
+    transition: var(--transition);
+}
+
+/* --- ХОВЕР: Обычные кнопки (становятся фирменными синими) --- */
+.btn-custom-outline:hover {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
+}
+
+/* --- ХОВЕР: Кнопки отмены/удаления (становятся красными) --- */
+.btn-custom-danger:hover {
+    background-color: #dc3545; 
+    color: #ffffff;
+    border-color: #dc3545;
+}
+
+/* Кнопка выхода (Logout) */
+.exit-btn {
+    background-color: #00334e;
+    border-radius: var(--radius-btn);
+    text-decoration: none; /* Убираем подчеркивание */
+    color: #ffffff; 
+    padding: 8px 20px; 
+    font-size: 1rem; 
+    display: inline-block; /* Необходимо для корректных отступов */
+    transition: background-color 0.2s ease; 
+}
+
+.exit-btn:hover {
+    background-color: var(--primary-hover);
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   ФОРМЫ И ПОЛЯ ВВОДА (Inputs, Selects)
+   ========================================================================== */
+.form-control, 
+.form-select {
+    border-radius: var(--radius-input);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1rem;
+    color: var(--text-main);
+    transition: var(--transition);
+    background-color: #fcfcfc;
+}
+
+/* Состояние при клике (Фокус) */
+.form-control:focus, 
+.form-select:focus {
+    background-color: var(--bg-card);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1); /* Синее свечение */
+}
+
+/* Убираем синее свечение для строки поиска в группах */
+.input-group .form-control.border-start-0:focus {
+    box-shadow: none; 
+    border-color: #dee2e6; /* Оставляем стандартный серый цвет рамки */
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.4rem;
+}
+
+/* ==========================================================================
+   ВКЛАДКИ (Tabs)
+   ========================================================================== */
+.nav-tabs {
+    border-bottom: 1px solid var(--border-color);
+    gap: 0.5rem;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-btn) var(--radius-btn) 0 0;
+    transition: var(--transition);
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--primary-color);
+    background-color: rgba(13, 71, 161, 0.04);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color) !important;
+    background-color: transparent !important;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+/* ==========================================================================
+   ТАБЛИЦЫ (Tables)
+   ========================================================================== */
+.table {
+    color: var(--text-main);
+}
+
+.table thead th {
+    border-bottom: 2px solid var(--border-color);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.table tbody tr {
+    transition: var(--transition);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(13, 71, 161, 0.02) !important; /* Легкое выделение строки */
+}
+
+/* ==========================================================================
+   АККОРДЕОНЫ (Скрываемые блоки)
+   ========================================================================== */
+.accordion-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-btn) !important;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.accordion-button {
+    font-weight: 500;
+    color: var(--text-main);
+    background-color: var(--bg-card);
+    box-shadow: none !important; /* Убирает синюю рамку Bootstrap при клике */
+}
+
+.accordion-button:not(.collapsed) {
+    color: var(--primary-color);
+    background-color: rgba(13, 71, 161, 0.04);
+}
+
+/* ==========================================================================
+   УТИЛИТЫ И ВСПОМОГАТЕЛЬНЫЕ КЛАССЫ
+   ========================================================================== */
+.badge {
+    padding: 0.4em 0.8em;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+.text-primary-copp {
+    color: var(--primary-color) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
