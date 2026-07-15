@@ -17,21 +17,8 @@ def dashboard():
     - Наблюдателю показывает все шаблоны и должников.
     - Обычному пользователю (учреждению) показывает, что нужно сдать, а что уже сдано.
     """
-    if current_user.role == 'admin':
+    if current_user.role in ['admin', 'viewer']:
         return redirect(url_for('admin.dashboard'))
-        
-    # === ЛОГИКА ДЛЯ НАБЛЮДАТЕЛЯ (VIEWER) ===
-    if current_user.role == 'viewer':
-        templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
-        fill_users = User.query.filter_by(role='user').all() 
-        
-        debtors_map = {}
-        for template in templates:
-            submitted_user_ids = [sub.user_id for sub in template.submissions]
-            debtors = [user for user in template.assigned_users if user.id not in submitted_user_ids]
-            debtors_map[template.id] = debtors
-            
-        return render_template('viewer_dashboard.html', templates=templates, debtors_map=debtors_map, fill_users=fill_users)
         
     # === ЛОГИКА ДЛЯ УЧРЕЖДЕНИЯ (USER) ===
     submissions = ReportSubmission.query.filter_by(user_id=current_user.id).all()
@@ -42,4 +29,4 @@ def dashboard():
     filled = [t for t in assigned if t.id in filled_ids]
     unfilled.sort(key=lambda x: x.deadline or date.max)
     
-    return render_template('base.html', unfilled_templates=unfilled, filled_templates=filled, current_date=date.today())
+    return render_template('user_dashboard.html', unfilled_templates=unfilled, filled_templates=filled, current_date=date.today())

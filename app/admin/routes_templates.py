@@ -1,5 +1,7 @@
-from flask import request, redirect, url_for
+from flask import request, redirect, url_for, send_file
 from flask_login import login_required, current_user
+import openpyxl
+from io import BytesIO
 from datetime import datetime
 from app import db
 from app.admin import admin_bp
@@ -88,3 +90,30 @@ def edit_template_meta(template_id):
     log_action('Редактирование отчета', f'Изменены метаданные отчета {template.short_name}')
     # Возвращаемся обратно на вкладку отчетов
     return redirect(url_for('admin.dashboard') + '#reportsTab')
+
+@admin_bp.route('/export_debtors/<int:template_id>', methods=['GET'])
+def export_debtors(template_id):
+    """Экспорт списка должников в Excel."""
+    template = ReportTemplate.query.get_or_404(template_id)
+    submitted_user_ids = [sub.user_id for sub in ReportSubmission.query.filter_by(template_id=template.id).all()]
+    debtors = [u for u in template.assigned_users if u.id not in submitted_user_ids]
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Должники"
+    ws.append(["Организация", "Описание"])
+    
+    for d in debtors:
+        ws.append([d.username, d.description or ""])
+        
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    filename = f"Должники_{template.short_name}.xlsx".replace(" ", "_")
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )

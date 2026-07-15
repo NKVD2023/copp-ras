@@ -1,53 +1,110 @@
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% block admin_navbar %}
+<nav class="admin-top-nav bg-light border-bottom">
+    <div class="container-fluid px-4 overflow-x-auto">
+        <ul class="admin-nav-list nav flex-nowrap mb-0 border-0" id="adminTabs" role="tablist" style="gap: 1.5rem; padding-top: 0.5rem; padding-bottom: 0.5rem;">
+            {% if current_user.role == 'admin' %}
+            <li class="admin-nav-item">
+                <button class="admin-nav-link active d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#usersTab" type="button">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>
+                    Пользователи
+                </button>
+            </li>
+            {% endif %}
+            <li class="admin-nav-item">
+                <button class="admin-nav-link {% if current_user.role == 'viewer' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#reportsTab" type="button">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/></svg>
+                    Отчеты
+                </button>
+            </li>
+            {% if current_user.role == 'admin' %}
+            <li class="admin-nav-item">
+                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#databaseTab" type="button">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313ZM13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A4.92 4.92 0 0 0 13 5.698ZM14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13V4Zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A4.92 4.92 0 0 0 13 8.698Zm0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525Z"/></svg>
+                    База данных
+                </button>
+            </li>
+            <li class="admin-nav-item">
+                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#logsTab" type="button">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
+                    Журнал действий
+                </button>
+            </li>
+            {% endif %}
+            <li class="admin-nav-item">
+                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#profileTab" type="button">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/></svg>
+                    Личный кабинет
+                </button>
+            </li>
+        </ul>
+    </div>
+</nav>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold text-dark m-0">Панель управления администратора</h3>
-</div>
-<ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#usersTab"
-            type="button">Пользователи и доступы</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#reportsTab"
-            type="button">Управление отчетами</button></li>
-    <li class="nav-item"><button class="nav-link font-monospace text-secondary" data-bs-toggle="tab"
-            data-bs-target="#databaseTab" type="button">База данных</button></li>
-    <li class="nav-item"><button class="nav-link text-info" data-bs-toggle="tab" data-bs-target="#logsTab"
-            type="button">Журнал действий</button></li>
-</ul>
-
 <div class="tab-content">
+    {% if current_user.role == 'admin' %}
     <div class="tab-pane fade show active" id="usersTab" role="tabpanel">
-     {% include 'admin_tabs/users_tabs.html' %}
+        <div class="admin-card">
+            {% include 'admin_tabs/users_tabs.html' %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="tab-pane fade {% if current_user.role == 'viewer' %}show active{% endif %}" id="reportsTab" role="tabpanel">
+        <div class="admin-card">
+            {% include 'admin_tabs/reports_tabs.html' %}
+        </div>
     </div>
 
-    <div class="tab-pane fade" id="reportsTab" role="tabpanel">
-        {% include 'admin_tabs/reports_tabs.html' %}
-    </div>
-
+    {% if current_user.role == 'admin' %}
     <div class="tab-pane fade" id="databaseTab" role="tabpanel">
-        {% include 'admin_tabs/db_tabs.html' %}
+        <div class="admin-card">
+            {% include 'admin_tabs/db_tabs.html' %}
+        </div>
     </div>
     
     <div class="tab-pane fade" id="logsTab" role="tabpanel">
-        {% include 'admin_tabs/logs_tabs.html' %}
+        <div class="admin-card">
+            {% include 'admin_tabs/logs_tabs.html' %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Новая вкладка профиля -->
+    <div class="tab-pane fade" id="profileTab" role="tabpanel">
+        <div class="admin-card" style="max-width: 500px;">
+            <div class="admin-card-header">
+                <svg viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/></svg>
+                Личный кабинет
+            </div>
+            <div class="card-body p-2">
+                <p class="text-muted small mb-4">Вы вошли как <strong>{{ current_user.username }}</strong></p>
+                <form action="{{ url_for('admin.change_my_password') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Сменить пароль</label>
+                        <input type="text" name="new_password" class="form-control" required autocomplete="off" placeholder="Введите новый пароль">
+                    </div>
+                    <button type="submit" class="btn-primary-action w-100 justify-content-center">Сохранить новый пароль</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
 
-
+{% block extra_js %}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Сохранение и восстановление активных вкладок
-        const navLists = document.querySelectorAll('.nav-tabs, .nav-pills');
+        const navLists = document.querySelectorAll('.nav-tabs, .nav-pills, .admin-nav-list');
         
         navLists.forEach(nav => {
             const navId = nav.id || 'defaultNav';
             const storageKey = 'activeTab_' + navId;
             
-            // Если это главные табы и есть хэш в URL - отдаем приоритет хэшу
             let targetHash = null;
             if (navId === 'adminTabs' && window.location.hash) {
                 targetHash = window.location.hash;
@@ -55,7 +112,6 @@
                 targetHash = localStorage.getItem(storageKey);
             }
             
-            // Восстанавливаем вкладку
             if (targetHash) {
                 let tabTrigger = nav.querySelector(`[data-bs-target="${targetHash}"]`);
                 if (tabTrigger) {
@@ -63,7 +119,6 @@
                 }
             }
             
-            // Слушаем клики по вкладкам для сохранения
             const tabs = nav.querySelectorAll('button[data-bs-toggle="tab"], button[data-bs-toggle="pill"]');
             tabs.forEach(tabEl => {
                 tabEl.addEventListener('shown.bs.tab', function (event) {
@@ -71,7 +126,6 @@
                     if (target) {
                         localStorage.setItem(storageKey, target);
                         
-                        // Если это главные табы, обновляем URL без скачка страницы
                         if (navId === 'adminTabs') {
                             history.replaceState(null, null, target);
                         }
@@ -81,5 +135,4 @@
         });
     });
 </script>
-<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 {% endblock %}

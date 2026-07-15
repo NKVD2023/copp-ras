@@ -1,0 +1,99 @@
+<div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h6 class="fw-bold m-0">Управление правами и пользователями</h6>
+    </div>
+    
+    <div class="input-group shadow-sm mb-4">
+        <span class="input-group-text bg-white border-end-0 text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+            </svg>
+        </span>
+        <input type="text" id="userSearch" class="form-control border-start-0 ps-0" placeholder="Поиск по логину или названию..." autocomplete="off">
+    </div>
+
+    <div class="row g-3" id="usersList">
+        {% for user in users %}
+        <div class="col-md-6 col-lg-4 user-card-item">
+            <div class="border rounded h-100 p-3 bg-white d-flex flex-column shadow-sm">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="fw-bold text-dark">{{ user.username }}</span>
+                    {% if user.role == 'viewer' %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size: 0.7em;">Наблюдатель</span>
+                    {% endif %}
+                </div>
+                {% if user.description %}
+                <p class="text-muted small mb-3 flex-grow-1" style="font-size: 0.85em;">{{ user.description }}</p>
+                {% else %}
+                <div class="flex-grow-1"></div>
+                {% endif %}
+                
+                <button class="btn btn-sm btn-outline-secondary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#userModal-{{ user.id }}">
+                    Управление
+                </button>
+            </div>
+        </div>
+
+        <div class="modal fade" id="userModal-{{ user.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header border-bottom-0 pt-4 px-4">
+                        <h6 class="modal-title fw-bold text-dark m-0">Пользователь: {{ user.username }}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body px-4 py-2">
+                        <h6 class="fw-bold text-dark small mb-2">Сброс пароля</h6>
+                        <form action="{{ url_for('admin.reset_password', user_id=user.id) }}" method="POST" class="d-flex gap-2 mb-4">
+                            <input type="text" name="new_password" class="form-control form-control-sm" placeholder="Новый пароль" required autocomplete="off">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Изменить</button>
+                        </form>
+
+                        {% if user.role == 'user' %}
+                        <h6 class="fw-bold text-dark small mb-2">Доступ к отчетам</h6>
+                        <form action="{{ url_for('admin.assign_access') }}" method="POST" class="mb-4">
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            <div class="border rounded p-2 mb-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                {% for t in templates %}
+                                <div class="form-check mb-2 {% if not loop.last %}border-bottom pb-2{% endif %}">
+                                    <input class="form-check-input" type="checkbox" name="template_ids" value="{{ t.id }}" {% if t in user.assigned_templates %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
+                                    <label class="form-check-label small" for="access-{{ user.id }}-{{ t.id }}">{{ t.short_name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-copp w-100">Сохранить доступы</button>
+                        </form>
+                        {% endif %}
+
+                        <div class="border-top pt-3 text-center">
+                            <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите полностью удалить этого пользователя?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">Удалить учетную запись</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const userSearch = document.getElementById('userSearch');
+        if (userSearch) {
+            userSearch.addEventListener('input', function () {
+                const query = this.value.toLowerCase();
+                const userItems = document.querySelectorAll('.user-card-item');
+
+                userItems.forEach(function (item) {
+                    const textContent = item.textContent.toLowerCase();
+                    if (textContent.includes(query)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>

@@ -1,4 +1,5 @@
 import os
+import datetime
 from flask import render_template, request, redirect, url_for
 from flask_login import login_required, current_user
 from app.admin import admin_bp
@@ -21,7 +22,7 @@ def require_admin():
     if current_user.role == 'admin':
         return
         
-    allowed_for_viewer = ['admin.constructor', 'admin.toggle_publish', 'admin.clone_template', 'admin.assign_template_users']
+    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.toggle_publish', 'admin.clone_template', 'admin.assign_template_users']
     if current_user.role == 'viewer' and request.endpoint in allowed_for_viewer:
         return
         
@@ -76,7 +77,8 @@ def dashboard():
                            all_users=all_users,
                            all_submissions=all_submissions,
                            backups_list=backups_list,
-                           logs_list=logs_list)
+                           logs_list=logs_list,
+                           current_date=datetime.date.today())
 
 @admin_bp.route('/clear_logs', methods=['POST'])
 @login_required
