@@ -1,0 +1,29 @@
+<div>
+    <h6 class="fw-bold mb-4">Регистрация учетной записи</h6>
+    <div class="row">
+        <div class="col-md-6 col-lg-4">
+            <form action="{{ url_for('admin.create_user') }}" method="POST">
+                <div class="mb-3">
+                    <label class="form-label small text-muted">Идентификатор (Логин)</label>
+                    <input type="text" name="username" class="form-control" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted">Пароль доступа</label>
+                    <input type="text" name="password" class="form-control" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted">Описание</label>
+                    <input type="text" name="description" class="form-control" autocomplete="off">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small text-muted">Тип пользователя (Роль)</label>
+                    <select name="role" class="form-select">
+                        <option value="user">Пользователь (Заполнение данных)</option>
+                        <option value="viewer">Наблюдатель (Только просмотр)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-copp w-100">Создать аккаунт</button>
+            </form>
+        </div>
+    </div>
+</div>

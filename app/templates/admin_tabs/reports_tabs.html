@@ -6,103 +6,177 @@
     <a href="{{ url_for('admin.constructor') }}" class="btn btn-copp px-4">Создать новый отчет</a>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-12">
+<div class="row mb-4 align-items-center g-2">
+    <div class="col-md-5">
         <div class="input-group shadow-sm">
             <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
             <input type="text" id="reportSearch" class="form-control border-start-0 ps-0" placeholder="Поиск отчетов"
                 autocomplete="off">
         </div>
     </div>
+    <div class="col-md-3">
+        <select id="reportStatusFilter" class="form-select shadow-sm text-muted">
+            <option value="all">Все статусы</option>
+            <option value="published">Только опубликованные</option>
+            <option value="draft">Только черновики</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <select id="reportSort" class="form-select shadow-sm text-muted">
+            <option value="newest">Сначала новые</option>
+            <option value="oldest">Сначала старые</option>
+            <option value="deadline">Ближайший дедлайн</option>
+            <option value="progress">С самым низким % сдачи</option>
+        </select>
+    </div>
 </div>
 
 <div class="row g-4">
     {% for t in templates %}
-    <div class="col-md-6 report-item">
-        <div class="card hoverable h-100 p-2 border-0 shadow-sm {% if not t.is_published %}bg-light opacity-75{% endif %}">
-            <div class="card-body d-flex flex-column justify-content-between">
+    {% set debtors = debtors_map[t.id] if debtors_map is defined else [] %}
+    {% set total_assigned = t.assigned_users.count() %}
+    {% set debtors_count = debtors|length %}
+    {% set submitted = total_assigned - debtors_count %}
+    {% set progress = (submitted / total_assigned * 100)|int if total_assigned > 0 else 0 %}
+    {% set progress_color = "success" if progress == 100 else ("warning" if progress > 0 else "danger") %}
+    {% set is_overdue = t.deadline and current_date and current_date > t.deadline %}
+    
+    <div class="col-md-6 report-item" 
+         data-status="{% if t.is_published %}published{% else %}draft{% endif %}" 
+         data-deadline="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '2099-12-31' }}"
+         data-progress="{{ progress }}"
+         data-id="{{ t.id }}">
+        
+        <div class="border rounded h-100 p-3 position-relative {% if not t.is_published %}bg-light opacity-75{% endif %} {% if is_overdue %}border-danger shadow-sm{% endif %}">
+            
+            <!-- Three dots menu (Действия) -->
+            <div class="dropdown position-absolute" style="top: 10px; right: 10px; z-index: 10;">
+                <button class="btn btn-link text-decoration-none p-0 text-copp" style="width: 24px; height: 24px;" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#003366" viewBox="0 0 16 16">
+                      <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                    </svg>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                    <li>
+                        <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST">
+                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
+                                <i class="bi {% if t.is_published %}bi-eye-slash{% else %}bi-eye{% endif %}"></i>
+                                {% if t.is_published %}Снять с публикации{% else %}Опубликовать{% endif %}
+                            </button>
+                        </form>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#edit-meta-{{ t.id }}">
+                            <i class="bi bi-pencil"></i>Изменить настройки
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#access-{{ t.id }}">
+                            <i class="bi bi-people"></i>Назначить исполнителей
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#clone-{{ t.id }}">
+                            <i class="bi bi-copy"></i>Запустить новый период
+                        </button>
+                    </li>
+                    {% if current_user.role == 'admin' %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form action="{{ url_for('admin.delete_template', template_id=t.id) }}" method="POST" onsubmit="return confirm('ВНИМАНИЕ!\n\nВы точно хотите удалить этот отчет?\nВсе данные, которые уже заполнили учреждения, будут навсегда удалены!');">
+                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 text-danger">
+                                <i class="bi bi-trash3-fill"></i>Удалить отчет
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
 
+            <div class="d-flex flex-column justify-content-between h-100 pe-4">
                 <div>
-                    <div class="d-flex justify-content-between mb-2">
+                    <div class="d-flex align-items-center gap-2 mb-2">
                         <span class="badge bg-light border text-dark">{{ t.period or 'Период не указан' }}</span>
                         {% if t.is_published %}
                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Опубликовано</span>
                         {% else %}
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Черновик</span>
                         {% endif %}
+                        {% if is_overdue %}
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="bi bi-exclamation-triangle-fill me-1"></i>Просрочено</span>
+                        {% endif %}
                     </div>
 
-                    <h5 class="card-title fw-bold text-dark mb-2">{{ t.short_name or t.name }}</h5>
-                    <p class="text-muted small mb-4 line-clamp-2" title="{{ t.name }}">{{ t.name }}</p>
-                    <div class="small text-muted mb-1">Количество листов: {{ t.schema|length }}</div>
-                    {% if t.deadline %}
-                    <div class="small text-muted mb-3">Срок сдачи: <span class="fw-medium text-dark">{{ t.deadline.strftime('%d.%m.%Y') }}</span></div>
-                    {% endif %}
+                    <h5 class="card-title fw-bold text-dark mb-1">{{ t.short_name or t.name }}</h5>
+                    <p class="text-muted small mb-3 line-clamp-2" title="{{ t.name }}">{{ t.name }}</p>
                     
-                    <div class="mb-3 mt-3">
-                        {% set debtors = debtors_map[t.id] if debtors_map is defined else [] %}
-                        {% if debtors %}
+                    <div class="d-flex justify-content-between align-items-center small text-muted mb-2">
+                        <span>Количество листов: {{ t.schema|length }}</span>
+                        {% if t.deadline %}
+                        <span class="{% if is_overdue %}text-danger fw-bold{% endif %}">Срок: {{ t.deadline.strftime('%d.%m.%Y') }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mb-3 border rounded p-2 bg-light">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <span class="small fw-bold text-dark">Прогресс сдачи: {{ progress }}%</span>
+                            <span class="small text-muted" style="font-size: 0.75rem;">Сдали: <b>{{ submitted }}</b> / Ожидается: <b>{{ debtors_count }}</b> (из {{ total_assigned }})</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-{{ progress_color }}" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    {% if total_assigned > 0 %}
+                    <div class="mb-3">
+                        {% if debtors_count > 0 %}
                         <div class="accordion accordion-flush border rounded shadow-sm" id="debtorsAccordion-{{ t.id }}">
                             <div class="accordion-item rounded">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed py-2 px-3 small text-danger fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#debtorsCollapse-{{ t.id }}" style="font-size: 0.85rem; box-shadow: none; background-color: #f8d7da1a;">
-                                        Не сдали отчет ({{ debtors|length }})
+                                        Не сдали отчет ({{ debtors_count }})
                                     </button>
                                 </h2>
                                 <div id="debtorsCollapse-{{ t.id }}" class="accordion-collapse collapse" data-bs-parent="#debtorsAccordion-{{ t.id }}">
-                                    <div class="accordion-body p-2 bg-light border-top" style="font-size: 0.8rem; max-height: 150px; overflow-y: auto;">
-                                        <ul class="mb-0 ps-3 text-muted">
-                                            {% for debtor in debtors %}
-                                            <li class="mb-1">
-                                                <strong class="text-dark">{{ debtor.username }}</strong>
-                                                {% if debtor.description %}<br><span style="font-size: 0.9em;">{{ debtor.description }}</span>{% endif %}
-                                            </li>
-                                            {% endfor %}
-                                        </ul>
+                                    <div class="accordion-body p-2 bg-light border-top" style="font-size: 0.8rem;">
+                                        <!-- Actions for debtors -->
+                                        <div class="d-flex gap-2 border-bottom pb-2 mb-2">
+                                            <button class="btn btn-sm btn-outline-secondary py-1 px-2 d-flex align-items-center justify-content-center gap-1 w-50" onclick="copyDebtorsList('{{ t.id }}')">
+                                                Скопировать
+                                            </button>
+                                            <a href="{{ url_for('admin.export_debtors', template_id=t.id) }}" class="btn btn-sm btn-outline-success py-1 px-2 d-flex align-items-center gap-1 w-50 justify-content-center">
+                                                В Excel
+                                            </a>
+                                        </div>
+                                        <div style="max-height: 120px; overflow-y: auto;" id="debtorsList-{{ t.id }}">
+                                            <ul class="mb-0 ps-3 text-muted">
+                                                {% for debtor in debtors %}
+                                                <li class="mb-1">
+                                                    <strong class="text-dark">{{ debtor.username }}</strong>
+                                                    {% if debtor.description %}<br><span style="font-size: 0.85em;" class="debtor-desc">{{ debtor.description }}</span>{% else %}<span class="debtor-desc d-none">{{ debtor.username }}</span>{% endif %}
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         {% else %}
-                        <div class="text-success small fw-bold mb-2"><i class="bi bi-check-circle me-1"></i>Все пользователи сдали отчет</div>
+                        <div class="text-success small fw-bold mb-2 p-2 border border-success rounded bg-success bg-opacity-10"><i class="bi bi-check-circle-fill me-1"></i>Все {{ total_assigned }} учреждений сдали отчет!</div>
                         {% endif %}
                     </div>
+                    {% else %}
+                    <div class="text-warning small fw-bold mb-3 p-2 border border-warning rounded bg-warning bg-opacity-10"><i class="bi bi-info-circle-fill me-1"></i>Нет назначенных исполнителей</div>
+                    {% endif %}
                 </div>
 
-                <div class="d-flex flex-column gap-2 mt-3 border-top pt-3">
-                    <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST">
-                        <button type="submit" class="btn btn-sm {% if t.is_published %}btn-custom-danger{% else %}btn-custom-outline{% endif %} w-100 py-2">
-                            <i class="bi {% if t.is_published %}bi-eye-slash{% else %}bi-eye{% endif %} me-1"></i>
-                            {% if t.is_published %}Снять с публикации{% else %}Опубликовать{% endif %}
-                        </button>
-                    </form>
-
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-custom-outline w-50 py-2" data-bs-toggle="modal" data-bs-target="#edit-meta-{{ t.id }}">
-                            <i class="bi bi-pencil me-1"></i>Изменить
-                        </button>
-                        
-                        <button type="button" class="btn btn-sm btn-custom-outline w-50 py-2" data-bs-toggle="modal" data-bs-target="#clone-{{ t.id }}">
-                            <i class="bi bi-copy me-1"></i>Копировать
-                        </button>
-                    </div>
-
-                    <button type="button" class="btn btn-sm btn-custom-outline w-100 py-2" data-bs-toggle="modal" data-bs-target="#access-{{ t.id }}">
-                        <i class="bi bi-people me-1"></i>Назначить исполнителей
-                    </button>
-
-                    <a href="{{ url_for('reports.view_data', template_id=t.id) }}" class="btn btn-sm btn-custom-outline w-100 py-2 mt-1">
-                        <i class="bi bi-bar-chart-fill me-1"></i>Сводные данные
+                <div class="mt-auto pt-2">
+                    <a href="{{ url_for('reports.view_data', template_id=t.id) }}" class="btn btn-sm btn-copp w-100 py-2">
+                        <i class="bi bi-bar-chart-fill me-1"></i>Открыть сводные данные
                     </a>
-
-
-                    {% if current_user.role == 'admin' %}
-                    <form action="{{ url_for('admin.delete_template', template_id=t.id) }}" method="POST" onsubmit="return confirm('ВНИМАНИЕ!\n\nВы точно хотите удалить этот отчет?\nВсе данные, которые уже заполнили учреждения, будут навсегда удалены!');">
-                        <button type="submit" class="btn btn-sm {% if t.is_published %}btn-custom-danger{% else %}btn-custom-outline{% endif %} w-100 py-2">
-                            <i class="bi bi-trash3-fill me-1"></i>Удалить отчет
-                        </button>
-                    </form>
-                    {% endif %}
                 </div>
 
             </div>
@@ -381,20 +455,74 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         const searchInput = document.getElementById('reportSearch');
-        if (searchInput) {
-            searchInput.addEventListener('input', function () {
-                const query = this.value.toLowerCase();
-                const reportItems = document.querySelectorAll('.report-item');
+        const statusFilter = document.getElementById('reportStatusFilter');
+        const sortSelect = document.getElementById('reportSort');
+        const container = document.querySelector('.row.g-4');
+        let reportItems = Array.from(document.querySelectorAll('.report-item'));
 
-                reportItems.forEach(function (item) {
-                    const textContent = item.textContent.toLowerCase();
-                    if (textContent.includes(query)) {
-                        item.style.display = '';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
+        function applyFiltersAndSort() {
+            const query = searchInput ? searchInput.value.toLowerCase() : '';
+            const status = statusFilter ? statusFilter.value : 'all';
+            const sortVal = sortSelect ? sortSelect.value : 'newest';
+
+            // Filter
+            reportItems.forEach(function (item) {
+                const textContent = item.textContent.toLowerCase();
+                const itemStatus = item.getAttribute('data-status');
+                
+                let matchesSearch = textContent.includes(query);
+                let matchesStatus = (status === 'all') || (status === itemStatus);
+
+                if (matchesSearch && matchesStatus) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
             });
+
+            // Sort
+            const visibleItems = reportItems.filter(item => item.style.display !== 'none');
+            visibleItems.sort((a, b) => {
+                if (sortVal === 'newest') {
+                    return parseInt(b.getAttribute('data-id')) - parseInt(a.getAttribute('data-id'));
+                } else if (sortVal === 'oldest') {
+                    return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
+                } else if (sortVal === 'deadline') {
+                    return a.getAttribute('data-deadline').localeCompare(b.getAttribute('data-deadline'));
+                } else if (sortVal === 'progress') {
+                    return parseInt(a.getAttribute('data-progress')) - parseInt(b.getAttribute('data-progress'));
+                }
+                return 0;
+            });
+
+            // Re-append sorted items to container
+            visibleItems.forEach(item => container.appendChild(item));
         }
+
+        if (searchInput) searchInput.addEventListener('input', applyFiltersAndSort);
+        if (statusFilter) statusFilter.addEventListener('change', applyFiltersAndSort);
+        if (sortSelect) sortSelect.addEventListener('change', applyFiltersAndSort);
     });
+
+    function copyDebtorsList(templateId) {
+        const listContainer = document.getElementById('debtorsList-' + templateId);
+        if (!listContainer) return;
+        
+        let text = "";
+        listContainer.querySelectorAll('.debtor-desc').forEach(span => {
+            text += span.textContent.trim() + "\n";
+        });
+        
+        if (!text) {
+            alert('Список пуст.');
+            return;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Список скопирован в буфер обмена!');
+        }).catch(err => {
+            console.error('Ошибка копирования: ', err);
+            alert('Не удалось скопировать список.');
+        });
+    }
 </script>

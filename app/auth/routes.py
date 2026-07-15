@@ -18,7 +18,7 @@ def login():
             return redirect(url_for('auth.login'))
         login_user(user)
         log_action('Вход в систему', f'Успешный вход пользователя {user.username}')
-        if user.role == 'admin':
+        if user.role in ['admin', 'viewer']:
             return redirect(url_for('admin.dashboard'))
         return redirect(url_for('reports.dashboard'))
     return render_template('login.html')

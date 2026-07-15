@@ -14,24 +14,8 @@ reports_bp = Blueprint('reports', __name__)
 @reports_bp.route('/')
 @login_required
 def dashboard():
-    if current_user.role == 'admin':
+    if current_user.role in ['admin', 'viewer']:
         return redirect(url_for('admin.dashboard'))
-    # === НАЧАЛО ИЗМЕНЕНИЙ ДЛЯ РОЛИ VIEWER ===
-    if current_user.role == 'viewer':
-        # ДОБАВИЛИ СОРТИРОВКУ: .order_by(ReportTemplate.id.desc())
-        templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
-        # ПОЛУЧАЕМ ВСЕХ ИСПОЛНИТЕЛЕЙ
-        fill_users = User.query.filter_by(role='user').all() 
-        
-        debtors_map = {}
-        for template in templates:
-            submitted_user_ids = [sub.user_id for sub in template.submissions]
-            debtors = [user for user in template.assigned_users if user.id not in submitted_user_ids]
-            debtors_map[template.id] = debtors
-            
-        # ПЕРЕДАЕМ fill_users В ШАБЛОН
-        return render_template('viewer_dashboard.html', templates=templates, debtors_map=debtors_map, fill_users=fill_users)
-    # === КОНЕЦ ИЗМЕНЕНИЙ ===
     submissions = ReportSubmission.query.filter_by(user_id=current_user.id).all()
     filled_ids = [s.template_id for s in submissions]
     assigned = [t for t in current_user.assigned_templates if t.is_published]

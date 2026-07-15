@@ -204,7 +204,8 @@ body {
    ФОРМЫ И ПОЛЯ ВВОДА (Inputs, Selects)
    ========================================================================== */
 .form-control, 
-.form-select {
+.form-select,
+.input-group-text {
     border-radius: var(--radius-input);
     border: 1px solid var(--border-color);
     padding: 0.6rem 1rem;

@@ -1,116 +1,30 @@
-   <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card p-2 border-0 shadow-sm">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-4">Регистрация учетной записи</h6>
-                        <form action="{{ url_for('admin.create_user') }}" method="POST">
-                            <div class="mb-3"><label class="form-label small text-muted">Идентификатор
-                                    (Логин)</label><input type="text" name="username" class="form-control" required
-                                    autocomplete="off"></div>
-                            <div class="mb-3"><label class="form-label small text-muted">Пароль доступа</label><input
-                                    type="text" name="password" class="form-control" required autocomplete="off"></div>
-                            <div class="mb-3">
-                                <label class="form-label small text-muted">Описание</label>
-                                <input type="text" name="description" class="form-control" autocomplete="off">
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label small text-muted">Тип пользователя (Роль)</label>
-                                <select name="role" class="form-select">
-                                    <option value="user">Пользователь (Заполнение данных)</option>
-                                    <option value="viewer">Наблюдатель (Только просмотр)</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-copp w-100">Создать аккаунт</button>
-                        </form>
-                    </div>
-                </div>
-                <div class="card p-2 border-0 shadow-sm mt-4">
-                <!-- <div class="my-profile"> -->
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-3">Мой профиль ({{ current_user.username }})</h6>
-                        <form action="{{ url_for('admin.change_my_password') }}" method="POST">
-                            <div class="mb-3">
-                                <label class="form-label small text-muted">Новый пароль</label>
-                                <input type="text" name="new_password" class="form-control" required autocomplete="off"
-                                    placeholder="Введите новый пароль">
-                            </div>
-                            <button type="submit" class="btn btn-custom-outline w-100">Обновить пароль</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+<div class="users-sub-tabs">
+    <ul class="admin-nav-list nav mb-4 border-bottom" id="usersSubTabs" role="tablist" style="gap: 1rem;">
+        <li class="admin-nav-item" role="presentation">
+            <button class="admin-nav-link active" id="user-list-tab" data-bs-toggle="tab" data-bs-target="#user-list" type="button" role="tab" aria-controls="user-list" aria-selected="true" style="font-size: 0.95rem; padding-bottom: 0.75rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people me-1" viewBox="0 0 16 16">
+                  <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                </svg>
+                Список пользователей
+            </button>
+        </li>
+        <li class="admin-nav-item" role="presentation">
+            <button class="admin-nav-link" id="user-registration-tab" data-bs-toggle="tab" data-bs-target="#user-registration" type="button" role="tab" aria-controls="user-registration" aria-selected="false" style="font-size: 0.95rem; padding-bottom: 0.75rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-plus me-1" viewBox="0 0 16 16">
+                  <path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H1s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C9.516 10.68 8.289 10 6 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                  <path fill-rule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5V7h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V8h-1.5a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5z"/>
+                </svg>
+                Добавить пользователя
+            </button>
+        </li>
+    </ul>
 
-            <div class="col-md-8">
-                <div class="card p-2 border-0 shadow-sm">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-4">Управление правами и пользователями</h6>
-                        <div class="accordion" id="usersAccordion">
-                            {% for user in users %}
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button
-                                        class="accordion-button collapsed d-flex justify-content-between align-items-center"
-                                        type="button" data-bs-toggle="collapse" data-bs-target="#u-{{ user.id }}">
-
-                                        <div class="me-auto d-flex flex-column">
-                                            <span>Пользователь: <strong>{{ user.username }}</strong></span>
-                                            {% if user.description %}
-                                            <span class="text-muted mt-1" style="font-size: 0.85em;">{{ user.description
-                                                }}</span>
-                                            {% endif %}
-                                        </div>
-                                        <!-- <span class="badge bg-light text-dark border me-3 shadow-sm">{% if user.role ==
-                                            'viewer' %}Наблюдатель{% elif user.role == 'admin' %}Администратор{% else
-                                            %}Заполнение{% endif %}</span> -->
-                                    </button>
-
-                                </h2>
-
-                                <div id="u-{{ user.id }}" class="accordion-collapse collapse"
-                                    data-bs-parent="#usersAccordion">
-                                    <div class="accordion-body bg-white">
-                                        <form action="{{ url_for('admin.reset_password', user_id=user.id) }}"
-                                            method="POST" class="d-flex gap-2 mb-4">
-                                            <input type="text" name="new_password" class="form-control form-control-sm"
-                                                placeholder="Новый пароль" required autocomplete="off">
-                                            <button type="submit"
-                                                class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Изменить
-                                                пароль</button>
-                                        </form>
-                                        {% if user.role == 'user' %}
-                                        <h6 class="fw-bold text-dark small mb-3">Назначенные отчеты (Черновики и
-                                            Опубликованные):</h6>
-                                        <form action="{{ url_for('admin.assign_access') }}" method="POST">
-                                            <input type="hidden" name="user_id" value="{{ user.id }}">
-                                            <div class="row px-2 mb-3">
-                                                {% for t in templates %}
-                                                <div class="form-check col-md-6 mb-2">
-                                                    <input class="form-check-input" type="checkbox" name="template_ids"
-                                                        value="{{ t.id }}" {% if t in user.assigned_templates
-                                                        %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
-                                                    <label class="form-check-label small"
-                                                        for="access-{{ user.id }}-{{ t.id }}">{{ t.short_name }}</label>
-                                                </div>
-                                                {% endfor %}
-                                            </div>
-                                            <button type="submit" class="btn btn-sm btn-outline-copp mb-3">Сохранить
-                                                доступы</button>
-                                        </form>
-                                        {% endif %}
-                                        <div class="border-top pt-3">
-                                            <form action="{{ url_for('admin.delete_user', user_id=user.id) }}"
-                                                method="POST"
-                                                onsubmit="return confirm('Вы уверены, что хотите полностью удалить этого пользователя?');">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Удалить
-                                                    учетную запись безвозвратно</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="tab-content" id="usersSubTabsContent">
+        <div class="tab-pane fade show active" id="user-list" role="tabpanel" aria-labelledby="user-list-tab">
+            {% include 'admin_tabs/users/user_list.html' %}
         </div>
+        <div class="tab-pane fade" id="user-registration" role="tabpanel" aria-labelledby="user-registration-tab">
+            {% include 'admin_tabs/users/user_registration.html' %}
+        </div>
+    </div>
+</div>

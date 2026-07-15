@@ -1,0 +1,118 @@
+/* admin.css - Стили для панели администратора */
+
+body {
+    background-color: #f1f3f5 !important;
+}
+
+/* Верхнее меню администратора */
+.admin-top-nav {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e9ecef;
+    padding: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.admin-nav-list {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none; /* Firefox */
+}
+
+.admin-nav-list::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+.admin-nav-item {
+    display: inline-flex;
+    align-items: center;
+}
+
+.admin-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+}
+
+.admin-nav-link svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.admin-nav-link:hover {
+    color: #00334e;
+}
+
+.admin-nav-link.active {
+    color: #00334e;
+    border-bottom: 2px solid #00334e;
+}
+
+/* Карточки админки */
+.admin-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    border: none;
+    margin-bottom: 20px;
+    padding: 20px;
+}
+
+.admin-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.admin-card-header svg {
+    width: 20px;
+    height: 20px;
+    fill: #6c757d;
+}
+
+/* Кнопки */
+.btn-primary-action {
+    background-color: #0d6efd;
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    transition: background-color 0.2s;
+}
+
+.btn-primary-action:hover {
+    background-color: #0b5ed7;
+    color: #fff;
+}
+
+.btn-primary-action svg {
+    fill: currentColor;
+    width: 16px;
+    height: 16px;
+}
