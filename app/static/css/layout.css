@@ -1,0 +1,64 @@
+/* ==========================================================================
+   МАКЕТ И СТРУКТУРНЫЕ ЭЛЕМЕНТЫ (Layout)
+   ========================================================================== */
+
+/* Общие контейнеры */
+.main-container {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+/* Логотип и брендинг */
+.brand-logo {
+    min-width: 45px;
+    object-fit: contain;
+}
+
+.brand-title {
+    font-size: 1.1rem;
+    white-space: nowrap;
+    color: var(--primary-color);
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.brand-subtitle {
+    font-size: 0.65rem;
+    white-space: nowrap;
+}
+
+/* Навигация (вкладки) */
+.admin-nav-list {
+    gap: 1.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.admin-subnav-list {
+    gap: 1rem;
+}
+
+/* Специфичные классы для выравнивания */
+.header-border {
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Ссылки навигации админ панели */
+.admin-nav-link {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+    transition: var(--transition);
+    border-bottom: 2px solid transparent;
+}
+
+.admin-nav-link:hover {
+    color: var(--primary-color);
+}
+
+.admin-nav-link.active {
+    color: var(--primary-color) !important;
+    border-bottom: 2px solid var(--primary-color);
+}

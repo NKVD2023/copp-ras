@@ -1,29 +1,58 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h6 class="fw-bold m-0">Журнал действий системы</h6>
-    <form action="{{ url_for('admin.clear_logs') }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить все логи? Это действие необратимо.');">
-        <button type="submit" class="btn btn-outline-danger btn-sm px-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-trash3 mb-1 me-1" viewBox="0 0 16 16">
-                <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .471-.53Zm5.058 0a.5.5 0 0 1 .471.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/>
+    <div class="d-flex gap-2 align-items-center">
+        <!-- Поиск -->
+        <div class="input-group input-group-sm" style="max-width: 250px;">
+            <span class="input-group-text bg-white text-muted">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                </svg>
+            </span>
+            <input type="text" id="logsSearch" class="form-control" placeholder="Поиск по журналу...">
+        </div>
+        
+        <!-- Экспорт в Excel -->
+        <button type="button" class="btn btn-outline-success btn-sm px-3 text-nowrap shadow-sm" onclick="exportLogsToCSV()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-spreadsheet mb-1 me-1" viewBox="0 0 16 16">
+              <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h2v2H3zm0 1h2v2H4a1 1 0 0 1-1-1v-1zm3 2v-2h3v2H6zm4 0v-2h3v1a1 1 0 0 1-1 1h-2zm3-3h-3v-2h3v2zm-7 0H6v-2h3v2z"/>
             </svg>
-            Очистить журнал
+            Excel
         </button>
-    </form>
+
+        <!-- Очистить -->
+        <form action="{{ url_for('admin.clear_logs') }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить все логи? Это действие необратимо.');" class="m-0">
+            <button type="submit" class="btn btn-outline-danger btn-sm px-3 text-nowrap shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-trash3 mb-1 me-1" viewBox="0 0 16 16">
+                    <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .471-.53Zm5.058 0a.5.5 0 0 1 .471.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/>
+                </svg>
+                Очистить
+            </button>
+        </form>
+    </div>
 </div>
 
-<div class="table-responsive" style="max-height: 65vh;">
-    <table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;">
+<div class="table-responsive table-scrollable-lg border rounded shadow-sm">
+    <table class="table table-sm table-hover mb-0 table-compact-md" id="logsTable">
         <thead class="table-light sticky-top">
             <tr>
-                <th style="width: 140px;" class="fw-bold text-muted">Дата и время</th>
-                <th style="width: 200px;" class="fw-bold text-muted">Пользователь</th>
-                <th style="width: 250px;" class="fw-bold text-muted">Действие</th>
-                <th class="fw-bold text-muted">Подробности</th>
+                <th class="fw-bold text-muted col-date sortable" data-col="0" style="cursor: pointer; user-select: none;">
+                    Дата и время <span class="sort-icon text-copp ms-1"></span>
+                </th>
+                <th class="fw-bold text-muted col-user sortable" data-col="1" style="cursor: pointer; user-select: none;">
+                    Пользователь <span class="sort-icon text-copp ms-1"></span>
+                </th>
+                <th class="fw-bold text-muted col-action sortable" data-col="2" style="cursor: pointer; user-select: none;">
+                    Действие <span class="sort-icon text-copp ms-1"></span>
+                </th>
+                <th class="fw-bold text-muted sortable" data-col="3" style="cursor: pointer; user-select: none;">
+                    Подробности <span class="sort-icon text-copp ms-1"></span>
+                </th>
             </tr>
         </thead>
         <tbody>
             {% for log in logs_list %}
-            <tr>
-                <td class="text-muted text-nowrap align-middle">{{ log.timestamp.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+            <tr class="log-row">
+                <td class="text-muted text-nowrap align-middle" data-sort-value="{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}">{{ log.timestamp.strftime('%d.%m.%Y %H:%M:%S') }}</td>
                 <td class="align-middle fw-bold">
                     {% if log.user %}
                         {% if log.user.role == 'admin' %}
@@ -42,10 +71,142 @@
                 <td class="align-middle text-muted">{{ log.details }}</td>
             </tr>
             {% else %}
-            <tr>
+            <tr class="no-logs-row">
                 <td colspan="4" class="text-center text-muted py-4">Журнал действий пуст.</td>
             </tr>
             {% endfor %}
+            <tr id="noResultsRow" style="display: none;">
+                <td colspan="4" class="text-center text-muted py-4">По вашему запросу ничего не найдено.</td>
+            </tr>
         </tbody>
     </table>
 </div>
+
+<script>
+    // --- Поиск по логам ---
+    const searchInput = document.getElementById('logsSearch');
+    const logsRows = document.querySelectorAll('.log-row');
+    const noResultsRow = document.getElementById('noResultsRow');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            let visibleCount = 0;
+
+            logsRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                if (text.includes(query)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (visibleCount === 0 && logsRows.length > 0) {
+                noResultsRow.style.display = '';
+            } else {
+                noResultsRow.style.display = 'none';
+            }
+        });
+    }
+
+    // --- Сортировка столбцов ---
+    const logsTable = document.getElementById('logsTable');
+    if (logsTable) {
+        const headers = logsTable.querySelectorAll('th.sortable');
+        let sortCol = -1;
+        let sortAsc = true;
+
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const col = parseInt(header.getAttribute('data-col'));
+                
+                // Переключаем направление или ставим ASC для нового столбца
+                if (sortCol === col) {
+                    sortAsc = !sortAsc;
+                } else {
+                    sortCol = col;
+                    sortAsc = true;
+                }
+                
+                // Обновляем иконки
+                headers.forEach(h => h.querySelector('.sort-icon').innerHTML = '');
+                header.querySelector('.sort-icon').innerHTML = sortAsc ? '↑' : '↓';
+
+                const tbody = logsTable.querySelector('tbody');
+                const rowsArray = Array.from(logsRows);
+
+                rowsArray.sort((a, b) => {
+                    const aCell = a.cells[col];
+                    const bCell = b.cells[col];
+                    
+                    // Если есть атрибут data-sort-value (например для дат), используем его
+                    let aVal = aCell.hasAttribute('data-sort-value') ? aCell.getAttribute('data-sort-value') : aCell.innerText.trim();
+                    let bVal = bCell.hasAttribute('data-sort-value') ? bCell.getAttribute('data-sort-value') : bCell.innerText.trim();
+
+                    if (aVal < bVal) return sortAsc ? -1 : 1;
+                    if (aVal > bVal) return sortAsc ? 1 : -1;
+                    return 0;
+                });
+
+                // Перестраиваем таблицу
+                rowsArray.forEach(row => tbody.appendChild(row));
+                
+                // Сообщения об отсутствии данных ставим в конец
+                if (noResultsRow) tbody.appendChild(noResultsRow);
+                const noLogs = document.querySelector('.no-logs-row');
+                if (noLogs) tbody.appendChild(noLogs);
+            });
+        });
+    }
+
+    // --- Экспорт в Excel (CSV UTF-8) ---
+    function exportLogsToCSV() {
+        if (logsRows.length === 0) {
+            alert('Нет данных для экспорта');
+            return;
+        }
+
+        // Добавляем BOM (Byte Order Mark), чтобы Excel правильно открыл русские символы (UTF-8)
+        let csvContent = '\uFEFF'; 
+        
+        // Заголовки таблицы (разделитель точка с запятой для Excel)
+        csvContent += 'Дата и время;Пользователь;Действие;Подробности\n';
+
+        // Данные (только те, которые не скрыты поиском)
+        logsRows.forEach(row => {
+            if (row.style.display !== 'none') {
+                const cells = row.cells;
+                const rowData = [
+                    cells[0].innerText.trim(),
+                    cells[1].innerText.trim().replace(/\n/g, ' '), // Убираем переносы между бейджем и никнеймом
+                    cells[2].innerText.trim(),
+                    cells[3].innerText.trim().replace(/"/g, '""')  // Экранируем кавычки
+                ];
+                
+                // Если внутри текста есть точка с запятой, кавычка или перенос строки - оборачиваем в кавычки
+                const formattedRowData = rowData.map(item => {
+                    if (item.includes(';') || item.includes('"') || item.includes('\n')) {
+                        return `"${item}"`;
+                    }
+                    return item;
+                });
+
+                csvContent += formattedRowData.join(';') + '\n';
+            }
+        });
+
+        // Формируем файл и скачиваем
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `copp_logs_export_${dateStr}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+</script>

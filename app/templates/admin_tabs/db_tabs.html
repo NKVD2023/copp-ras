@@ -1,13 +1,36 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="alert bg-white border border-light-subtle small mb-0 py-2 text-muted shadow-sm w-100 me-3">
-        <strong>Режим БД:</strong> Прямое редактирование таблиц. JSON поля (schema, data) доступны только для чтения.
+<div class="row align-items-center mb-4">
+    <div class="col-md-6 d-flex gap-2">
+        <a href="{{ url_for('admin.download_current_db') }}" class="btn btn-copp shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download me-1 mb-1" viewBox="0 0 16 16">
+              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+            </svg>
+            Полный бэкап
+        </a>
+        <button type="button" class="btn btn-outline-secondary shadow-sm" onclick="document.getElementById('backupFileInput').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload me-1 mb-1" viewBox="0 0 16 16">
+              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+              <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+            </svg>
+            Восстановить
+        </button>
+        <form id="restoreForm" action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-none">
+            <input type="file" name="backup_file" id="backupFileInput" accept=".db" required onchange="promptRestorePassword()">
+            <input type="hidden" name="password" id="restorePasswordHidden">
+        </form>
     </div>
-    <button type="button" class="btn btn-copp btn-sm px-4 shadow-sm text-nowrap" id="saveDbChangesBtn" onclick="saveDbChanges()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-1 mb-1" viewBox="0 0 16 16">
-          <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
-        </svg>
-        Сохранить изменения
-    </button>
+    <div class="col-md-6 text-end">
+        <button type="button" class="btn btn-copp btn-sm px-4 shadow-sm text-nowrap" id="saveDbChangesBtn" onclick="saveDbChanges()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-1 mb-1" viewBox="0 0 16 16">
+              <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+            </svg>
+            Сохранить изменения
+        </button>
+    </div>
+</div>
+
+<div class="alert bg-white border border-light-subtle small mb-4 py-2 text-muted shadow-sm w-100">
+    <strong>Режим БД:</strong> Прямое редактирование таблиц. JSON поля (schema, data) доступны только для чтения.
 </div>
 
 <ul class="nav nav-pills mb-3 small" id="dbTablesTabs" role="tablist">
@@ -20,16 +43,7 @@
     <li class="nav-item">
         <button class="nav-link py-1 px-3" data-bs-toggle="pill" data-bs-target="#dbSubmissions" type="button">report_submissions</button>
     </li>
-    <li class="nav-item ms-auto">
-        <button class="nav-link py-1 px-3 bg-warning text-dark border border-warning" data-bs-toggle="pill" data-bs-target="#dbBackups" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock-history me-1" viewBox="0 0 16 16">
-              <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483zm.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501zm-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z"/>
-              <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z"/>
-              <path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.247 1.856a.5.5 0 0 1-.494.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5"/>
-            </svg>
-            Резервные копии
-        </button>
-    </li>
+
 </ul>
 
 <div class="tab-content" id="dbTablesContent">
@@ -37,11 +51,11 @@
     <div class="tab-pane fade show active" id="dbUsers" role="tabpanel">
         <div class="db-table-container">
             <div class="p-0">
-                <div class="table-responsive" style="max-height: 60vh;">
-                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table" style="font-size: 0.8rem;">
+                <div class="table-responsive table-scrollable">
+                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table table-compact">
                         <thead class="table-light sticky-top">
                             <tr>
-                                <th class="px-3" style="width: 50px;">id</th>
+                                <th class="px-3 col-id">id</th>
                                 <th>username</th>
                                 <th>role</th>
                                 <th>description</th>
@@ -55,7 +69,7 @@
                                 <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="username">{{ u.username or '' }}</td>
                                 <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="role">{{ u.role or '' }}</td>
                                 <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="description">{{ u.description or '' }}</td>
-                                <td class="text-muted text-truncate bg-light" style="max-width: 200px;" title="Хэш пароля (только для чтения)">{{ u.password_hash }}</td>
+                                <td class="text-muted text-truncate bg-light cell-truncate-md" title="Хэш пароля (только для чтения)">{{ u.password_hash }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -69,11 +83,11 @@
     <div class="tab-pane fade" id="dbTemplates" role="tabpanel">
         <div class="db-table-container">
             <div class="p-0">
-                <div class="table-responsive" style="max-height: 60vh;">
-                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table" style="font-size: 0.8rem;">
+                <div class="table-responsive table-scrollable">
+                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table table-compact">
                         <thead class="table-light sticky-top">
                             <tr>
-                                <th class="px-3" style="width: 50px;">id</th>
+                                <th class="px-3 col-id">id</th>
                                 <th>name</th>
                                 <th>short_name</th>
                                 <th>period</th>
@@ -91,7 +105,7 @@
                                 <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="period">{{ t.period or '' }}</td>
                                 <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="deadline">{{ t.deadline or '' }}</td>
                                 <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="is_published">{{ t.is_published }}</td>
-                                <td class="text-muted text-truncate bg-light" style="max-width: 250px;" title="Только для чтения">[JSON Object]</td>
+                                <td class="text-muted text-truncate bg-light cell-truncate-lg" title="Только для чтения">[JSON Object]</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -105,11 +119,11 @@
     <div class="tab-pane fade" id="dbSubmissions" role="tabpanel">
         <div class="db-table-container">
             <div class="p-0">
-                <div class="table-responsive" style="max-height: 60vh;">
-                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table" style="font-size: 0.8rem;">
+                <div class="table-responsive table-scrollable">
+                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table table-compact">
                         <thead class="table-light sticky-top">
                             <tr>
-                                <th class="px-3" style="width: 50px;">id</th>
+                                <th class="px-3 col-id">id</th>
                                 <th>template_id</th>
                                 <th>user_id</th>
                                 <th>data (JSON)</th>
@@ -121,7 +135,7 @@
                                 <td class="fw-bold px-3 text-muted bg-light">{{ s.id }}</td>
                                 <td class="db-editable" contenteditable="true" data-model="ReportSubmission" data-id="{{ s.id }}" data-field="template_id">{{ s.template_id or '' }}</td>
                                 <td class="db-editable" contenteditable="true" data-model="ReportSubmission" data-id="{{ s.id }}" data-field="user_id">{{ s.user_id or '' }}</td>
-                                <td class="text-muted text-truncate bg-light" style="max-width: 300px;" title="Только для чтения">[JSON Object]</td>
+                                <td class="text-muted text-truncate bg-light cell-truncate-xl" title="Только для чтения">[JSON Object]</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -131,62 +145,7 @@
         </div>
     </div>
 
-    <!-- BACKUPS -->
-    <div class="tab-pane fade" id="dbBackups" role="tabpanel">
-        <div class="border rounded mb-4">
-            <div class="bg-light border-bottom py-2 px-3 rounded-top">
-                <h6 class="m-0 fw-bold">Управление резервными копиями</h6>
-            </div>
-            <div class="p-3">
-                <div class="row">
-                    <div class="col-md-6 border-end">
-                        <p class="small text-muted mb-3">Создайте мгновенную копию базы данных на сервере. Рекомендуется делать это перед любыми масштабными изменениями.</p>
-                        <button class="btn btn-sm btn-outline-copp" onclick="createBackup()" id="btnCreateBackup">
-                            Создать резервную копию сейчас
-                        </button>
-                    </div>
-                    <div class="col-md-6">
-                        <p class="small text-muted mb-3">Восстановите базу данных из файла .db с вашего компьютера.</p>
-                        <form action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center" onsubmit="return confirm('ВНИМАНИЕ! Текущая база данных будет полностью заменена загружаемой. Продолжить?');">
-                            <input type="file" name="backup_file" class="form-control form-control-sm me-2" accept=".db" required>
-                            <input type="password" name="password" class="form-control form-control-sm me-2" placeholder="Ваш пароль" style="width: 150px;" required>
-                            <button type="submit" class="btn btn-sm btn-copp text-nowrap">Восстановить</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <h6 class="fw-bold mb-3">Доступные резервные копии на сервере</h6>
-        <div class="table-responsive">
-            <table class="table table-sm table-hover border">
-                <thead class="table-light">
-                    <tr>
-                        <th>Файл</th>
-                        <th>Размер</th>
-                        <th class="text-end">Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for b in backups_list %}
-                    <tr>
-                        <td class="align-middle fw-bold">{{ b.name }}</td>
-                        <td class="align-middle text-muted">{{ (b.size / 1024)|round(1) }} KB</td>
-                        <td class="text-end">
-                            <a href="{{ url_for('admin.download_backup', filename=b.name) }}" class="btn btn-sm btn-outline-secondary">Скачать</a>
-                            <button class="btn btn-sm btn-outline-copp ms-1" onclick="restoreBackup('{{ b.name }}')">Восстановить</button>
-                            <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteBackup('{{ b.name }}')">Удалить</button>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="3" class="text-center text-muted py-4">Резервные копии не найдены.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 
 <!-- Password Confirmation Modal -->
@@ -344,74 +303,18 @@
         modal.show();
     }
 
-    function createBackup() {
-        const btn = document.getElementById('btnCreateBackup');
+    function promptRestorePassword() {
+        const fileInput = document.getElementById('backupFileInput');
+        if (!fileInput.files.length) return;
         
-        withPassword(function(pwd) {
-            btn.disabled = true;
-            btn.innerText = 'Создание...';
-            
-            fetch('/admin/db/backup/create', { 
-                method: 'POST',
-                headers: { 'X-User-Password': pwd }
-            })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('Резервная копия успешно создана!');
-                location.reload();
-            } else {
-                alert('Ошибка: ' + data.message);
-                btn.disabled = false;
-                btn.innerText = 'Создать резервную копию сейчас';
-            }
-        })
-        .catch(err => {
-            alert('Ошибка сети: ' + err);
-            btn.disabled = false;
-            btn.innerText = 'Создать резервную копию сейчас';
-        });
-        });
-    }
+        if(!confirm('ВНИМАНИЕ! Текущая база данных будет полностью заменена загружаемой. Продолжить?')) {
+            fileInput.value = '';
+            return;
+        }
 
-    function restoreBackup(filename) {
-        if(!confirm(`ВНИМАНИЕ! Вы собираетесь восстановить базу данных из копии "${filename}". ТЕКУЩИЕ ДАННЫЕ БУДУТ УДАЛЕНЫ И ЗАМЕНЕНЫ. Продолжить?`)) return;
-        
         withPassword(function(pwd) {
-            fetch(`/admin/db/backup/restore/${filename}`, { 
-                method: 'POST',
-                headers: { 'X-User-Password': pwd }
-            })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('База данных успешно восстановлена! Страница будет перезагружена.');
-                location.reload();
-            } else {
-                alert('Ошибка: ' + data.message);
-            }
-        })
-        .catch(err => alert('Ошибка сети: ' + err));
-        });
-    }
-
-    function deleteBackup(filename) {
-        if(!confirm(`Удалить резервную копию "${filename}"?`)) return;
-        
-        withPassword(function(pwd) {
-            fetch(`/admin/db/backup/delete/${filename}`, { 
-                method: 'POST',
-                headers: { 'X-User-Password': pwd }
-            })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                location.reload();
-            } else {
-                alert('Ошибка: ' + data.message);
-            }
-        })
-        .catch(err => alert('Ошибка сети: ' + err));
+            document.getElementById('restorePasswordHidden').value = pwd;
+            document.getElementById('restoreForm').submit();
         });
     }
 </script>

@@ -204,11 +204,19 @@ body {
    ФОРМЫ И ПОЛЯ ВВОДА (Inputs, Selects)
    ========================================================================== */
 .form-control, 
-.form-select,
 .input-group-text {
     border-radius: var(--radius-input);
     border: 1px solid var(--border-color);
     padding: 0.6rem 1rem;
+    color: var(--text-main);
+    transition: var(--transition);
+    background-color: #fcfcfc;
+}
+
+.form-select {
+    border-radius: var(--radius-input);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 2.5rem 0.6rem 1rem; /* 2.5rem on the right for the arrow */
     color: var(--text-main);
     transition: var(--transition);
     background-color: #fcfcfc;
