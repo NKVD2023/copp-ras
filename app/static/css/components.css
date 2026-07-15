@@ -1,0 +1,42 @@
+/* ==========================================================================
+   КОМПОНЕНТЫ И МОДУЛИ (Components)
+   ========================================================================== */
+
+/* Прогресс-бары */
+.progress-slim {
+    height: 6px;
+}
+
+/* Аккордеоны для списка должников */
+.accordion-debtors .accordion-button {
+    font-size: 0.85rem;
+    box-shadow: none;
+    background-color: rgba(248, 215, 218, 0.1);
+}
+
+.accordion-debtors .accordion-body {
+    font-size: 0.8rem;
+}
+
+/* Списки должников */
+.debtors-list-container {
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* Три точки меню (Dropdown) */
+.dropdown-options {
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.dropdown-options-btn {
+    width: 24px;
+    height: 24px;
+}
+
+/* Обертка для карточки админа/шаблонов */
+.admin-card-wrapper {
+    max-width: 500px;
+}
