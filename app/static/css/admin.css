@@ -1,118 +1,82 @@
-/* admin.css - Стили для панели администратора */
+/* ==========================================================================
+   ПАНЕЛЬ АДМИНИСТРАТОРА И КОНСТРУКТОР (Admin & Constructor)
+   ========================================================================== */
 
-body {
-    background-color: #f1f3f5 !important;
+/* Общие таблицы логов, юзеров, базы данных */
+.table-scrollable {
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
-/* Верхнее меню администратора */
-.admin-top-nav {
-    background-color: #ffffff;
-    border-bottom: 1px solid #e9ecef;
-    padding: 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+.table-scrollable-lg {
+    max-height: 65vh;
+    overflow-y: auto;
 }
 
-.admin-nav-list {
-    display: flex;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: none; /* Firefox */
+.table-compact {
+    font-size: 0.8rem;
 }
 
-.admin-nav-list::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
-}
-
-.admin-nav-item {
-    display: inline-flex;
-    align-items: center;
-}
-
-.admin-nav-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    color: #6c757d;
-    font-weight: 600;
+.table-compact-md {
     font-size: 0.85rem;
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-    background: none;
-    border-top: none;
-    border-left: none;
-    border-right: none;
 }
 
-.admin-nav-link svg {
-    width: 16px;
-    height: 16px;
-    fill: currentColor;
+/* Колонки таблиц */
+.col-id {
+    width: 50px;
 }
 
-.admin-nav-link:hover {
-    color: #00334e;
+.col-date {
+    width: 140px;
 }
 
-.admin-nav-link.active {
-    color: #00334e;
-    border-bottom: 2px solid #00334e;
+.col-user {
+    width: 200px;
 }
 
-/* Карточки админки */
-.admin-card {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    border: none;
-    margin-bottom: 20px;
-    padding: 20px;
+.col-action {
+    width: 250px;
 }
 
-.admin-card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #212529;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #f1f3f5;
+.cell-truncate-md {
+    max-width: 200px;
 }
 
-.admin-card-header svg {
-    width: 20px;
-    height: 20px;
-    fill: #6c757d;
+.cell-truncate-lg {
+    max-width: 250px;
 }
 
-/* Кнопки */
-.btn-primary-action {
-    background-color: #0d6efd;
-    color: #fff;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: none;
-    transition: background-color 0.2s;
+.cell-truncate-xl {
+    max-width: 300px;
 }
 
-.btn-primary-action:hover {
-    background-color: #0b5ed7;
-    color: #fff;
+/* Модальные окна */
+.modal-scrollable-body {
+    overflow-y: auto;
+    max-height: 60vh;
 }
 
-.btn-primary-action svg {
-    fill: currentColor;
-    width: 16px;
-    height: 16px;
+.access-list-scrollable {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Конструктор форм */
+.constructor-textarea {
+    resize: vertical;
+    min-height: 40px;
+    background-color: #f8f9fa;
+}
+
+.constructor-badge {
+    min-width: 90px;
+    text-align: center;
+}
+
+.constructor-idx {
+    min-width: 20px;
+}
+
+.cursor-pointer {
+    cursor: pointer;
 }

@@ -127,23 +127,36 @@
             font-style: italic;
             pointer-events: none;
         }
+        
+        .report-col-header {
+            min-width: 250px;
+            max-width: 450px;
+            white-space: normal;
+        }
+        
+        .brand-main-text {
+            font-size: 1.1rem;
+        }
+        
+        .brand-sub-text {
+            font-size: 0.65rem;
+        }
     </style>
 </head>
 
 <body>
     <nav class="navbar navbar-expand-lg py-2">
         <div class="container-fluid px-4">
-            <a class="brand-container d-flex align-items-center text-decoration-none" href="/" style="gap: 15px;">
+            <a class="brand-container d-flex align-items-center text-decoration-none gap-3" href="/">
                 <div class="d-flex flex-column justify-content-center">
-                    <span class="brand-main lh-1 mb-1" style="font-size: 1.1rem;">ЦОПП Республики Крым</span>
-                    <span class="brand-sub lh-1" style="font-size: 0.65rem;">Региональная Аналитическая Система</span>
+                    <span class="brand-main lh-1 mb-1 brand-main-text">ЦОПП Республики Крым</span>
+                    <span class="brand-sub lh-1 brand-sub-text">Региональная Аналитическая Система</span>
                 </div>
             </a>
             <div class="d-flex align-items-center">
 
                 <a href="{{ url_for('reports.export_excel', template_id=template.id) }}"
-                    class="btn btn-sm btn-success px-4 me-2 shadow-sm text-white"
-                    style="background-color: #198754; border: none;">
+                    class="btn btn-sm btn-success px-4 me-2 shadow-sm text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                         class="bi bi-file-earmark-excel me-1 mb-1" viewBox="0 0 16 16">
                         <path
@@ -200,8 +213,7 @@
                             <tr>
                                 <th class="p-3 sticky-col">Организация</th>
                                 {% for field in sheet.fields %}
-                                <th class="p-3 text-center"
-                                    style="min-width: 250px; max-width: 450px; white-space: normal;">{{ field.label }}
+                                <th class="p-3 text-center report-col-header">{{ field.label }}
                                 </th>
                                 {% endfor %}
                             </tr>

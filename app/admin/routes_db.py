@@ -105,6 +105,18 @@ def create_backup():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@admin_bp.route('/db/backup/download_current')
+@login_required
+def download_current_db():
+    if current_user.role != 'admin':
+        return "Forbidden", 403
+        
+    db_path = os.path.join(basedir, 'reports.db')
+    if os.path.exists(db_path):
+        log_action('Скачивание БД', 'Скачана текущая база данных')
+        return send_file(db_path, as_attachment=True, download_name=f'copp_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db')
+    return "File not found", 404
+
 @admin_bp.route('/db/backup/download/<filename>')
 @login_required
 def download_backup(filename):

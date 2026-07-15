@@ -6,20 +6,20 @@
     <title>Панель Администратора - ЦОПП РАС</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
 
 <body>
-    <header class="bg-white py-2" style="border-bottom: 1px solid #e2e8f0;">
+    <header class="bg-white py-2 header-border">
         <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
-            <a class="brand-container text-decoration-none" href="/"
-                style="display: flex; flex-direction: row; align-items: center; gap: 15px;">
-                <img src="{{ url_for('static', filename='img/logoblue2.png') }}" alt="Логотип" height="45"
-                    style="min-width: 45px; object-fit: contain;">
-                <div style="display: flex; flex-direction: column; justify-content: center;">
-                    <span class="brand-main lh-1 mb-1" style="font-size: 1.1rem; white-space: nowrap; color: #00334e; font-weight: 900; text-transform: uppercase;">Республики Крым</span>
-                    <span class="brand-sub lh-1 text-muted" style="font-size: 0.65rem; white-space: nowrap;">Региональная Аналитическая Система</span>
+            <a class="brand-container text-decoration-none d-flex flex-row align-items-center gap-3" href="/">
+                <img src="{{ url_for('static', filename='img/logoblue2.png') }}" alt="Логотип" height="45" class="brand-logo">
+                <div class="d-flex flex-column justify-content-center">
+                    <span class="brand-title lh-1 mb-1">Республики Крым</span>
+                    <span class="brand-subtitle lh-1 text-muted">Региональная Аналитическая Система</span>
                 </div>
             </a>
             <div class="d-flex align-items-center">

@@ -23,7 +23,7 @@
                     {% endif %}
                 </div>
                 {% if user.description %}
-                <p class="text-muted small mb-3 flex-grow-1" style="font-size: 0.85em;">{{ user.description }}</p>
+                <p class="text-muted small mb-3 flex-grow-1">{{ user.description }}</p>
                 {% else %}
                 <div class="flex-grow-1"></div>
                 {% endif %}
@@ -54,7 +54,7 @@
                         <form action="{{ url_for('admin.assign_access') }}" method="POST" class="mb-4">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="user_id" value="{{ user.id }}">
-                            <div class="border rounded p-2 mb-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                            <div class="border rounded p-2 mb-3 bg-light access-list-scrollable">
                                 {% for t in templates %}
                                 <div class="form-check mb-2 {% if not loop.last %}border-bottom pb-2{% endif %}">
                                     <input class="form-check-input" type="checkbox" name="template_ids" value="{{ t.id }}" {% if t in user.assigned_templates %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
