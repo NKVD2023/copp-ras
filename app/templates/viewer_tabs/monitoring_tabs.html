@@ -75,6 +75,7 @@
 
                 <div class="d-flex flex-column gap-2 mt-3 border-top pt-3">
                     <form action="{{ url_for('admin.toggle_publish', template_id=template.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit"
                             class="btn btn-sm {% if template.is_published %}btn-custom-danger{% else %}btn-custom-outline{% endif %} w-100 py-2">
                             <i
@@ -113,6 +114,7 @@
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('admin.assign_template_users', template_id=template.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="modal-header border-bottom-0 pt-4 px-4">
                         <h6 class="modal-title fw-bold text-dark m-0">Доступ к форме: {{ template.short_name }}</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -163,6 +165,7 @@
         <div class="modal-dialog">
             <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('admin.clone_template', template_id=template.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="modal-header border-bottom-0 pt-4 px-4">
                         <h6 class="modal-title fw-bold text-dark m-0">Запуск нового периода</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -196,6 +199,7 @@
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('admin.assign_template_users', template_id=template.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="modal-header border-bottom-0 pt-4 px-4">
                         <h6 class="modal-title fw-bold text-dark m-0">Доступ к форме: {{ template.short_name }}</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

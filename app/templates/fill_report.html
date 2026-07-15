@@ -21,6 +21,7 @@
         {% endif %}
 
         <form id="reportForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="tab-content">
                 {% for sheet in template.schema %}
                 <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="sheet-{{ loop.index }}"
@@ -60,6 +61,7 @@
     <div class="card-body">
         <h6 class="fw-bold mb-3">Мой профиль ({{ current_user.username }})</h6>
         <form action="{{ url_for('admin.change_my_password') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="mb-3">
                 <label class="form-label small text-muted">Новый пароль</label>
                 <input type="text" name="new_password" class="form-control" required autocomplete="off"
@@ -72,14 +74,76 @@
 
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 <script>
+    const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
+    const form = document.getElementById('reportForm');
+    
+    // Восстановление данных
+    document.addEventListener("DOMContentLoaded", () => {
+        {% if not is_locked %}
+        const savedDraft = localStorage.getItem(DRAFT_KEY);
+        if (savedDraft) {
+            try {
+                const data = JSON.parse(savedDraft);
+                let restored = false;
+                for (const [name, value] of Object.entries(data)) {
+                    // Игнорируем csrf_token
+                    if (name === 'csrf_token') continue;
+                    
+                    const field = form.elements[name];
+                    if (field) {
+                        // Только если поле пустое, подставляем черновик (чтобы не затереть то, что пришло из БД)
+                        if (!field.value || field.value === '') {
+                            field.value = value;
+                            restored = true;
+                        }
+                    }
+                }
+                
+                if (restored) {
+                    // Показываем уведомление
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-info py-2 small shadow-sm mb-4 border-info';
+                    alertDiv.innerHTML = '<i class="bi bi-info-circle-fill me-2"></i><strong>Восстановлены несохраненные данные</strong> из локального черновика вашего браузера.';
+                    form.parentNode.insertBefore(alertDiv, form);
+                }
+            } catch (e) {
+                console.error("Ошибка чтения черновика:", e);
+            }
+        }
+        
+        // Настройка сохранения при изменении
+        form.addEventListener('input', () => {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+        });
+        {% endif %}
+    });
+
     function submitFullForm() {
-        const form = document.getElementById('reportForm');
         if (!form.reportValidity()) {
             return;
         }
         
         const formData = new FormData(form);
-        fetch("{{ url_for('reports.fill_report', template_id=template.id) }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(formData.entries())) }).then(res => res.json()).then(res => { if (res.status === 'success') window.location.href = "/"; });
+        const dataObj = Object.fromEntries(formData.entries());
+        
+        fetch("{{ url_for('reports.fill_report', template_id=template.id) }}", { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' , 'X-CSRFToken': '{{ csrf_token() }}'}, 
+            body: JSON.stringify(dataObj) 
+        })
+        .then(res => res.json())
+        .then(res => { 
+            if (res.status === 'success') {
+                // Очищаем черновик после успешной отправки
+                localStorage.removeItem(DRAFT_KEY);
+                window.location.href = "/"; 
+            } else {
+                alert("Ошибка: " + res.message);
+            }
+        })
+        .catch(err => alert("Ошибка сети: " + err));
     }
 </script>
 {% endblock %}

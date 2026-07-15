@@ -148,6 +148,7 @@
                     <div class="col-md-6">
                         <p class="small text-muted mb-3">Восстановите базу данных из файла .db с вашего компьютера.</p>
                         <form action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center" onsubmit="return confirm('ВНИМАНИЕ! Текущая база данных будет полностью заменена загружаемой. Продолжить?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="file" name="backup_file" class="form-control form-control-sm me-2" accept=".db" required>
                             <input type="password" name="password" class="form-control form-control-sm me-2" placeholder="Ваш пароль" style="width: 150px;" required>
                             <button type="submit" class="btn btn-sm btn-copp text-nowrap">Восстановить</button>
@@ -262,12 +263,12 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Сохранение...';
             
-            fetch('/admin/db_update', {
+            fetch('/admin/db_update', { headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-User-Password': pwd
-                },
+                , 'X-CSRFToken': '{{ csrf_token() }}'},
                 body: JSON.stringify(updates)
             })
         .then(res => res.json())
@@ -351,9 +352,9 @@
             btn.disabled = true;
             btn.innerText = 'Создание...';
             
-            fetch('/admin/db/backup/create', { 
+            fetch('/admin/db/backup/create', { headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, 
                 method: 'POST',
-                headers: { 'X-User-Password': pwd }
+                headers: { 'X-User-Password': pwd , 'X-CSRFToken': '{{ csrf_token() }}'}
             })
         .then(res => res.json())
         .then(data => {
@@ -378,9 +379,9 @@
         if(!confirm(`ВНИМАНИЕ! Вы собираетесь восстановить базу данных из копии "${filename}". ТЕКУЩИЕ ДАННЫЕ БУДУТ УДАЛЕНЫ И ЗАМЕНЕНЫ. Продолжить?`)) return;
         
         withPassword(function(pwd) {
-            fetch(`/admin/db/backup/restore/${filename}`, { 
+            fetch(`/admin/db/backup/restore/${filename}`, { headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, 
                 method: 'POST',
-                headers: { 'X-User-Password': pwd }
+                headers: { 'X-User-Password': pwd , 'X-CSRFToken': '{{ csrf_token() }}'}
             })
         .then(res => res.json())
         .then(data => {
@@ -399,9 +400,9 @@
         if(!confirm(`Удалить резервную копию "${filename}"?`)) return;
         
         withPassword(function(pwd) {
-            fetch(`/admin/db/backup/delete/${filename}`, { 
+            fetch(`/admin/db/backup/delete/${filename}`, { headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, 
                 method: 'POST',
-                headers: { 'X-User-Password': pwd }
+                headers: { 'X-User-Password': pwd , 'X-CSRFToken': '{{ csrf_token() }}'}
             })
         .then(res => res.json())
         .then(data => {

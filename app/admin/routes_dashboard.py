@@ -22,7 +22,7 @@ def require_admin():
     if current_user.role == 'admin':
         return
         
-    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.toggle_publish', 'admin.clone_template', 'admin.assign_template_users']
+    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.edit_constructor', 'admin.toggle_publish', 'admin.clone_template', 'admin.assign_template_users', 'admin.import_excel_template']
     if current_user.role == 'viewer' and request.endpoint in allowed_for_viewer:
         return
         

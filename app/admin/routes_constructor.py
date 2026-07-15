@@ -85,28 +85,32 @@ def import_excel_template():
     создает черновой ReportTemplate и возвращает его ID.
     Пользователь затем будет перенаправлен в редактор.
     """
-    import openpyxl
-    import time
-    
-    file = request.files.get('file')
-    if not file or not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
-        return jsonify({'status': 'error', 'message': 'Пожалуйста, загрузите файл .xlsx или .xls'}), 400
-
     try:
+        import openpyxl
+        import time
+        
+        file = request.files.get('file')
+        if not file or not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+            return jsonify({'status': 'error', 'message': 'Пожалуйста, загрузите файл .xlsx или .xls'}), 400
+
         if file.filename.endswith('.xls'):
             import tempfile
             import os
             from xls2xlsx import XLS2XLSX
             
-            # Сохраняем загруженный файл во временный .xls
-            with tempfile.NamedTemporaryFile(suffix='.xls', delete=False) as tf_xls:
-                file.save(tf_xls.name)
-                temp_xls = tf_xls.name
+            # На Windows файл нужно закрыть перед тем, как file.save() попытается его открыть
+            tf_xls = tempfile.NamedTemporaryFile(suffix='.xls', delete=False)
+            tf_xls.close()
+            temp_xls = tf_xls.name
+            
+            file.save(temp_xls)
                 
             # Конвертируем .xls в .xlsx
             x2x = XLS2XLSX(temp_xls)
-            with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tf_xlsx:
-                temp_xlsx = tf_xlsx.name
+            
+            tf_xlsx = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
+            tf_xlsx.close()
+            temp_xlsx = tf_xlsx.name
                 
             x2x.to_xlsx(temp_xlsx)
             
@@ -118,127 +122,131 @@ def import_excel_template():
             os.remove(temp_xlsx)
         else:
             wb = openpyxl.load_workbook(file, data_only=True)
-            
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Ошибка при чтении Excel: {str(e)}'}), 400
 
-    schema = []
-    
-    for sheet_idx, sheet_name in enumerate(wb.sheetnames):
-        ws = wb[sheet_name]
-        fields = []
+        schema = []
         
-        # 1. Находим реальное количество колонок (max_col) в первых 30 строках
-        actual_max_col = 0
-        for r in range(1, min(ws.max_row + 1, 30)):
-            for c in range(1, ws.max_column + 1):
-                if ws.cell(row=r, column=c).value is not None:
-                    actual_max_col = max(actual_max_col, c)
-                    
-        if actual_max_col < 1:
-            continue
+        for sheet_idx, sheet_name in enumerate(wb.sheetnames):
+            ws = wb[sheet_name]
+            fields = []
             
-        # Detect header boundary
-        header_max_row = min(ws.max_row, 30)
-        for r in range(1, header_max_row + 1):
-            vals = [str(ws.cell(row=r, column=c).value).strip() for c in range(1, actual_max_col + 1) if ws.cell(row=r, column=c).value is not None]
-            if not vals: continue
-            
-            # Detect numbering row (e.g. 1, 2, 3...)
-            if len(vals) >= 3 and vals[0] == '1' and vals[1] == '2' and vals[2] == '3':
-                header_max_row = r
-                break
-            if len(vals) >= 2 and vals[0] == '1' and vals[1] == '2':
-                short_count = sum(1 for v in vals if len(v) <= 5)
-                if short_count / len(vals) > 0.5:
+            # 1. Находим реальное количество колонок (max_col) в первых 30 строках
+            actual_max_col = 0
+            for r in range(1, min((ws.max_row or 1) + 1, 30)):
+                for c in range(1, (ws.max_column or 1) + 1):
+                    if ws.cell(row=r, column=c).value is not None:
+                        actual_max_col = max(actual_max_col, c)
+                        
+            if actual_max_col < 1:
+                continue
+                
+            # Detect header boundary
+            header_max_row = min((ws.max_row or 1), 30)
+            for r in range(1, header_max_row + 1):
+                vals = [str(ws.cell(row=r, column=c).value).strip() for c in range(1, actual_max_col + 1) if ws.cell(row=r, column=c).value is not None]
+                if not vals: continue
+                
+                # Detect numbering row (e.g. 1, 2, 3...)
+                if len(vals) >= 3 and vals[0] == '1' and vals[1] == '2' and vals[2] == '3':
                     header_max_row = r
                     break
-            
-        def get_merge_info(r, c):
-            for merge_range in ws.merged_cells.ranges:
-                if merge_range.min_row <= r <= merge_range.max_row and \
-                   merge_range.min_col <= c <= merge_range.max_col:
-                    return {
-                        'val': ws.cell(row=merge_range.min_row, column=merge_range.min_col).value,
-                        'width': merge_range.max_col - merge_range.min_col + 1
-                    }
-            return {'val': ws.cell(row=r, column=c).value, 'width': 1}
+                if len(vals) >= 2 and vals[0] == '1' and vals[1] == '2':
+                    short_count = sum(1 for v in vals if len(v) <= 5)
+                    if short_count / len(vals) > 0.5:
+                        header_max_row = r
+                        break
+                
+            def get_merge_info(r, c):
+                for merge_range in ws.merged_cells.ranges:
+                    if merge_range.min_row <= r <= merge_range.max_row and \
+                       merge_range.min_col <= c <= merge_range.max_col:
+                        return {
+                            'val': ws.cell(row=merge_range.min_row, column=merge_range.min_col).value,
+                            'width': merge_range.max_col - merge_range.min_col + 1
+                        }
+                return {'val': ws.cell(row=r, column=c).value, 'width': 1}
 
-        # 2. Собираем составные заголовки
-        for col_idx in range(1, actual_max_col + 1):
-            parts = []
-            empty_count = 0
-            
-            for row_idx in range(1, header_max_row + 1):
-                info = get_merge_info(row_idx, col_idx)
-                val = info['val']
-                width = info['width']
+            # 2. Собираем составные заголовки
+            for col_idx in range(1, actual_max_col + 1):
+                parts = []
+                empty_count = 0
                 
-                v_str = str(val).strip().replace('\n', ' ') if val is not None else ""
+                for row_idx in range(1, header_max_row + 1):
+                    info = get_merge_info(row_idx, col_idx)
+                    val = info['val']
+                    width = info['width']
+                    
+                    v_str = str(val).strip().replace('\n', ' ') if val is not None else ""
+                    
+                    if v_str:
+                        empty_count = 0
+                        # Пропускаем глобальные заголовки (которые растянуты на бОльшую часть таблицы)
+                        if width > actual_max_col * 0.75 and width > 2:
+                            continue
+                        
+                        # Избегаем дублирования при вертикальном объединении ячеек
+                        if v_str not in parts:
+                            parts.append(v_str)
+                    else:
+                        empty_count += 1
+                        
+                    # Если 3 пустые ячейки подряд — считаем, что шапка закончилась
+                    if empty_count >= 3:
+                        break
+                        
+                label = " - ".join(parts)
                 
-                if v_str:
-                    empty_count = 0
-                    # Пропускаем глобальные заголовки (которые растянуты на бОльшую часть таблицы)
-                    if width > actual_max_col * 0.75 and width > 2:
+                if label:
+                    lower_label = label.lower()
+                    # Пропускаем служебные колонки
+                    if 'организация' in lower_label and len(label) < 30:
                         continue
+                    if lower_label in ['№', '№ п/п', 'n', 'п/п', '№ п\п', 'номер']:
+                        continue
+                        
+                    timestamp = str(int(time.time() * 1000))[-6:]
+                    field_name = f"s{sheet_idx}_c{col_idx}_{timestamp}"
                     
-                    # Избегаем дублирования при вертикальном объединении ячеек
-                    if v_str not in parts:
-                        parts.append(v_str)
-                else:
-                    empty_count += 1
+                    fields.append({
+                        'name': field_name,
+                        'label': label,
+                        'type': 'text',  # Всегда текст по умолчанию
+                        'required': False
+                    })
                     
-                # Если 3 пустые ячейки подряд — считаем, что шапка закончилась
-                if empty_count >= 3:
-                    break
-                    
-            label = " - ".join(parts)
-            
-            if label:
-                lower_label = label.lower()
-                # Пропускаем служебные колонки
-                if 'организация' in lower_label and len(label) < 30:
-                    continue
-                if lower_label in ['№', '№ п/п', 'n', 'п/п', '№ п\п', 'номер']:
-                    continue
-                    
-                timestamp = str(int(time.time() * 1000))[-6:]
-                field_name = f"s{sheet_idx}_c{col_idx}_{timestamp}"
-                
-                fields.append({
-                    'name': field_name,
-                    'label': label,
-                    'type': 'text',  # Всегда текст по умолчанию
-                    'required': False
+            # Добавляем лист только если на нем есть колонки
+            if fields:
+                schema.append({
+                    'sheet_title': sheet_name,
+                    'fields': fields
                 })
                 
-        # Добавляем лист только если на нем есть колонки
-        if fields:
-            schema.append({
-                'sheet_title': sheet_name,
-                'fields': fields
-            })
-            
-    wb.close()
-    
-    if not schema:
-        return jsonify({'status': 'error', 'message': 'Не удалось найти таблицы с заголовками в файле.'}), 400
+        wb.close()
         
-    # Создаем черновой шаблон
-    base_name = file.filename.rsplit('.', 1)[0]
-    
-    template = ReportTemplate(
-        name=base_name,
-        short_name=base_name[:30],
-        is_published=False,
-        schema=schema
-    )
-    db.session.add(template)
-    db.session.commit()
-    
-    log_action('Импорт структуры из Excel', f'Загружен шаблон из файла {file.filename}')
-    
-    return jsonify({
-        'status': 'success',
-        'template_id': template.id
-    })
+        if not schema:
+            return jsonify({'status': 'error', 'message': 'Не удалось найти таблицы с заголовками в файле.'}), 400
+            
+        # Создаем черновой шаблон
+        original_filename = file.filename or "Новый шаблон"
+        base_name = original_filename.rsplit('.', 1)[0] if '.' in original_filename else original_filename
+        if not base_name.strip():
+            base_name = "Новый шаблон"
+        
+        template = ReportTemplate(
+            name=base_name,
+            short_name=base_name[:30],
+            is_published=False,
+            schema=schema
+        )
+        db.session.add(template)
+        db.session.commit()
+        
+        log_action('Импорт структуры из Excel', f'Загружен шаблон из файла {file.filename}')
+        
+        return jsonify({
+            'status': 'success',
+            'template_id': template.id
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': f'Системная ошибка обработки файла: {str(e)}'}), 500

@@ -7,10 +7,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-    {% if config.ENABLE_CHARTS %}
-    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/html2canvas.min.js') }}"></script>
-    {% endif %}
+    <script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/html2pdf.bundle.min.js') }}"></script>
 
     <style>
         /* 1. Настраиваем тело страницы как Flex-контейнер на весь экран */
@@ -164,9 +162,7 @@
                 </button>
 
 
-                {% if config.ENABLE_CHARTS %}
-                <button onclick="openInfographics()" class="btn btn-sm btn-copp px-4 me-3">Аналитика данных</button>
-                {% endif %}
+                <button onclick="document.getElementById('tab-analytics').click()" class="btn btn-sm btn-copp px-4 me-3"><i class="bi bi-bar-chart-fill me-1"></i>Аналитика</button>
                 <a href="/" class="btn btn-sm btn-outline-secondary px-3">Вернуться</a>
             </div>
         </div>
@@ -186,6 +182,12 @@
                     sheet.sheet_title }}</button>
             </li>
             {% endfor %}
+            <li class="nav-item ms-auto">
+                <button class="nav-link bg-light text-dark fw-bold border" id="tab-analytics"
+                    data-bs-toggle="tab" data-bs-target="#panel-analytics" type="button" onclick="renderDashboards()">
+                    📊 Аналитика и PDF
+                </button>
+            </li>
         </ul>
 
         <div class="tab-content" id="dataSheetsTabsContent">
@@ -247,68 +249,170 @@
                 </div>
             </div>
             {% endfor %}
+            
+            <div class="tab-pane fade" id="panel-analytics" role="tabpanel">
+                <div class="p-4" style="overflow-y: auto; height: 100%; background: #f8f9fa;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold text-dark m-0">Аналитика и Дашборды</h4>
+                        <button class="btn btn-danger shadow-sm px-4" onclick="exportToPDF()">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Скачать презентацию (PDF)
+                        </button>
+                    </div>
+                    
+                    <div id="pdf-export-area" class="bg-white p-5 rounded border shadow-sm">
+                        <div class="text-center mb-5 pb-3 border-bottom">
+                            <h2 class="fw-bold text-primary-copp mb-2">{{ template.name }}</h2>
+                            <p class="text-muted fs-5">Аналитический отчет и инфографика</p>
+                        </div>
+                        
+                        <div class="row g-4" id="charts-container">
+                            <!-- Charts will be generated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
-    {% if config.ENABLE_CHARTS %}
-    <div class="modal fade" id="infoModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-bottom-0 pt-4 px-4">
-                    <h5 class="fw-bold text-dark m-0">Аналитическая выгрузка</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body px-4 bg-light" id="chartCaptureArea">
-                    <div class="bg-white p-4 rounded border shadow-sm text-center">
-                        <h5 class="fw-bold text-primary-copp mb-1">{{ template.short_name }}</h5>
-                        <p class="text-muted small mb-4">Сводные показатели</p>
-                        <canvas id="mainChart" height="100"></canvas>
-                    </div>
-                </div>
-                <div class="modal-footer border-top-0 pb-4 px-4">
-                    <button onclick="downloadInfographic()" class="btn btn-dark px-4 py-2">Скачать как изображение
-                        (.png)</button>
-                </div>
-            </div>
-        </div>
-    </div>
     <script>
-        let myChart = null;
-        function openInfographics() {
-            const labels = []; const data = [];
-            const activeTabPane = document.querySelector('.tab-pane.active');
-            if (!activeTabPane) return;
-
-            const footers = activeTabPane.querySelectorAll('tfoot td.text-primary-copp');
-            const headers = activeTabPane.querySelectorAll('thead th');
-
-            footers.forEach((td, index) => {
-                const val = parseFloat(td.innerText);
-                if (!isNaN(val) && val > 0) {
-                    let labelText = headers[index + 1].innerText;
-                    if (labelText.length > 40) labelText = labelText.substring(0, 40) + '...';
-                    labels.push(labelText); data.push(val);
+        let chartsRendered = false;
+        
+        function renderDashboards() {
+            if (chartsRendered) return;
+            
+            const container = document.getElementById('charts-container');
+            container.innerHTML = ''; // Clear previous
+            
+            const panels = document.querySelectorAll('.tab-pane[id^="panel-"]');
+            let chartIdCounter = 0;
+            
+            panels.forEach((panel) => {
+                if(panel.id === 'panel-analytics') return;
+                
+                const tabBtn = document.querySelector(`button[data-bs-target="#${panel.id}"]`);
+                const sheetName = tabBtn ? tabBtn.innerText.replace('Лист: ', '') : '';
+                const headers = Array.from(panel.querySelectorAll('thead th')).map(th => th.innerText.trim());
+                const rows = Array.from(panel.querySelectorAll('tbody tr'));
+                
+                if (rows.length === 0 || rows[0].innerText.includes('Нет привязанных')) return;
+                
+                const footers = Array.from(panel.querySelectorAll('tfoot td'));
+                
+                for (let i = 1; i < headers.length; i++) {
+                    const footerVal = footers[i] ? footers[i].innerText.trim() : '-';
+                    // Build chart if it's a numeric column with sum > 0
+                    if (footerVal !== '-' && !isNaN(parseFloat(footerVal)) && parseFloat(footerVal) > 0) {
+                        const chartTitle = headers[i];
+                        const labels = [];
+                        const data = [];
+                        
+                        rows.forEach(row => {
+                            const cells = row.querySelectorAll('td');
+                            if (cells.length > i) {
+                                const orgName = cells[0].innerText.trim();
+                                const val = parseFloat(cells[i].innerText.trim());
+                                if (!isNaN(val) && val > 0) {
+                                    labels.push(orgName.substring(0, 30) + (orgName.length > 30 ? '...' : ''));
+                                    data.push(val);
+                                }
+                            }
+                        });
+                        
+                        if (data.length > 0) {
+                            chartIdCounter++;
+                            
+                            const colDiv = document.createElement('div');
+                            colDiv.className = 'col-md-6 mb-4';
+                            
+                            const cardDiv = document.createElement('div');
+                            cardDiv.className = 'card h-100 border-0 shadow-sm bg-light';
+                            cardDiv.style.pageBreakInside = 'avoid';
+                            
+                            const cardBody = document.createElement('div');
+                            cardBody.className = 'card-body p-4';
+                            
+                            const titleEl = document.createElement('h6');
+                            titleEl.className = 'card-title fw-bold text-center text-dark mb-4';
+                            titleEl.innerText = sheetName + ' — ' + chartTitle;
+                            
+                            const canvasWrapper = document.createElement('div');
+                            canvasWrapper.style.position = 'relative';
+                            canvasWrapper.style.height = '300px';
+                            
+                            const canvas = document.createElement('canvas');
+                            canvas.id = `chart-${chartIdCounter}`;
+                            
+                            canvasWrapper.appendChild(canvas);
+                            cardBody.appendChild(titleEl);
+                            cardBody.appendChild(canvasWrapper);
+                            cardDiv.appendChild(cardBody);
+                            colDiv.appendChild(cardDiv);
+                            container.appendChild(colDiv);
+                            
+                            const ctx = canvas.getContext('2d');
+                            new Chart(ctx, {
+                                type: chartIdCounter % 2 === 0 ? 'pie' : 'bar',
+                                data: {
+                                    labels: labels,
+                                    datasets: [{
+                                        label: 'Значение',
+                                        data: data,
+                                        backgroundColor: [
+                                            '#003366', '#005b9f', '#0083d6', '#33a1fd', '#66b8fd',
+                                            '#198754', '#20c997', '#ffc107', '#fd7e14', '#dc3545',
+                                            '#6f42c1', '#d63384', '#0dcaf0', '#adb5bd'
+                                        ],
+                                        borderRadius: chartIdCounter % 2 === 0 ? 0 : 4
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            display: chartIdCounter % 2 === 0,
+                                            position: 'right'
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
                 }
             });
-            if (labels.length === 0) return alert("Нет числовых данных для графика на этом листе.");
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            if (myChart) myChart.destroy();
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Показатели', data: data, backgroundColor: '#0d47a1', borderRadius: 4 }] },
-                options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
-            });
-            new bootstrap.Modal(document.getElementById('infoModal')).show();
+            
+            if (chartIdCounter === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted py-5">Нет числовых данных для построения графиков. Заполните хотя бы один числовой столбец (он должен считаться в строке Итого).</div>';
+            }
+            
+            chartsRendered = true;
         }
-        function downloadInfographic() {
-            html2canvas(document.getElementById('chartCaptureArea'), { scale: 2 }).then(canvas => {
-                const link = document.createElement('a'); link.download = 'Chart.png'; link.href = canvas.toDataURL('image/png'); link.click();
+        
+        function exportToPDF() {
+            const element = document.getElementById('pdf-export-area');
+            const opt = {
+                margin:       10,
+                filename:     `Отчет_Аналитика.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+            
+            // Temporary styles for clean PDF export
+            element.classList.remove('shadow-sm');
+            element.classList.remove('border');
+            document.body.style.cursor = 'wait';
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.add('shadow-sm');
+                element.classList.add('border');
+                document.body.style.cursor = 'default';
             });
         }
     </script>
-    {% endif %}
 
     <script>
         function saveAllChanges() {
@@ -348,11 +452,11 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Сохранение...';
             
-            fetch('/inline_update/{{ template.id }}', {
+            fetch('/inline_update/{{ template.id }}', { headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                },
+                , 'X-CSRFToken': '{{ csrf_token() }}'},
                 body: JSON.stringify(updates)
             })
             .then(res => res.json())

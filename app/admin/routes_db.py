@@ -30,6 +30,12 @@ def db_update():
         'ReportSubmission': ReportSubmission
     }
     
+    ALLOWED_UPDATE_FIELDS = {
+        'User': ['username', 'description'],
+        'ReportTemplate': ['name', 'short_name', 'period', 'deadline', 'is_published'],
+        'ReportSubmission': ['data']
+    }
+    
     for item in updates:
         model_name = item.get('model')
         row_id = item.get('id')
@@ -38,6 +44,10 @@ def db_update():
         
         if not all([model_name, row_id, field]):
             continue
+            
+        # Защита от изменения критических полей
+        if model_name not in ALLOWED_UPDATE_FIELDS or field not in ALLOWED_UPDATE_FIELDS[model_name]:
+            return jsonify({'status': 'error', 'message': f'Поле {field} запрещено для изменения напрямую'}), 403
             
         ModelClass = model_map.get(model_name)
         if not ModelClass:
@@ -164,6 +174,13 @@ def upload_backup():
     file = request.files.get('backup_file')
     if not file or not file.filename.endswith('.db'):
         flash('Неверный формат файла. Требуется .db')
+        return redirect(url_for('admin.dashboard') + '#databaseTab')
+        
+    # Проверка сигнатуры SQLite файла (защита от загрузки вредоносных файлов)
+    header = file.read(16)
+    file.seek(0)
+    if header != b'SQLite format 3\000':
+        flash('Неверный формат файла. Это не база данных SQLite.')
         return redirect(url_for('admin.dashboard') + '#databaseTab')
         
     db_path = os.path.join(basedir, 'reports.db')

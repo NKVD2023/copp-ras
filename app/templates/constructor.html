@@ -134,6 +134,15 @@
         renderStructure();
     }
 
+    function updateSheetTitle(sIdx, newTitle) {
+        if (!newTitle.trim()) {
+            alert("Название листа не может быть пустым!");
+            renderStructure();
+            return;
+        }
+        reportStructure[sIdx].sheet_title = newTitle.trim();
+    }
+
     function updateFieldLabel(sIdx, fIdx, newLabel) {
         if (!newLabel.trim()) {
             alert("Заголовок не может быть пустым!");
@@ -141,6 +150,10 @@
             return;
         }
         reportStructure[sIdx].fields[fIdx].label = newLabel.trim();
+    }
+
+    function updateFieldType(sIdx, fIdx, newType) {
+        reportStructure[sIdx].fields[fIdx].type = newType;
     }
 
     function removeField(sIdx, fIdx) { 
@@ -157,7 +170,13 @@
 
         container.innerHTML = reportStructure.map((sheet, sIdx) => `
             <div class="card mb-4 border-primary-subtle shadow-sm">
-                <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3"><span class="fw-bold text-primary-copp">Лист: ${sheet.sheet_title}</span><button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0">Удалить лист</button></div>
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+                    <div class="d-flex align-items-center flex-grow-1 me-3">
+                        <span class="fw-bold text-primary-copp me-2">Лист:</span>
+                        <input type="text" class="form-control form-control-sm fw-bold text-primary-copp border-0 bg-light" value="${sheet.sheet_title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}" onchange="updateSheetTitle(${sIdx}, this.value)" style="max-width: 400px;">
+                    </div>
+                    <button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0">Удалить лист</button>
+                </div>
                 <div class="card-body">
                     <div class="mb-4">
                         ${sheet.fields.map((f, fIdx) => `
@@ -167,7 +186,11 @@
                                     <textarea class="form-control form-control-sm" rows="2" onchange="updateFieldLabel(${sIdx}, ${fIdx}, this.value)" style="background: #f8f9fa; border: 1px solid #dee2e6; resize: vertical; min-height: 40px;">${f.label.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                     ${f.required ? '<span class="text-danger ms-2 fw-bold" title="Обязательное поле">*</span>' : ''}
                                 </div>
-                                <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex align-items-center gap-3 ms-2">
+                                    <select class="form-select form-select-sm" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)" style="width: 110px;">
+                                        <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текстовое</option>
+                                        <option value="number" ${f.type === 'number' ? 'selected' : ''}>Числовое</option>
+                                    </select>
                                     <span class="badge bg-light border text-muted font-monospace" style="min-width: 90px; text-align: center;">${f.name}</span>
                                     <button onclick="removeField(${sIdx}, ${fIdx})" class="btn btn-sm btn-link text-danger p-0 text-decoration-none fw-bold">Удалить</button>
                                 </div>
@@ -199,9 +222,9 @@
         const editTemplateId = {% if template %}{{ template.id }}{% else %}null{% endif %};
         const fetchUrl = editTemplateId ? `/admin/edit_constructor/${editTemplateId}` : "{{ url_for('admin.constructor') }}";
 
-        fetch(fetchUrl, { 
+        fetch(fetchUrl, { headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, 
             method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
+            headers: { 'Content-Type': 'application/json' , 'X-CSRFToken': '{{ csrf_token() }}'}, 
             body: JSON.stringify({ name, short_name: shortName, period, deadline, schema: reportStructure, user_ids: userIds }) 
         })
         .then(res => res.json())
