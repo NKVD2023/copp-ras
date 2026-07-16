@@ -1,3 +1,8 @@
+"""
+Модуль администратора: Конструктор отчетов (Admin - Constructor).
+Содержит логику создания и редактирования структуры шаблонов отчетов,
+а также функционал импорта структуры из загруженного Excel-файла.
+"""
 from flask import render_template, request, redirect, url_for, jsonify
 from flask_login import login_required
 from datetime import datetime
@@ -12,7 +17,12 @@ from app.utils import log_action
 
 @admin_bp.route('/constructor', methods=['GET', 'POST'])
 def constructor():
-    """Создание абсолютно нового отчета с нуля."""
+    """
+    Маршрут создания абсолютно нового шаблона отчета с нуля.
+    GET: Отдает пустую HTML-страницу конструктора.
+    POST: Принимает JSON со структурой отчета (название, дедлайн, структура полей `schema`)
+          и сохраняет новый шаблон в базу данных.
+    """
     if request.method == 'POST':
         data = request.get_json()
         deadline_str = data.get('deadline')
@@ -28,7 +38,7 @@ def constructor():
         )
         db.session.add(template)
         
-        # Назначаем пользователей, выбранных в галочках
+        # Назначаем пользователей, выбранных галочками на фронтенде
         for u_id in data.get('user_ids', []):
             user = User.query.get(u_id)
             if user:
@@ -46,8 +56,9 @@ def constructor():
 @login_required
 def edit_constructor(template_id):
     """
-    Редактирование существующего отчета. 
-    Перезаписывает старые данные новыми из конструктора.
+    Маршрут редактирования существующего шаблона отчета. 
+    GET: Загружает форму конструктора, предварительно заполнив её старой `schema`.
+    POST: Принимает обновленный JSON и перезаписывает старые данные.
     """
     template = ReportTemplate.query.get_or_404(template_id)
     
@@ -62,7 +73,7 @@ def edit_constructor(template_id):
         template.deadline = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
         template.schema = data['schema']
         
-        # Полностью пересобираем список назначенных пользователей
+        # Полностью пересобираем список назначенных пользователей (удаляем старые, добавляем новые)
         template.assigned_users = []
         for u_id in data.get('user_ids', []):
             user = User.query.get(u_id)
@@ -81,9 +92,11 @@ def edit_constructor(template_id):
 @login_required
 def import_excel_template():
     """
-    Принимает Excel файл, парсит листы и первую строку,
-    создает черновой ReportTemplate и возвращает его ID.
-    Пользователь затем будет перенаправлен в редактор.
+    Маршрут умного парсинга Excel файлов.
+    Принимает Excel файл, сканирует его листы, находит шапку таблицы,
+    вычленяет столбцы (учитывая горизонтальное и вертикальное объединение ячеек),
+    создает черновой ReportTemplate (шаблон) и возвращает его ID на клиент.
+    Затем фронтенд перенаправляет пользователя в редактор для тонкой настройки.
     """
     try:
         import openpyxl
@@ -93,6 +106,7 @@ def import_excel_template():
         if not file or not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
             return jsonify({'status': 'error', 'message': 'Пожалуйста, загрузите файл .xlsx или .xls'}), 400
 
+        # Обработка старого формата .xls (конвертация в .xlsx через xls2xlsx)
         if file.filename.endswith('.xls'):
             import tempfile
             import os
@@ -114,13 +128,14 @@ def import_excel_template():
                 
             x2x.to_xlsx(temp_xlsx)
             
-            # Загружаем сконвертированный файл
+            # Загружаем сконвертированный файл (data_only=True позволяет считывать значения вместо формул)
             wb = openpyxl.load_workbook(temp_xlsx, data_only=True)
             
             # Подчищаем временные файлы
             os.remove(temp_xls)
             os.remove(temp_xlsx)
         else:
+            # Загружаем обычный .xlsx
             wb = openpyxl.load_workbook(file, data_only=True)
 
         schema = []
@@ -129,7 +144,7 @@ def import_excel_template():
             ws = wb[sheet_name]
             fields = []
             
-            # 1. Находим реальное количество колонок (max_col) в первых 30 строках
+            # ШАГ 1: Находим реальное количество колонок (max_col), игнорируя полностью пустые крайние столбцы
             actual_max_col = 0
             for r in range(1, min((ws.max_row or 1) + 1, 30)):
                 for c in range(1, (ws.max_column or 1) + 1):
@@ -139,16 +154,17 @@ def import_excel_template():
             if actual_max_col < 1:
                 continue
                 
-            # Detect header boundary
+            # ЭВРИСТИКА: Пытаемся автоматически определить, где заканчивается шапка таблицы.
             header_max_row = min((ws.max_row or 1), 30)
             for r in range(1, header_max_row + 1):
                 vals = [str(ws.cell(row=r, column=c).value).strip() for c in range(1, actual_max_col + 1) if ws.cell(row=r, column=c).value is not None]
                 if not vals: continue
                 
-                # Detect numbering row (e.g. 1, 2, 3...)
+                # Ищем строку с нумерацией (типа 1, 2, 3...) - это явный признак конца шапки
                 if len(vals) >= 3 and vals[0] == '1' and vals[1] == '2' and vals[2] == '3':
                     header_max_row = r
                     break
+                # Или если строка содержит короткие цифры (альтернативная нумерация)
                 if len(vals) >= 2 and vals[0] == '1' and vals[1] == '2':
                     short_count = sum(1 for v in vals if len(v) <= 5)
                     if short_count / len(vals) > 0.5:
@@ -156,6 +172,7 @@ def import_excel_template():
                         break
                 
             def get_merge_info(r, c):
+                """Вспомогательная функция для корректного чтения объединенных (Merged) ячеек"""
                 for merge_range in ws.merged_cells.ranges:
                     if merge_range.min_row <= r <= merge_range.max_row and \
                        merge_range.min_col <= c <= merge_range.max_col:
@@ -165,7 +182,7 @@ def import_excel_template():
                         }
                 return {'val': ws.cell(row=r, column=c).value, 'width': 1}
 
-            # 2. Собираем составные заголовки
+            # ШАГ 2: Собираем составные заголовки, проходясь по столбцам сверху вниз до конца шапки
             for col_idx in range(1, actual_max_col + 1):
                 parts = []
                 empty_count = 0
@@ -179,41 +196,43 @@ def import_excel_template():
                     
                     if v_str:
                         empty_count = 0
-                        # Пропускаем глобальные заголовки (которые растянуты на бОльшую часть таблицы)
+                        # Пропускаем глобальные "над-заголовки" (которые растянуты на бОльшую часть таблицы)
                         if width > actual_max_col * 0.75 and width > 2:
                             continue
                         
-                        # Избегаем дублирования при вертикальном объединении ячеек
+                        # Избегаем дублирования текста при вертикальном объединении ячеек
                         if v_str not in parts:
                             parts.append(v_str)
                     else:
                         empty_count += 1
                         
-                    # Если 3 пустые ячейки подряд — считаем, что шапка закончилась
+                    # Если 3 пустые ячейки подряд — считаем, что шапка над этим столбцом закончилась
                     if empty_count >= 3:
                         break
                         
+                # Склеиваем найденные части заголовка через дефис
                 label = " - ".join(parts)
                 
                 if label:
                     lower_label = label.lower()
-                    # Пропускаем служебные колонки
+                    # Игнорируем служебные колонки
                     if 'организация' in lower_label and len(label) < 30:
                         continue
                     if lower_label in ['№', '№ п/п', 'n', 'п/п', '№ п\п', 'номер']:
                         continue
                         
+                    # Генерируем уникальный внутренний ID поля для JSON
                     timestamp = str(int(time.time() * 1000))[-6:]
                     field_name = f"s{sheet_idx}_c{col_idx}_{timestamp}"
                     
                     fields.append({
                         'name': field_name,
                         'label': label,
-                        'type': 'text',  # Всегда текст по умолчанию
+                        'type': 'text',  # Все поля при импорте по умолчанию текстовые
                         'required': False
                     })
                     
-            # Добавляем лист только если на нем есть колонки
+            # Добавляем лист в структуру отчета только если на нем есть распознанные колонки
             if fields:
                 schema.append({
                     'sheet_title': sheet_name,
@@ -225,7 +244,7 @@ def import_excel_template():
         if not schema:
             return jsonify({'status': 'error', 'message': 'Не удалось найти таблицы с заголовками в файле.'}), 400
             
-        # Создаем черновой шаблон
+        # ШАГ 3: Создаем черновой шаблон в БД
         original_filename = file.filename or "Новый шаблон"
         base_name = original_filename.rsplit('.', 1)[0] if '.' in original_filename else original_filename
         if not base_name.strip():
@@ -242,6 +261,7 @@ def import_excel_template():
         
         log_action('Импорт структуры из Excel', f'Загружен шаблон из файла {file.filename}')
         
+        # Возвращаем ID шаблона на клиент для последующего перенаправления в редактор
         return jsonify({
             'status': 'success',
             'template_id': template.id

@@ -1,3 +1,8 @@
+"""
+Модуль администратора: Управление Пользователями (Admin - Users).
+Содержит логику создания, удаления пользователей, принудительного сброса паролей
+и массового назначения отчетов конкретному пользователю.
+"""
 from flask import request, redirect, url_for, flash
 from flask_login import current_user
 from app import db
@@ -11,7 +16,11 @@ from app.utils import log_action
 
 @admin_bp.route('/create_user', methods=['POST'])
 def create_user():
-    """Создание нового пользователя (учреждения) или наблюдателя."""
+    """
+    Создание нового аккаунта. 
+    Роль по умолчанию: 'user' (учреждение, сдающее отчет).
+    Также может создавать роль 'viewer' (наблюдатель - только чтение).
+    """
     username = request.form.get('username').strip()
     password = request.form.get('password')
     role = request.form.get('role', 'user')
@@ -30,8 +39,12 @@ def create_user():
 
 @admin_bp.route('/delete_user/<int:user_id>', methods=['POST'])
 def delete_user(user_id):
-    """Удаление пользователя и всех его сданных отчетов."""
+    """
+    Удаление пользователя и каскадное удаление всех его сданных отчетов.
+    Вызывается из вкладки "Пользователи".
+    """
     user = User.query.get_or_404(user_id)
+    # Очищаем связанные данные, чтобы не сломать внешние ключи
     ReportSubmission.query.filter_by(user_id=user.id).delete()
     username = user.username
     db.session.delete(user)
@@ -41,7 +54,7 @@ def delete_user(user_id):
 
 @admin_bp.route('/reset_password/<int:user_id>', methods=['POST'])
 def reset_password(user_id):
-    """Принудительный сброс пароля пользователя администратором."""
+    """Принудительный сброс пароля пользователя администратором (если тот забыл)."""
     user = User.query.get_or_404(user_id)
     user.set_password(request.form.get('new_password'))
     db.session.commit()
@@ -50,20 +63,25 @@ def reset_password(user_id):
 
 @admin_bp.route('/change_my_password', methods=['POST'])
 def change_my_password():
-    """Смена собственного пароля (через профиль)."""
+    """Смена собственного пароля (вызывается через модальное окно профиля)."""
     new_password = request.form.get('new_password')
     if new_password:
         current_user.set_password(new_password)
         db.session.commit()
         log_action('Смена пароля', f'Пользователь {current_user.username} сменил свой пароль')
+    # request.referrer позволяет вернуть пользователя на ту страницу, где он был
     return redirect(request.referrer or url_for('admin.dashboard'))
 
 @admin_bp.route('/assign_access', methods=['POST'])
 def assign_access():
-    """Назначение доступов к отчетам для конкретного пользователя (из вкладки Пользователи)."""
+    """
+    Массовое назначение шаблонов отчетов конкретному пользователю.
+    Вызывается из профиля пользователя во вкладке "Пользователи".
+    """
     user = User.query.get_or_404(request.form.get('user_id'))
-    user.assigned_templates = []
+    user.assigned_templates = [] # Очищаем старые доступы
     
+    # Назначаем новые на основе отмеченных чекбоксов
     for t_id in request.form.getlist('template_ids'):
         template = ReportTemplate.query.get(t_id)
         if template:
@@ -71,5 +89,5 @@ def assign_access():
             
     db.session.commit()
     log_action('Назначение доступа', f'Обновлены доступы к отчетам для пользователя {user.username}')
-    # Возвращаемся на вкладку с пользователями
+    # Возвращаемся на вкладку с пользователями с якорем
     return redirect(url_for('admin.dashboard') + '#usersTab')

@@ -1,3 +1,9 @@
+"""
+Модуль администратора: Управление Готовыми Шаблонами (Admin - Templates).
+Включает в себя логику публикации шаблонов, назначения исполнителей,
+клонирования отчетов на новый период, редактирования метаданных и удаления.
+Также содержит логику экспорта списка должников в Excel.
+"""
 from flask import request, redirect, url_for, send_file
 from flask_login import login_required, current_user
 import openpyxl
@@ -14,9 +20,12 @@ from app.utils import log_action
 
 @admin_bp.route('/assign_template_users/<int:template_id>', methods=['POST'])
 def assign_template_users(template_id):
-    """Назначение прав: кто из учреждений должен сдавать этот отчет."""
+    """
+    Назначение прав доступа: какие учреждения (пользователи) должны сдавать этот отчет.
+    Получает массив `user_ids` из формы (список галочек).
+    """
     template = ReportTemplate.query.get_or_404(template_id)
-    template.assigned_users = [] # Очищаем старые доступы
+    template.assigned_users = [] # Очищаем старые доступы перед добавлением новых
     
     for u_id in request.form.getlist('user_ids'):
         user = User.query.get(u_id)
@@ -29,7 +38,10 @@ def assign_template_users(template_id):
 
 @admin_bp.route('/toggle_publish/<int:template_id>', methods=['POST'])
 def toggle_publish(template_id):
-    """Переключение статуса (Черновик <-> Опубликовано)."""
+    """
+    Переключение статуса видимости отчета для пользователей (Черновик <-> Опубликовано).
+    Пока отчет не опубликован, пользователи его не увидят на своем дашборде.
+    """
     template = ReportTemplate.query.get_or_404(template_id)
     template.is_published = not template.is_published
     db.session.commit()
@@ -39,7 +51,10 @@ def toggle_publish(template_id):
 
 @admin_bp.route('/clone_template/<int:template_id>', methods=['POST'])
 def clone_template(template_id):
-    """Копирование структуры старого отчета в новый период."""
+    """
+    Копирование структуры старого отчета в новый период.
+    Берет `schema` от старого отчета и создает новый объект ReportTemplate.
+    """
     original = ReportTemplate.query.get_or_404(template_id)
     deadline_str = request.form.get('new_deadline')
     deadline_date = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
@@ -49,7 +64,7 @@ def clone_template(template_id):
         short_name=request.form.get('new_short_name'),
         period=request.form.get('new_period'),
         deadline=deadline_date,
-        is_published=False,
+        is_published=False,  # Новые копии по умолчанию являются черновиками
         schema=original.schema
     )
     db.session.add(new_template)
@@ -60,13 +75,17 @@ def clone_template(template_id):
 @admin_bp.route('/delete_template/<int:template_id>', methods=['POST'])
 @login_required
 def delete_template(template_id):
-    """Полное удаление отчета (доступно только Admin)."""
+    """
+    Полное удаление отчета из системы вместе со всеми ответами пользователей.
+    Доступно исключительно администратору.
+    """
     if current_user.role != 'admin':
         return "Доступ запрещен", 403
         
     template = ReportTemplate.query.get_or_404(template_id)
     
-    # Очищаем связанные ответы, чтобы не было конфликтов БД
+    # Каскадно очищаем связанные ответы пользователей (Submissions),
+    # чтобы не было конфликтов внешних ключей (Foreign Key Constraints) БД
     ReportSubmission.query.filter_by(template_id=template_id).delete()
     name = template.short_name
     db.session.delete(template)
@@ -76,7 +95,10 @@ def delete_template(template_id):
 
 @admin_bp.route('/edit_template_meta/<int:template_id>', methods=['POST'])
 def edit_template_meta(template_id):
-    """Быстрое редактирование названий и сроков отчета через модальное окно."""
+    """
+    Быстрое редактирование текстовой информации (метаданных) отчета
+    через модальное окно на вкладке отчетов (без захода в конструктор).
+    """
     template = ReportTemplate.query.get_or_404(template_id)
     
     template.short_name = request.form.get('short_name')
@@ -88,16 +110,23 @@ def edit_template_meta(template_id):
     
     db.session.commit()
     log_action('Редактирование отчета', f'Изменены метаданные отчета {template.short_name}')
-    # Возвращаемся обратно на вкладку отчетов
+    # Возвращаемся обратно на вкладку отчетов с якорем
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
 @admin_bp.route('/export_debtors/<int:template_id>', methods=['GET'])
 def export_debtors(template_id):
-    """Экспорт списка должников в Excel."""
+    """
+    Формирует и отдает Excel файл (.xlsx) со списком учреждений (должников),
+    которые еще не сдали отчет по конкретному шаблону.
+    """
     template = ReportTemplate.query.get_or_404(template_id)
+    
+    # Ищем тех, кто уже сдал
     submitted_user_ids = [sub.user_id for sub in ReportSubmission.query.filter_by(template_id=template.id).all()]
+    # Вычитаем сдавших из всех назначенных
     debtors = [u for u in template.assigned_users if u.id not in submitted_user_ids]
 
+    # Генерируем Excel-файл в оперативной памяти (BytesIO)
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Должники"

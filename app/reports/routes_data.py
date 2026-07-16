@@ -1,3 +1,10 @@
+"""
+Модуль отчетов: Просмотр и Экспорт данных (Reports - Data).
+Предоставляет функционал для администраторов:
+- Просмотр сводной HTML-таблицы (все ответы учреждений по одному отчету).
+- Встроенное (inline) редактирование ответов прямо в браузере.
+- Экспорт всех заполненных данных в сводный Excel файл (.xlsx) с форматированием.
+"""
 from flask import render_template, send_file, request, jsonify
 from flask_login import login_required, current_user
 from io import BytesIO
@@ -17,15 +24,20 @@ from app.utils import log_action
 @reports_bp.route('/view_data/<int:template_id>')
 @login_required
 def view_data(template_id):
-    """Просмотр сводных данных по отчету прямо в браузере (HTML таблица)."""
+    """
+    Просмотр сводных данных по отчету прямо в браузере (HTML таблица).
+    Каждый лист шаблона отображается отдельной вкладкой, столбцы - это поля, 
+    строки - это ответившие учреждения.
+    """
     if current_user.role not in ['admin', 'viewer']:
         return "Доступ ограничен", 403
         
     template = ReportTemplate.query.get_or_404(template_id)
     
+    # Получаем все сданные ответы по данному шаблону
     submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
     
-    # Сортируем по имени организации для удобства
+    # Сортируем по имени организации для удобства поиска
     submissions.sort(key=lambda x: x.user.username.lower())
         
     return render_template('report_data_view.html', template=template, submissions=submissions)
@@ -33,7 +45,10 @@ def view_data(template_id):
 @reports_bp.route('/inline_update/<int:template_id>', methods=['POST'])
 @login_required
 def inline_update(template_id):
-    """Сохранение изменений напрямую из сводной таблицы."""
+    """
+    Сохранение изменений напрямую из сводной таблицы (inline editing).
+    Принимает JSON с изменениями (список словарей или один словарь) и обновляет поле `data`.
+    """
     if current_user.role not in ['admin', 'viewer']:
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         
@@ -56,7 +71,8 @@ def inline_update(template_id):
             submission = ReportSubmission(template_id=template.id, user_id=user_id, data={})
             db.session.add(submission)
             
-        # Для SQLite JSON поля необходимо присваивать новый объект словаря
+        # ВАЖНО: Для корректного обнаружения изменений в JSON/JSONB колонках SQLAlchemy
+        # необходимо создать новую копию словаря `data`, изменить её и присвоить обратно.
         data_copy = submission.data.copy() if submission.data else {}
         data_copy[field_name] = value
         submission.data = data_copy
@@ -70,8 +86,10 @@ def inline_update(template_id):
 @login_required
 def export_excel(template_id):
     """
-    Генерация Excel-файла (.xlsx) со всеми ответами учреждений.
-    Применяет форматирование, стили шапки, автоширину колонок и подсчет 'Итого'.
+    Генерация Excel-файла (.xlsx) со всеми ответами учреждений по выбранному шаблону.
+    - Динамически создает листы (по вкладкам шаблона).
+    - Применяет визуальное форматирование: стили шапки, границы, автоширину колонок.
+    - Автоматически подсчитывает строку "Итого" для всех числовых полей.
     """
     if current_user.role not in ['admin', 'viewer']:
         return "Доступ ограничен", 403
@@ -80,15 +98,15 @@ def export_excel(template_id):
     submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
 
     wb = openpyxl.Workbook()
-    wb.remove(wb.active)
+    wb.remove(wb.active) # Удаляем стандартный пустой лист 'Sheet'
 
     # --- НАСТРОЙКИ СТИЛЕЙ EXCEL ---
     title_font = Font(name='Arial', size=14, bold=True, color="000000")
     header_font = Font(name='Arial', size=11, bold=True, color="FFFFFF")
-    header_fill = PatternFill("solid", fgColor="0071DC")
+    header_fill = PatternFill("solid", fgColor="0071DC") # Синяя заливка
     data_font = Font(name='Arial', size=11)
     total_font = Font(name='Arial', size=11, bold=True)
-    total_fill = PatternFill("solid", fgColor="F8F9FA")
+    total_fill = PatternFill("solid", fgColor="F8F9FA") # Светло-серая заливка
     
     thin_border = Border(
         left=Side(style='thin', color='BFBFBF'),
@@ -102,12 +120,14 @@ def export_excel(template_id):
 
     # --- ГЕНЕРАЦИЯ ЛИСТОВ ---
     for sheet_data in template.schema:
+        # Excel не поддерживает спецсимволы в названиях листов и ограничивает длину 31 символом
         safe_title = re.sub(r'[\\*?:/\[\]]', '', sheet_data['sheet_title'])[:31]
         ws = wb.create_sheet(title=safe_title)
 
+        # Количество колонок = Организация (1) + Количество полей
         max_col = len(sheet_data['fields']) + 1
 
-        # 1. ЗАГОЛОВОК
+        # 1. ЗАГОЛОВОК ОТЧЕТА (Объединенная ячейка на самом верху)
         title_cell = ws.cell(row=1, column=1, value=template.name)
         title_cell.font = title_font
         title_cell.alignment = align_center
@@ -118,16 +138,18 @@ def export_excel(template_id):
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
         ws.row_dimensions[1].height = 100 
 
-        # 2. ШАПКА ТАБЛИЦЫ
+        # 2. ШАПКА ТАБЛИЦЫ (Названия полей)
         headers = ['Организация'] + [f['label'] for f in sheet_data['fields']]
         ws.append(headers) 
         ws.row_dimensions[2].height = 100
 
+        # Настройка ширины колонок
         ws.column_dimensions['A'].width = 50 
         for col_idx in range(2, max_col + 1):
             col_letter = get_column_letter(col_idx)
             ws.column_dimensions[col_letter].width = 45
 
+        # Стилизация шапки
         for col_idx, _ in enumerate(headers, 1):
             cell = ws.cell(row=2, column=col_idx)
             cell.font = header_font
@@ -135,12 +157,13 @@ def export_excel(template_id):
             cell.alignment = align_center
             cell.border = thin_border
 
-        # 3. ДАННЫЕ
+        # 3. ДАННЫЕ (Ответы учреждений)
         current_row = 3
         for sub in submissions:
             row_data = [sub.user.username]
             for f in sheet_data['fields']:
                 val = sub.data.get(f['name'], '-')
+                # Конвертируем строки в числа, если поле числовое, для корректной работы Excel-формул
                 if f['type'] == 'number' and val not in ['-', '', None]:
                     try:
                         val = float(val)
@@ -151,6 +174,7 @@ def export_excel(template_id):
             ws.append(row_data)
             ws.row_dimensions[current_row].height = 70 
 
+            # Стилизация данных
             for col_idx, _ in enumerate(row_data, 1):
                 cell = ws.cell(row=current_row, column=col_idx)
                 cell.font = data_font
@@ -159,7 +183,7 @@ def export_excel(template_id):
             
             current_row += 1
 
-        # 4. ИТОГО
+        # 4. ИТОГО (Вычисление суммы по колонкам)
         total_row = ['Итого']
         for f in sheet_data['fields']:
             if f['type'] == 'number':
@@ -175,11 +199,12 @@ def export_excel(template_id):
                             pass
                 total_row.append(col_total if has_data else 0)
             else:
-                total_row.append('-')
+                total_row.append('-') # Текстовые поля не суммируем
 
         ws.append(total_row)
         ws.row_dimensions[current_row].height = 40
         
+        # Стилизация строки 'Итого'
         for col_idx, _ in enumerate(total_row, 1):
             cell = ws.cell(row=current_row, column=col_idx)
             cell.font = total_font
@@ -187,6 +212,7 @@ def export_excel(template_id):
             cell.border = thin_border
             cell.alignment = align_left if col_idx == 1 else align_center
 
+    # Формируем и отдаем файл из оперативной памяти
     output = BytesIO()
     wb.save(output)
     output.seek(0)

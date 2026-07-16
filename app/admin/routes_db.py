@@ -1,3 +1,8 @@
+"""
+Модуль администратора: Управление Базой Данных (Admin - Database).
+Позволяет напрямую редактировать записи в БД (с проверкой пароля),
+создавать резервные копии SQLite файла, скачивать их, удалять и восстанавливать.
+"""
 from flask import request, jsonify, send_file, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.admin import admin_bp
@@ -12,10 +17,15 @@ from app.utils import log_action
 @admin_bp.route('/db_update', methods=['POST'])
 @login_required
 def db_update():
-    """Массовое обновление полей напрямую в базе данных."""
+    """
+    Массовое или одиночное обновление полей напрямую в базе данных.
+    Используется во вкладке "База данных" администратора.
+    Требует обязательного подтверждения паролем администратора (в заголовках запроса).
+    """
     if current_user.role != 'admin':
         return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
         
+    # Проверка пароля администратора перед внесением изменений
     password = request.headers.get('X-User-Password')
     if not password or not current_user.check_password(password):
         return jsonify({'status': 'error', 'message': 'Неверный пароль'}), 401
@@ -30,6 +40,7 @@ def db_update():
         'ReportSubmission': ReportSubmission
     }
     
+    # Жесткий белый список полей, которые разрешено редактировать напрямую
     ALLOWED_UPDATE_FIELDS = {
         'User': ['username', 'description'],
         'ReportTemplate': ['name', 'short_name', 'period', 'deadline', 'is_published'],
@@ -45,7 +56,7 @@ def db_update():
         if not all([model_name, row_id, field]):
             continue
             
-        # Защита от изменения критических полей
+        # Защита от изменения критических полей (например пароля или роли)
         if model_name not in ALLOWED_UPDATE_FIELDS or field not in ALLOWED_UPDATE_FIELDS[model_name]:
             return jsonify({'status': 'error', 'message': f'Поле {field} запрещено для изменения напрямую'}), 403
             
@@ -75,12 +86,16 @@ def db_update():
         return jsonify({'status': 'error', 'message': str(e)})
 
 # ==========================================
-# РЕЗЕРВНОЕ КОПИРОВАНИЕ
+# РЕЗЕРВНОЕ КОПИРОВАНИЕ (BACKUPS)
 # ==========================================
 
 @admin_bp.route('/db/backup/create', methods=['POST'])
 @login_required
 def create_backup():
+    """
+    Создает физическую резервную копию файла базы данных SQLite (reports.db)
+    в директорию /backups. Требует подтверждения паролем.
+    """
     if current_user.role != 'admin':
         return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
         
@@ -108,6 +123,7 @@ def create_backup():
 @admin_bp.route('/db/backup/download_current')
 @login_required
 def download_current_db():
+    """Скачивание текущего (рабочего) файла базы данных."""
     if current_user.role != 'admin':
         return "Forbidden", 403
         
@@ -120,6 +136,7 @@ def download_current_db():
 @admin_bp.route('/db/backup/download/<filename>')
 @login_required
 def download_backup(filename):
+    """Скачивание конкретной исторической резервной копии из папки /backups."""
     if current_user.role != 'admin':
         return "Forbidden", 403
         
@@ -132,6 +149,7 @@ def download_backup(filename):
 @admin_bp.route('/db/backup/delete/<filename>', methods=['POST'])
 @login_required
 def delete_backup(filename):
+    """Удаление резервной копии из папки /backups."""
     if current_user.role != 'admin':
         return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
         
@@ -149,6 +167,10 @@ def delete_backup(filename):
 @admin_bp.route('/db/backup/restore/<filename>', methods=['POST'])
 @login_required
 def restore_backup(filename):
+    """
+    Восстановление базы данных из старого бэкапа.
+    Перезаписывает рабочий reports.db файлом из папки /backups.
+    """
     if current_user.role != 'admin':
         return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
         
@@ -163,7 +185,7 @@ def restore_backup(filename):
         return jsonify({'status': 'error', 'message': 'Бэкап не найден'}), 404
         
     try:
-        # Сброс пула подключений, чтобы разблокировать файл (особенно актуально для Windows)
+        # Сброс пула подключений к БД (важно для Windows, чтобы снять лок с файла)
         db.engine.dispose()
         shutil.copy2(backup_path, db_path)
         log_action('Восстановление БД', f'База данных восстановлена из файла {filename}')
@@ -174,6 +196,10 @@ def restore_backup(filename):
 @admin_bp.route('/db/backup/upload', methods=['POST'])
 @login_required
 def upload_backup():
+    """
+    Загрузка пользовательского SQLite файла на сервер.
+    Позволяет администратору восстановить базу из файла, который он хранил локально у себя.
+    """
     if current_user.role != 'admin':
         flash('Доступ запрещен')
         return redirect(url_for('admin.dashboard') + '#databaseTab')
@@ -188,7 +214,7 @@ def upload_backup():
         flash('Неверный формат файла. Требуется .db')
         return redirect(url_for('admin.dashboard') + '#databaseTab')
         
-    # Проверка сигнатуры SQLite файла (защита от загрузки вредоносных файлов)
+    # Базовая защита: Проверка сигнатуры SQLite файла (защита от загрузки вредоносных бинарников)
     header = file.read(16)
     file.seek(0)
     if header != b'SQLite format 3\000':
@@ -197,8 +223,8 @@ def upload_backup():
         
     db_path = os.path.join(basedir, 'reports.db')
     try:
-        db.engine.dispose()
-        file.save(db_path)
+        db.engine.dispose() # Отпускаем старый файл БД
+        file.save(db_path)  # Перезаписываем новым
         log_action('Восстановление БД', f'База данных восстановлена из загруженного файла {file.filename}')
         flash('База данных успешно восстановлена из загруженного файла')
     except Exception as e:

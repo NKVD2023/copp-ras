@@ -1,3 +1,9 @@
+<!-- 
+  FILL_REPORT.HTML
+  Интерфейс заполнения отчета пользователем.
+  Отображает поля на основе JSON схемы. Содержит JS-логику для автосохранения
+  черновиков в localStorage браузера (чтобы не потерять данные при закрытии).
+-->
 {% extends "base.html" %}
 {% block content %}
 <div class="card mb-5">
@@ -47,11 +53,17 @@
                 {% endfor %}
             </div>
             <hr class="border-secondary opacity-10 my-5">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <span class="text-muted small">{% if is_locked %}Просмотр исторической записи.{% else %}Данные
                     сохраняются в единый документ.{% endif %}</span>
-                {% if not is_locked %}<button type="button" onclick="submitFullForm()"
-                    class="btn btn-copp px-5 py-2">Сохранить данные</button>{% endif %}
+                {% if not is_locked %}
+                <div class="d-flex gap-2">
+                    <button type="button" onclick="loadPreviousData()" class="btn btn-outline-secondary px-4 py-2 d-flex align-items-center gap-2" id="btn-no-changes">
+                        <i class="bi bi-clock-history"></i> Без изменений (Заполнить из прошлого)
+                    </button>
+                    <button type="button" onclick="submitFullForm()" class="btn btn-copp px-5 py-2">Сохранить данные</button>
+                </div>
+                {% endif %}
             </div>
         </form>
     </div>
@@ -145,5 +157,57 @@
         })
         .catch(err => alert("Ошибка сети: " + err));
     }
+
+    {% if not is_locked %}
+    function loadPreviousData() {
+        if (!confirm("Внимание! Это действие перезапишет все текущие заполненные поля на экране значениями из прошлого отчета. Вы уверены, что хотите продолжить?")) {
+            return;
+        }
+
+        const btn = document.getElementById('btn-no-changes');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Загрузка...';
+
+        fetch("{{ url_for('reports.get_previous_data', template_id=template.id) }}")
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+
+                if (data.status === 'success') {
+                    let updatedCount = 0;
+                    for (const [name, value] of Object.entries(data.data)) {
+                        const field = form.elements[name];
+                        if (field) {
+                            field.value = value;
+                            updatedCount++;
+                        }
+                    }
+                    
+                    // Сохраняем в localStorage чтобы не потерялось при обновлении
+                    const formData = new FormData(form);
+                    const currentData = Object.fromEntries(formData.entries());
+                    localStorage.setItem(DRAFT_KEY, JSON.stringify(currentData));
+
+                    // Показываем уведомление
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success py-2 small shadow-sm mb-4 border-success';
+                    alertDiv.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i><strong>Успех:</strong> ${data.message} Заполнено полей: ${updatedCount}. <br><span class="text-dark">Пожалуйста, проверьте данные и нажмите «Сохранить данные».</span>`;
+                    form.parentNode.insertBefore(alertDiv, form);
+                    
+                    // Прокрутка наверх к уведомлению
+                    window.scrollTo({top: form.offsetTop - 50, behavior: 'smooth'});
+                } else {
+                    alert("Не удалось загрузить прошлый отчет: " + data.message);
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                alert("Ошибка сети при загрузке прошлого отчета: " + err);
+            });
+    }
+    {% endif %}
 </script>
 {% endblock %}

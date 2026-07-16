@@ -1,3 +1,9 @@
+<!-- 
+  CONSTRUCTOR.HTML
+  Интерфейс конструктора отчетов для администраторов.
+  Позволяет создавать новые шаблоны отчетов (ReportTemplate) или редактировать существующие.
+  Содержит сложную JS-логику для динамического добавления листов и полей в JSON схему (schema).
+-->
 {% extends "base.html" %}
 
 {% block extra_css %}
@@ -18,7 +24,7 @@
             <div class="col-md-7">
                 <label class="form-label small text-muted">Полное имя отчета</label>
                 <textarea id="templateName" class="form-control long-name-field"
-                    placeholder="Введите полное наименование...">{{ template.name if template else '' }}</textarea>
+                    placeholder="Введите полное наименование..." rows="2">{{ template.name if template else '' }}</textarea>
             </div>
 
             <div class="col-md-5">
@@ -176,7 +182,7 @@
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3 gap-3">
                     <div class="d-flex align-items-center flex-grow-1 gap-2">
                         <span class="fw-bold text-primary-copp text-nowrap">Лист:</span>
-                        <input type="text" class="form-control form-control-sm border-light-subtle fw-bold text-primary-copp" value="${sheet.sheet_title.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&quot;/g, '&quot;')}" onchange="updateSheetTitle(${sIdx}, this.value)">
+                        <input type="text" class="form-control form-control-sm border-light-subtle fw-bold text-primary-copp" value="${String(sheet.sheet_title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&quot;/g, '&quot;')}" oninput="updateSheetTitle(${sIdx}, this.value)">
                     </div>
                     <button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0 flex-shrink-0">Удалить лист</button>
                 </div>
@@ -186,7 +192,7 @@
                             <div class="py-3 border-bottom">
                                 <div class="d-flex align-items-start gap-3 mb-2">
                                     <span class="text-muted small fw-bold constructor-idx mt-1">${fIdx + 1}.</span>
-                                    <textarea class="form-control form-control-sm constructor-textarea border-light-subtle" rows="2" onchange="updateFieldLabel(${sIdx}, ${fIdx}, this.value)">${f.label.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                    <textarea class="form-control form-control-sm constructor-textarea border-light-subtle" rows="2" oninput="updateFieldLabel(${sIdx}, ${fIdx}, this.value)">${String(f.label || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center ms-4 ps-2">
                                     <div class="d-flex align-items-center gap-3">
@@ -219,7 +225,8 @@
     }
 
     function saveFullReportTemplate() {
-        const name = document.getElementById('templateName').value.trim();
+        let name = document.getElementById('templateName').value.trim();
+        name = name.replace(/\r?\n|\r/g, ' '); // Удаляем переносы строк из полного имени
         const shortName = document.getElementById('templateShortName').value.trim();
         const period = document.getElementById('templatePeriod').value.trim();
         const deadline = document.getElementById('templateDeadline').value;
