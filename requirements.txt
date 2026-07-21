@@ -6,3 +6,4 @@ Werkzeug==3.0.1
 openpyxl
 xls2xlsx
 xlrd
+Flask-Limiter

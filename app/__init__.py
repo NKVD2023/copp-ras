@@ -8,6 +8,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from config import Config
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Инициализация глобальных расширений Flask
 db = SQLAlchemy()
@@ -15,6 +17,7 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message = "Авторизуйтесь для доступа к платформе."
 csrf = CSRFProtect()
+limiter = Limiter(key_func=get_remote_address)
 
 def create_app(config_class: type = Config) -> Flask:
     """
@@ -32,6 +35,18 @@ def create_app(config_class: type = Config) -> Flask:
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
+
+    @app.after_request
+    def add_security_headers(response):
+        """
+        Добавляет заголовки безопасности HTTP к каждому ответу.
+        Защищает от Clickjacking и MIME-sniffing.
+        """
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
 
     @app.context_processor
     def inject_config() -> dict:

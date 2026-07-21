@@ -13,5 +13,12 @@ class Config:
         'sqlite:///' + os.path.join(basedir, 'reports.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # БЕЗОПАСНОСТЬ COOKIES (Session Security)
+    SESSION_COOKIE_SECURE = True       # Куки передаются только по HTTPS
+    SESSION_COOKIE_HTTPONLY = True     # Запрет доступа к куки из JavaScript (XSS защита)
+    SESSION_COOKIE_SAMESITE = 'Lax'    # Защита от CSRF
+    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_HTTPONLY = True
+    
     # ПЕРЕКЛЮЧАТЕЛЬ ИНФОГРАФИКИ
     ENABLE_CHARTS = True
