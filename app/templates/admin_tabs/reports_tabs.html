@@ -16,9 +16,10 @@
     </div>
     <div class="col-md-3">
         <select id="reportStatusFilter" class="form-select shadow-sm text-muted">
-            <option value="all">Все статусы</option>
+            <option value="all">Активные (Все)</option>
             <option value="published">Только опубликованные</option>
             <option value="draft">Только черновики</option>
+            <option value="archived">В архиве</option>
         </select>
     </div>
     <div class="col-md-4">
@@ -43,6 +44,7 @@
     
     <div class="col-md-6 report-item" 
          data-status="{% if t.is_published %}published{% else %}draft{% endif %}" 
+         data-archived="{{ 'true' if t.is_archived else 'false' }}"
          data-deadline="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '2099-12-31' }}"
          data-progress="{{ progress }}"
          data-id="{{ t.id }}">
@@ -58,7 +60,7 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                     <li>
-                        <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST">
+                        <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST" {% if not t.is_published %}onsubmit="return confirm('После публикации отчета вы больше не сможете изменять его структуру (добавлять или удалять поля). Продолжить?');"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
                                 <i class="bi {% if t.is_published %}bi-eye-slash{% else %}bi-eye{% endif %}"></i>
@@ -66,6 +68,13 @@
                             </button>
                         </form>
                     </li>
+                    {% if not t.is_published %}
+                    <li>
+                        <a href="{{ url_for('admin.edit_constructor', template_id=t.id) }}" class="dropdown-item py-2 small d-flex align-items-center gap-2">
+                            <i class="bi bi-pencil-square"></i>Изменить структуру (Конструктор)
+                        </a>
+                    </li>
+                    {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#edit-meta-{{ t.id }}">
@@ -81,6 +90,15 @@
                         <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#clone-{{ t.id }}">
                             <i class="bi bi-copy"></i>Запустить новый период
                         </button>
+                    </li>
+                    <li>
+                        <form action="{{ url_for('admin.toggle_archive', template_id=t.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 text-warning">
+                                <i class="bi {% if t.is_archived %}bi-box-arrow-up{% else %}bi-archive{% endif %}"></i>
+                                {% if t.is_archived %}Разархивировать{% else %}В архив{% endif %}
+                            </button>
+                        </form>
                     </li>
                     {% if current_user.role == 'admin' %}
                     <li><hr class="dropdown-divider"></li>
@@ -486,9 +504,21 @@
             reportItems.forEach(function (item) {
                 const textContent = item.textContent.toLowerCase();
                 const itemStatus = item.getAttribute('data-status');
+                const isArchived = item.getAttribute('data-archived') === 'true';
                 
                 let matchesSearch = textContent.includes(query);
-                let matchesStatus = (status === 'all') || (status === itemStatus);
+                
+                let matchesStatus = false;
+                if (status === 'archived') {
+                    matchesStatus = isArchived;
+                } else {
+                    // if not searching for archive, hide archived items
+                    if (isArchived) {
+                        matchesStatus = false;
+                    } else {
+                        matchesStatus = (status === 'all') || (status === itemStatus);
+                    }
+                }
 
                 if (matchesSearch && matchesStatus) {
                     item.style.display = '';

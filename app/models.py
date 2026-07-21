@@ -50,6 +50,7 @@ class ReportTemplate(db.Model):
     period = db.Column(db.String(128))        # Период сдачи (например, "I квартал 2026")
     deadline = db.Column(db.Date)             # Дедлайн сдачи
     is_published = db.Column(db.Boolean, default=False)  # Виден ли пользователям
+    is_archived = db.Column(db.Boolean, default=False)   # Перенесен ли в архив
     schema = db.Column(JSON)                  # Структура: листы, столбцы, типы полей
 
 class ReportSubmission(db.Model):

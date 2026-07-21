@@ -49,6 +49,19 @@ def toggle_publish(template_id):
     log_action('Публикация отчета', f'Отчет {template.short_name} {status_str}')
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
+@admin_bp.route('/toggle_archive/<int:template_id>', methods=['POST'])
+def toggle_archive(template_id):
+    """
+    Переключение статуса архивации отчета (В архиве <-> Активный).
+    Архивированные отчеты скрыты с главного дашборда по умолчанию.
+    """
+    template = ReportTemplate.query.get_or_404(template_id)
+    template.is_archived = not template.is_archived
+    db.session.commit()
+    status_str = "в архив" if template.is_archived else "из архива"
+    log_action('Архивация отчета', f'Отчет {template.short_name} перенесен {status_str}')
+    return redirect(url_for('admin.dashboard') + '#reportsTab')
+
 @admin_bp.route('/clone_template/<int:template_id>', methods=['POST'])
 def clone_template(template_id):
     """

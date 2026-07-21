@@ -28,7 +28,7 @@ def require_admin():
         return
         
     # Разрешенные маршруты для роли "наблюдатель"
-    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.edit_constructor', 'admin.toggle_publish', 'admin.clone_template', 'admin.assign_template_users', 'admin.import_excel_template', 'admin.change_my_password', 'admin.export_debtors', 'admin.edit_template_meta']
+    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.edit_constructor', 'admin.toggle_publish', 'admin.toggle_archive', 'admin.clone_template', 'admin.assign_template_users', 'admin.import_excel_template', 'admin.change_my_password', 'admin.export_debtors', 'admin.edit_template_meta']
     if current_user.role == 'viewer' and request.endpoint in allowed_for_viewer:
         return
         
