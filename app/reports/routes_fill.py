@@ -46,7 +46,43 @@ def fill_report(template_id):
             submission = ReportSubmission(template_id=template.id, user_id=current_user.id)
             db.session.add(submission)
             
-        submission.data = request.get_json()
+        json_data = request.get_json()
+        
+        # --- СЕРВЕРНАЯ ВАЛИДАЦИЯ ---
+        if type(template.schema) is str:
+            import json
+            try:
+                schema = json.loads(template.schema)
+            except:
+                schema = []
+        else:
+            schema = template.schema or []
+            
+        for sheet in schema:
+            for field in sheet.get('fields', []):
+                val = json_data.get(field['name'])
+                
+                # 1. Проверка обязательных полей
+                if field.get('required') and (val is None or str(val).strip() == ''):
+                    return jsonify({'status': 'error', 'message': f'Обязательное поле "{field["label"]}" не заполнено.'}), 400
+                    
+                # Если значение есть, проверяем его тип
+                if val is not None and str(val).strip() != '':
+                    if field.get('type') == 'number':
+                        # 2. Проверка числовых значений (>= 0)
+                        try:
+                            num_val = float(val)
+                            if num_val < 0:
+                                return jsonify({'status': 'error', 'message': f'Поле "{field["label"]}" не может быть отрицательным.'}), 400
+                        except ValueError:
+                            return jsonify({'status': 'error', 'message': f'Поле "{field["label"]}" должно быть числом.'}), 400
+                    elif field.get('type') == 'text':
+                        # 3. Проверка длины текста
+                        if len(str(val)) > 500:
+                            return jsonify({'status': 'error', 'message': f'Текст в поле "{field["label"]}" превышает 500 символов.'}), 400
+        # ----------------------------
+
+        submission.data = json_data
         db.session.commit()
         log_action('Заполнение отчета', f'Отправлены данные для отчета {template.short_name}')
         return jsonify({'status': 'success'})

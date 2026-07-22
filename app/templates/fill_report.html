@@ -40,10 +40,10 @@
                                 %}<span class="text-danger">*</span>{% endif %}</label>
                             
                             {% if field.type == 'text' %}
-                                <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                                <textarea class="form-control" name="{{ field.name }}" rows="3" maxlength="500" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
                             {% else %}
                                 <input type="{{ field.type }}" class="form-control" name="{{ field.name }}"
-                                    value="{{ submission.data.get(field.name, '') if submission else '' }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                    value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
                             {% endif %}
                             
                         </div>
