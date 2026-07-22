@@ -200,6 +200,8 @@ def restore_backup(filename):
         return jsonify({'status': 'error', 'message': 'Бэкап не найден'}), 404
 
     try:
+        # Сначала закрываем текущую сессию, чтобы её кэшированные данные не перезаписали новый файл при коммите лога
+        db.session.remove()
         # Сброс пула подключений к БД (важно для Windows, чтобы снять лок с файла)
         db.engine.dispose()
         shutil.copy2(backup_path, db_path)
@@ -238,6 +240,8 @@ def upload_backup():
         
     db_path = os.path.join(basedir, 'reports.db')
     try:
+        # Сначала закрываем текущую сессию, чтобы её кэшированные данные не перезаписали новый файл при коммите лога
+        db.session.remove()
         db.engine.dispose() # Отпускаем старый файл БД
         file.save(db_path)  # Перезаписываем новым
         log_action('Восстановление БД', f'База данных восстановлена из загруженного файла {file.filename}')
