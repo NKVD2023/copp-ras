@@ -221,7 +221,14 @@
                             <tr>
                                 <th class="p-3 sticky-col">Организация</th>
                                 {% for field in sheet.fields %}
-                                <th class="p-3 text-center report-col-header">{{ field.label }}
+                                <th class="p-3 text-center report-col-header">
+                                    {{ field.label }}
+                                    {% if field.hint %}
+                                    <span class="hint-icon hint-icon-table"
+                                          data-bs-toggle="tooltip"
+                                          data-bs-placement="bottom"
+                                          title="{{ field.hint }}">?</span>
+                                    {% endif %}
                                 </th>
                                 {% endfor %}
                             </tr>
@@ -296,8 +303,14 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-
     <script>
+        // Инициализация Bootstrap Tooltips (иконки подсказок в заголовках)
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                new bootstrap.Tooltip(el, { trigger: 'hover' });
+            });
+        });
+
         let chartsRendered = false;
         
         function renderDashboards() {

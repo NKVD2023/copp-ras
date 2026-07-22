@@ -339,3 +339,40 @@ body {
 .text-muted {
     color: var(--text-muted) !important;
 }
+
+/* ==========================================================================
+   ИКОНКА ПОДСКАЗКИ (hint-icon)
+   Отображается рядом с подписью поля в форме заполнения.
+   ========================================================================== */
+.hint-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    font-style: normal;
+    line-height: 1;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    cursor: help;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    user-select: none;
+}
+
+.hint-icon:hover {
+    background-color: var(--primary-hover);
+    transform: scale(1.15);
+}
+
+/* В сводной таблице иконка чуть меньше и с отступом */
+.hint-icon-table {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    margin-left: 4px;
+    vertical-align: middle;
+}

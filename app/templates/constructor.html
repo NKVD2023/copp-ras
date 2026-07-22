@@ -152,12 +152,14 @@
         const labelInput = document.getElementById(`label-${sIdx}`);
         const typeInput = document.getElementById(`type-${sIdx}`);
         const reqInput = document.getElementById(`req-${sIdx}`);
+        const hintInput = document.getElementById(`hint-${sIdx}`);
         const label = labelInput.value.trim();
-        if (!label) return alert("Заполните заголовок показателя!");
+        if (!label) return alert('Заполните заголовок показателя!');
 
         const name = `s${sIdx}_c${Date.now().toString().slice(-6)}`;
-        reportStructure[sIdx].fields.push({ name, label, type: typeInput.value, required: reqInput.checked });
+        reportStructure[sIdx].fields.push({ name, label, type: typeInput.value, required: reqInput.checked, hint: hintInput.value.trim() });
         labelInput.value = '';
+        hintInput.value = '';
         renderStructure();
     }
 
@@ -186,6 +188,11 @@
     function updateFieldRequired(sIdx, fIdx, isRequired) {
         reportStructure[sIdx].fields[fIdx].required = isRequired;
     }
+
+    function updateFieldHint(sIdx, fIdx, newHint) {
+        reportStructure[sIdx].fields[fIdx].hint = newHint.trim();
+    }
+
     function removeField(sIdx, fIdx) { 
         reportStructure[sIdx].fields.splice(fIdx, 1); 
         renderStructure(); 
@@ -215,18 +222,21 @@
                                     <span class="text-muted small fw-bold constructor-idx mt-1">${fIdx + 1}.</span>
                                     <textarea class="form-control form-control-sm constructor-textarea border-light-subtle" rows="2" oninput="updateFieldLabel(${sIdx}, ${fIdx}, this.value)">${String(f.label || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center ms-4 ps-2">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <select class="form-select form-select-sm w-auto text-muted" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
-                                            <option value="number" ${f.type === 'number' ? 'selected' : ''}>Числовое</option>
-                                            <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текстовое</option>
-                                        </select>
-                                        <div class="form-check mb-0">
-                                            <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
-                                            <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
-                                        </div>
+                                <div class="d-flex align-items-center gap-3 ms-4 ps-2 mb-2">
+                                    <select class="form-select form-select-sm w-auto text-muted" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
+                                        <option value="number" ${f.type === 'number' ? 'selected' : ''}>Числовое</option>
+                                        <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текстовое</option>
+                                    </select>
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
+                                        <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                     </div>
-                                    <div class="d-flex align-items-center gap-3">
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center ms-4 ps-2">
+                                    <div class="flex-grow-1 me-3">
+                                        <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="2" placeholder="Подсказка для пользователя (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3 flex-shrink-0">
                                         <span class="badge bg-light border text-muted font-monospace constructor-badge">${f.name}</span>
                                         <button onclick="removeField(${sIdx}, ${fIdx})" class="btn btn-sm btn-link text-danger p-0 text-decoration-none fw-bold">Удалить</button>
                                     </div>
@@ -234,11 +244,24 @@
                             </div>
                         `).join('')}
                     </div>
-                    <div class="row g-2 align-items-center bg-light p-3 rounded border border-light-subtle">
-                        <div class="col-md-5"><textarea id="label-${sIdx}" class="form-control form-control-sm constructor-textarea" placeholder="Заголовок столбца" rows="2"></textarea></div>
-                        <div class="col-md-3"><select id="type-${sIdx}" class="form-select form-select-sm"><option value="number">Числовое</option><option value="text">Текстовое</option></select></div>
-                        <div class="col-md-2 d-flex justify-content-center"><div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="req-${sIdx}" checked><label class="form-check-label small text-dark" for="req-${sIdx}">Обязательно</label></div></div>
-                        <div class="col-md-2"><button onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-dark w-100">Добавить</button></div>
+                    <div class="bg-light p-3 rounded border border-light-subtle d-flex flex-column gap-2">
+                        <textarea id="label-${sIdx}" class="form-control form-control-sm constructor-textarea" placeholder="Заголовок столбца" rows="3"></textarea>
+                        
+                        <div class="d-flex align-items-center gap-3">
+                            <select id="type-${sIdx}" class="form-select form-select-sm" style="width: 200px;">
+                                <option value="number">Числовое</option>
+                                <option value="text">Текстовое</option>
+                            </select>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="req-${sIdx}" checked>
+                                <label class="form-check-label small text-dark" for="req-${sIdx}">Обязательно</label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-start gap-2">
+                            <textarea id="hint-${sIdx}" class="form-control form-control-sm flex-grow-1 constructor-textarea" rows="2" placeholder="Подсказка (необязательно)"></textarea>
+                            <button onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-dark px-4 flex-shrink-0 mt-1">Добавить</button>
+                        </div>
                     </div>
                 </div>
             </div>

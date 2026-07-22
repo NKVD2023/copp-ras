@@ -36,8 +36,16 @@
                         {% for field in sheet.fields %}
                         
                         <div class="col-12">
-                            <label class="form-label text-dark small fw-bold">{{ field.label }} {% if field.required
-                                %}<span class="text-danger">*</span>{% endif %}</label>
+                            <label class="form-label text-dark small fw-bold d-flex align-items-center gap-1">
+                                {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                                {% if field.hint and not is_locked %}
+                                <span class="hint-icon"
+                                      data-bs-toggle="tooltip"
+                                      data-bs-placement="right"
+                                      title="{{ field.hint }}"
+                                      aria-label="Подсказка">?</span>
+                                {% endif %}
+                            </label>
                             
                             {% if field.type == 'text' %}
                                 <textarea class="form-control" name="{{ field.name }}" rows="3" maxlength="500" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
@@ -69,23 +77,15 @@
     </div>
 </div>
 
-<!-- <div class="card p-2 border-0 shadow-sm mt-4">
-    <div class="card-body">
-        <h6 class="fw-bold mb-3">Мой профиль ({{ current_user.username }})</h6>
-        <form action="{{ url_for('admin.change_my_password') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="mb-3">
-                <label class="form-label small text-muted">Новый пароль</label>
-                <input type="text" name="new_password" class="form-control" required autocomplete="off"
-                    placeholder="Введите новый пароль">
-            </div>
-            <button type="submit" class="btn btn-custom-outline w-100">Обновить пароль</button>
-        </form>
-    </div>
-</div> -->
-
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 <script>
+    // Инициализация Bootstrap Tooltips для иконок подсказок
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+            new bootstrap.Tooltip(el, { trigger: 'hover' });
+        });
+    });
+
     const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
     const form = document.getElementById('reportForm');
     
