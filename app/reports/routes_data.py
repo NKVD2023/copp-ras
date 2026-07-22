@@ -64,7 +64,28 @@ def inline_update(template_id):
         
         if not user_id or not field_name:
             continue
-            
+
+        # --- ВАЛИДАЦИЯ ПО СХЕМЕ ШАБЛОНА ---
+        # Находим описание поля в схеме, чтобы применить те же правила, что и при обычном сохранении
+        import json as _json
+        schema = template.schema if not isinstance(template.schema, str) else _json.loads(template.schema or '[]')
+        field_def = next(
+            (f for sheet in (schema or []) for f in sheet.get('fields', []) if f['name'] == field_name),
+            None
+        )
+        if field_def and value is not None and str(value).strip() != '':
+            if field_def.get('type') == 'number':
+                try:
+                    num_val = float(value)
+                    if num_val < 0:
+                        return jsonify({'status': 'error', 'message': f'Поле "{field_def["label"]}" не может быть отрицательным.'}), 400
+                except (ValueError, TypeError):
+                    return jsonify({'status': 'error', 'message': f'Поле "{field_def["label"]}" должно быть числом.'}), 400
+            elif field_def.get('type') == 'text':
+                if len(str(value)) > 500:
+                    return jsonify({'status': 'error', 'message': f'Текст в поле "{field_def["label"]}" превышает 500 символов.'}), 400
+        # -----------------------------------
+
         submission = ReportSubmission.query.filter_by(template_id=template_id, user_id=user_id).first()
         
         if not submission:

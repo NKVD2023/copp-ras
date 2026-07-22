@@ -19,6 +19,7 @@ from app.utils import log_action
 # ==========================================
 
 @admin_bp.route('/assign_template_users/<int:template_id>', methods=['POST'])
+@login_required
 def assign_template_users(template_id):
     """
     Назначение прав доступа: какие учреждения (пользователи) должны сдавать этот отчет.
@@ -43,6 +44,7 @@ def assign_template_users(template_id):
     return redirect(request.referrer or url_for('reports.dashboard'))
 
 @admin_bp.route('/toggle_publish/<int:template_id>', methods=['POST'])
+@login_required
 def toggle_publish(template_id):
     """
     Переключение статуса видимости отчета для пользователей (Черновик <-> Опубликовано).
@@ -56,6 +58,7 @@ def toggle_publish(template_id):
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
 @admin_bp.route('/toggle_archive/<int:template_id>', methods=['POST'])
+@login_required
 def toggle_archive(template_id):
     """
     Переключение статуса архивации отчета (В архиве <-> Активный).
@@ -69,6 +72,7 @@ def toggle_archive(template_id):
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
 @admin_bp.route('/clone_template/<int:template_id>', methods=['POST'])
+@login_required
 def clone_template(template_id):
     """
     Копирование структуры старого отчета в новый период.
@@ -113,6 +117,7 @@ def delete_template(template_id):
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
 @admin_bp.route('/edit_template_meta/<int:template_id>', methods=['POST'])
+@login_required
 def edit_template_meta(template_id):
     """
     Быстрое редактирование текстовой информации (метаданных) отчета
@@ -133,6 +138,7 @@ def edit_template_meta(template_id):
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
 @admin_bp.route('/export_debtors/<int:template_id>', methods=['GET'])
+@login_required
 def export_debtors(template_id):
     """
     Формирует и отдает Excel файл (.xlsx) со списком учреждений (должников),

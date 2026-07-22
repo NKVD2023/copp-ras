@@ -49,6 +49,14 @@ def create_app(config_class: type = Config) -> Flask:
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' fonts.googleapis.com; "
+            "font-src 'self' fonts.gstatic.com; "
+            "img-src 'self' data:; "
+            "object-src 'none';"
+        )
         return response
 
     @app.context_processor

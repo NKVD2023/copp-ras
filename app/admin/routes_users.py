@@ -4,8 +4,8 @@
 и массового назначения отчетов конкретному пользователю.
 """
 from flask import request, redirect, url_for, flash
-from flask_login import current_user
-from app import db
+from flask_login import login_required, current_user
+from app import db, limiter
 from app.admin import admin_bp
 from app.models import User, ReportSubmission, ReportTemplate
 from app.utils import log_action
@@ -15,15 +15,22 @@ from app.utils import log_action
 # ==========================================
 
 @admin_bp.route('/create_user', methods=['POST'])
+@login_required
 def create_user():
     """
     Создание нового аккаунта. 
     Роль по умолчанию: 'user' (учреждение, сдающее отчет).
-    Также может создавать роль 'viewer' (наблюдатель - только чтение).
+    Также может создавать роль 'viewer' (ответственный - полный контроль отчетов).
     """
     username = request.form.get('username').strip()
     password = request.form.get('password')
+
+    # Защита: роль только из белого списка, чтобы нельзя передать role=admin через POST
+    ALLOWED_ROLES = ['user', 'viewer']
     role = request.form.get('role', 'user')
+    if role not in ALLOWED_ROLES:
+        role = 'user'
+
     description = request.form.get('description', '').strip()
     group = request.form.get('group', None)
     if group == '':
@@ -32,8 +39,8 @@ def create_user():
     if User.query.filter_by(username=username).first():
         flash('Пользователь с таким логином уже существует')
         return redirect(url_for('admin.dashboard'))
-        
-    user = User(username=username, role=role, description=description, group=group) 
+
+    user = User(username=username, role=role, description=description, group=group)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
@@ -41,6 +48,7 @@ def create_user():
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/delete_user/<int:user_id>', methods=['POST'])
+@login_required
 def delete_user(user_id):
     """
     Удаление пользователя и каскадное удаление всех его сданных отчетов.
@@ -56,6 +64,8 @@ def delete_user(user_id):
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/reset_password/<int:user_id>', methods=['POST'])
+@login_required
+@limiter.limit("5 per minute")
 def reset_password(user_id):
     """Принудительный сброс пароля пользователя администратором (если тот забыл)."""
     user = User.query.get_or_404(user_id)
@@ -65,6 +75,7 @@ def reset_password(user_id):
     return redirect(url_for('admin.dashboard') + '#usersTab')
 
 @admin_bp.route('/change_user_group/<int:user_id>', methods=['POST'])
+@login_required
 def change_user_group(user_id):
     """Изменение группы пользователя."""
     user = User.query.get_or_404(user_id)
@@ -77,6 +88,8 @@ def change_user_group(user_id):
     return redirect(url_for('admin.dashboard') + '#usersTab')
 
 @admin_bp.route('/change_my_password', methods=['POST'])
+@login_required
+@limiter.limit("5 per minute")
 def change_my_password():
     """Смена собственного пароля (вызывается через модальное окно профиля)."""
     new_password = request.form.get('new_password')
@@ -84,10 +97,11 @@ def change_my_password():
         current_user.set_password(new_password)
         db.session.commit()
         log_action('Смена пароля', f'Пользователь {current_user.username} сменил свой пароль')
-    # request.referrer позволяет вернуть пользователя на ту страницу, где он был
-    return redirect(request.referrer or url_for('admin.dashboard'))
+    # Защита от Open Redirect: возвращаемся только на внутренний маршрут 
+    return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/assign_access', methods=['POST'])
+@login_required
 def assign_access():
     """
     Массовое назначение шаблонов отчетов конкретному пользователю.

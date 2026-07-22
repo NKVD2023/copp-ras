@@ -139,8 +139,13 @@ def download_backup(filename):
     """Скачивание конкретной исторической резервной копии из папки /backups."""
     if current_user.role != 'admin':
         return "Forbidden", 403
-        
-    backup_path = os.path.join(basedir, 'backups', filename)
+
+    # Защита от Path Traversal: проверяем, что итоговый путь остается внутри backups/
+    backups_dir = os.path.realpath(os.path.join(basedir, 'backups'))
+    backup_path = os.path.realpath(os.path.join(backups_dir, filename))
+    if not backup_path.startswith(backups_dir + os.sep):
+        return "Доступ запрещён", 403
+
     if os.path.exists(backup_path):
         log_action('Скачивание БД', f'Скачана резервная копия {filename}')
         return send_file(backup_path, as_attachment=True)
@@ -152,12 +157,17 @@ def delete_backup(filename):
     """Удаление резервной копии из папки /backups."""
     if current_user.role != 'admin':
         return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
-        
+
     password = request.headers.get('X-User-Password')
     if not password or not current_user.check_password(password):
         return jsonify({'status': 'error', 'message': 'Неверный пароль'}), 401
-        
-    backup_path = os.path.join(basedir, 'backups', filename)
+
+    # Защита от Path Traversal
+    backups_dir = os.path.realpath(os.path.join(basedir, 'backups'))
+    backup_path = os.path.realpath(os.path.join(backups_dir, filename))
+    if not backup_path.startswith(backups_dir + os.sep):
+        return jsonify({'status': 'error', 'message': 'Доступ запрещён'}), 403
+
     if os.path.exists(backup_path):
         os.remove(backup_path)
         log_action('Удаление бэкапа БД', f'Удалена резервная копия {filename}')
@@ -173,17 +183,22 @@ def restore_backup(filename):
     """
     if current_user.role != 'admin':
         return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
-        
+
     password = request.headers.get('X-User-Password')
     if not password or not current_user.check_password(password):
         return jsonify({'status': 'error', 'message': 'Неверный пароль'}), 401
-        
-    backup_path = os.path.join(basedir, 'backups', filename)
+
+    # Защита от Path Traversal
+    backups_dir = os.path.realpath(os.path.join(basedir, 'backups'))
+    backup_path = os.path.realpath(os.path.join(backups_dir, filename))
+    if not backup_path.startswith(backups_dir + os.sep):
+        return jsonify({'status': 'error', 'message': 'Доступ запрещён'}), 403
+
     db_path = os.path.join(basedir, 'reports.db')
-    
+
     if not os.path.exists(backup_path):
         return jsonify({'status': 'error', 'message': 'Бэкап не найден'}), 404
-        
+
     try:
         # Сброс пула подключений к БД (важно для Windows, чтобы снять лок с файла)
         db.engine.dispose()
