@@ -26,6 +26,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256))
     description = db.Column(db.String(256))  # Например, название муниципалитета или организации
     role = db.Column(db.String(20), default='user')
+    group = db.Column(db.String(50), nullable=True) # Группа: СПО, ВУЗ, Школы, Работодатели
     
     # Отношение: к каким шаблонам пользователь имеет доступ для заполнения
     assigned_templates = db.relationship('ReportTemplate', secondary=user_template_access, backref=db.backref('assigned_users', lazy='dynamic'))

@@ -41,8 +41,15 @@ def constructor():
         # Назначаем пользователей, выбранных галочками на фронтенде
         for u_id in data.get('user_ids', []):
             user = User.query.get(u_id)
-            if user:
+            if user and user not in template.assigned_users:
                 template.assigned_users.append(user)
+                
+        # Назначаем пользователей по выбранным группам
+        for group_name in data.get('group_names', []):
+            users_in_group = User.query.filter_by(group=group_name).all()
+            for user in users_in_group:
+                if user not in template.assigned_users:
+                    template.assigned_users.append(user)
                 
         db.session.commit()
         log_action('Создание отчета (Конструктор)', f'Создан новый шаблон отчета: {template.short_name}')
@@ -77,8 +84,14 @@ def edit_constructor(template_id):
         template.assigned_users = []
         for u_id in data.get('user_ids', []):
             user = User.query.get(u_id)
-            if user:
+            if user and user not in template.assigned_users:
                 template.assigned_users.append(user)
+                
+        for group_name in data.get('group_names', []):
+            users_in_group = User.query.filter_by(group=group_name).all()
+            for user in users_in_group:
+                if user not in template.assigned_users:
+                    template.assigned_users.append(user)
                 
         db.session.commit()
         log_action('Редактирование структуры отчета', f'Обновлена структура шаблона отчета: {template.short_name}')

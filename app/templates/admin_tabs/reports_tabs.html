@@ -266,6 +266,28 @@
                     <div class="modal-body px-4 py-2 modal-scrollable-body">
                         <p class="small text-muted mb-3">Выберите пользователей, которые должны заполнить этот отчет:</p>
                         
+                        <div class="mb-3 pb-3 border-bottom border-2" style="border-color: #e2e8f0 !important;">
+                            <label class="fw-bold text-dark mb-2" style="font-size: 0.9rem;">Назначить целой группе:</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="group_names" value="СПО" id="group-spo-{{ t.id }}">
+                                    <label class="form-check-label" for="group-spo-{{ t.id }}">СПО</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="group_names" value="ВУЗ" id="group-vuz-{{ t.id }}">
+                                    <label class="form-check-label" for="group-vuz-{{ t.id }}">ВУЗ</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="group_names" value="Школы" id="group-school-{{ t.id }}">
+                                    <label class="form-check-label" for="group-school-{{ t.id }}">Школы</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="group_names" value="Работодатели" id="group-emp-{{ t.id }}">
+                                    <label class="form-check-label" for="group-emp-{{ t.id }}">Работодатели</label>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="form-check mb-3 pb-3 border-bottom border-2" style="border-color: #e2e8f0 !important;">
                             <input class="form-check-input shadow-sm border-secondary" type="checkbox" id="selectAll-{{ t.id }}" onchange="toggleSelectAll(this, '{{ t.id }}')">
                             <label class="form-check-label fw-bold text-primary-copp w-100 ms-1" style="cursor: pointer;" for="selectAll-{{ t.id }}">

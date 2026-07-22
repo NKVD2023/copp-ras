@@ -25,12 +25,15 @@ def create_user():
     password = request.form.get('password')
     role = request.form.get('role', 'user')
     description = request.form.get('description', '').strip()
+    group = request.form.get('group', None)
+    if group == '':
+        group = None
 
     if User.query.filter_by(username=username).first():
         flash('Пользователь с таким логином уже существует')
         return redirect(url_for('admin.dashboard'))
         
-    user = User(username=username, role=role, description=description) 
+    user = User(username=username, role=role, description=description, group=group) 
     user.set_password(password)
     db.session.add(user)
     db.session.commit()

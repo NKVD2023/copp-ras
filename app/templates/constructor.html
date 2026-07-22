@@ -46,6 +46,27 @@
 
         <div class="bg-light p-4 rounded mb-5 border">
             <label class="form-label small fw-bold text-dark mb-3">Предварительное назначение прав доступа:</label>
+            <div class="mb-3 pb-3 border-bottom border-2 border-light-subtle">
+                <label class="fw-bold text-dark mb-2" style="font-size: 0.9rem;">Назначить целой группе:</label>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="СПО" id="group-spo-c">
+                        <label class="form-check-label" for="group-spo-c">СПО</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="ВУЗ" id="group-vuz-c">
+                        <label class="form-check-label" for="group-vuz-c">ВУЗ</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="Школы" id="group-school-c">
+                        <label class="form-check-label" for="group-school-c">Школы</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="Работодатели" id="group-emp-c">
+                        <label class="form-check-label" for="group-emp-c">Работодатели</label>
+                    </div>
+                </div>
+            </div>
             <div class="form-check mb-3 pb-3 border-bottom border-2 border-light-subtle">
                 <input class="form-check-input shadow-sm border-secondary" type="checkbox" id="selectAllConstructor"
                     onchange="toggleSelectAllConstructor(this)">
@@ -235,6 +256,7 @@
         if (reportStructure.length === 0) return alert('Требуется создать хотя бы один лист!');
         
         const userIds = Array.from(document.querySelectorAll('.user-cb:checked')).map(cb => parseInt(cb.value));
+        const groupNames = Array.from(document.querySelectorAll('.group-cb:checked')).map(cb => cb.value);
         
         const editTemplateId = {% if template %}{{ template.id }}{% else %}null{% endif %};
         const fetchUrl = editTemplateId ? `/admin/edit_constructor/${editTemplateId}` : "{{ url_for('admin.constructor') }}";
@@ -242,7 +264,7 @@
         fetch(fetchUrl, { headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' , 'X-CSRFToken': '{{ csrf_token() }}'}, 
-            body: JSON.stringify({ name, short_name: shortName, period, deadline, schema: reportStructure, user_ids: userIds }) 
+            body: JSON.stringify({ name, short_name: shortName, period, deadline, schema: reportStructure, user_ids: userIds, group_names: groupNames }) 
         })
         .then(res => res.json())
         .then(data => { 

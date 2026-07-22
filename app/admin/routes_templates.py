@@ -29,8 +29,14 @@ def assign_template_users(template_id):
     
     for u_id in request.form.getlist('user_ids'):
         user = User.query.get(u_id)
-        if user:
+        if user and user not in template.assigned_users:
             template.assigned_users.append(user)
+
+    for group_name in request.form.getlist('group_names'):
+        users_in_group = User.query.filter_by(group=group_name).all()
+        for user in users_in_group:
+            if user not in template.assigned_users:
+                template.assigned_users.append(user)
             
     db.session.commit()
     log_action('Назначение исполнителей отчета', f'Изменены исполнители для отчета {template.short_name}')

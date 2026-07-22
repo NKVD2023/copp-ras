@@ -7,3 +7,4 @@ openpyxl
 xls2xlsx
 xlrd
 Flask-Limiter
+Flask-Migrate
