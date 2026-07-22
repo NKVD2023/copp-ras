@@ -21,6 +21,9 @@
                     {% if user.role == 'viewer' %}
                     <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size: 0.7em;">Наблюдатель</span>
                     {% endif %}
+                    {% if user.group %}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 ms-1" style="font-size: 0.7em;">{{ user.group }}</span>
+                    {% endif %}
                 </div>
                 {% if user.description %}
                 <p class="text-muted small mb-3 flex-grow-1">{{ user.description }}</p>
@@ -47,6 +50,19 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="text" name="new_password" class="form-control form-control-sm" placeholder="Новый пароль" required autocomplete="off">
                             <button type="submit" class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Изменить</button>
+                        </form>
+
+                        <h6 class="fw-bold text-dark small mb-2">Изменение группы</h6>
+                        <form action="{{ url_for('admin.change_user_group', user_id=user.id) }}" method="POST" class="d-flex gap-2 mb-4">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <select name="group" class="form-select form-select-sm">
+                                <option value="" {% if not user.group %}selected{% endif %}>Без группы</option>
+                                <option value="СПО" {% if user.group == 'СПО' %}selected{% endif %}>СПО</option>
+                                <option value="ВУЗ" {% if user.group == 'ВУЗ' %}selected{% endif %}>ВУЗ</option>
+                                <option value="Школы" {% if user.group == 'Школы' %}selected{% endif %}>Школы</option>
+                                <option value="Работодатели" {% if user.group == 'Работодатели' %}selected{% endif %}>Работодатели</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Сохранить</button>
                         </form>
 
                         {% if user.role == 'user' %}

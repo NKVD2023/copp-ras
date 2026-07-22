@@ -62,7 +62,19 @@ def reset_password(user_id):
     user.set_password(request.form.get('new_password'))
     db.session.commit()
     log_action('Сброс пароля', f'Сброшен пароль для пользователя {user.username}')
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.dashboard') + '#usersTab')
+
+@admin_bp.route('/change_user_group/<int:user_id>', methods=['POST'])
+def change_user_group(user_id):
+    """Изменение группы пользователя."""
+    user = User.query.get_or_404(user_id)
+    group = request.form.get('group', None)
+    if group == '':
+        group = None
+    user.group = group
+    db.session.commit()
+    log_action('Изменение группы', f'Изменена группа пользователя {user.username} на {group}')
+    return redirect(url_for('admin.dashboard') + '#usersTab')
 
 @admin_bp.route('/change_my_password', methods=['POST'])
 def change_my_password():
