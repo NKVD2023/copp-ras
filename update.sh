@@ -118,12 +118,14 @@ fi
 # ─── 3. МИГРАЦИИ И ОБНОВЛЕНИЕ ДАННЫХ ────────────────────────────────────────────
 section "3/5  Миграции БД и системные скрипты"
 
+if [ -f "$APP_DIR/upgrade_db.py" ]; then
+    info "Применение структуры базы данных..."
+    "$APP_DIR/venv/bin/python" "$APP_DIR/upgrade_db.py" || warn "Не удалось обновить структуру БД."
+fi
+
 export FLASK_APP="$APP_DIR/run.py"
 if [ -d "$APP_DIR/migrations" ]; then
-    info "Применение миграций базы данных..."
-    "$APP_DIR/venv/bin/flask" db upgrade || warn "Миграции не применены."
-else
-    info "Папка migrations не найдена, пропускаем flask db upgrade."
+    "$APP_DIR/venv/bin/flask" db upgrade 2>/dev/null || true
 fi
 
 if [ -f "$APP_DIR/add_users.py" ]; then
