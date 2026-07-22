@@ -77,9 +77,7 @@ def fill_report(template_id):
                         except ValueError:
                             return jsonify({'status': 'error', 'message': f'Поле "{field["label"]}" должно быть числом.'}), 400
                     elif field.get('type') == 'text':
-                        # 3. Проверка длины текста
-                        if len(str(val)) > 500:
-                            return jsonify({'status': 'error', 'message': f'Текст в поле "{field["label"]}" превышает 500 символов.'}), 400
+                        pass # No length restriction needed
         # ----------------------------
 
         submission.data = json_data
