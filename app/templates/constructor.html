@@ -152,14 +152,16 @@
         const labelInput = document.getElementById(`label-${sIdx}`);
         const typeInput = document.getElementById(`type-${sIdx}`);
         const reqInput = document.getElementById(`req-${sIdx}`);
+        const multInput = document.getElementById(`mult-${sIdx}`);
         const hintInput = document.getElementById(`hint-${sIdx}`);
         const label = labelInput.value.trim();
         if (!label) return alert('Заполните заголовок показателя!');
 
         const name = `s${sIdx}_c${Date.now().toString().slice(-6)}`;
-        reportStructure[sIdx].fields.push({ name, label, type: typeInput.value, required: reqInput.checked, hint: hintInput.value.trim() });
+        reportStructure[sIdx].fields.push({ name, label, type: typeInput.value, required: reqInput.checked, is_multiple: multInput.checked, hint: hintInput.value.trim() });
         labelInput.value = '';
         hintInput.value = '';
+        multInput.checked = false;
         renderStructure();
     }
 
@@ -187,6 +189,10 @@
 
     function updateFieldRequired(sIdx, fIdx, isRequired) {
         reportStructure[sIdx].fields[fIdx].required = isRequired;
+    }
+
+    function updateFieldMultiple(sIdx, fIdx, isMultiple) {
+        reportStructure[sIdx].fields[fIdx].is_multiple = isMultiple;
     }
 
     function updateFieldHint(sIdx, fIdx, newHint) {
@@ -231,6 +237,10 @@
                                         <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
                                         <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                     </div>
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="mult-${sIdx}-${fIdx}" ${f.is_multiple ? 'checked' : ''} onchange="updateFieldMultiple(${sIdx}, ${fIdx}, this.checked)">
+                                        <label class="form-check-label small text-dark" for="mult-${sIdx}-${fIdx}">Разрешить несколько значений (+)</label>
+                                    </div>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center ms-4 ps-2">
                                     <div class="flex-grow-1 me-3">
@@ -255,6 +265,10 @@
                             <div class="form-check mb-0">
                                 <input class="form-check-input" type="checkbox" id="req-${sIdx}" checked>
                                 <label class="form-check-label small text-dark" for="req-${sIdx}">Обязательно</label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="mult-${sIdx}">
+                                <label class="form-check-label small text-dark" for="mult-${sIdx}">Несколько значений (+)</label>
                             </div>
                         </div>
 

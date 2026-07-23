@@ -238,11 +238,28 @@
                             <tr>
                                 <td class="p-3 fw-bold sticky-col">{{ sub.user.username }}</td>
                                 {% for field in sheet.fields %}
-                                <td class="p-3 text-center text-dark" 
-                                    contenteditable="true" 
-                                    data-user-id="{{ sub.user.id }}"
-                                    data-field-name="{{ field.name }}"
-                                    title="Кликните для редактирования">{{ sub.data.get(field.name, '') }}</td>
+                                <td class="p-0 align-top text-center text-dark" title="Кликните для редактирования">
+                                    {% set val = sub.data.get(field.name, '') %}
+                                    {% if val is iterable and val is not string %}
+                                        {% for v in val %}
+                                        <div class="p-3 {% if not loop.last %}border-bottom{% endif %}" 
+                                             contenteditable="true" 
+                                             data-user-id="{{ sub.user.id }}"
+                                             data-field-name="{{ field.name }}"
+                                             data-is-multiple="true"
+                                             data-index="{{ loop.index0 }}">{{ v }}</div>
+                                        {% endfor %}
+                                        {% if val|length == 0 %}
+                                        <div class="p-3" contenteditable="true" data-user-id="{{ sub.user.id }}" data-field-name="{{ field.name }}" data-is-multiple="true" data-index="0"></div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="p-3" 
+                                             contenteditable="true" 
+                                             data-user-id="{{ sub.user.id }}"
+                                             data-field-name="{{ field.name }}"
+                                             data-is-multiple="false">{{ val }}</div>
+                                    {% endif %}
+                                </td>
                                 {% endfor %}
                             </tr>
                             {% else %}
@@ -450,9 +467,30 @@
     <script>
         function saveAllChanges() {
             const btn = document.getElementById('saveChangesBtn');
-            const cells = document.querySelectorAll('td[contenteditable="true"]');
+            const cells = document.querySelectorAll('div[contenteditable="true"]');
+            
+            // Сначала собираем все текущие значения со всех ячеек, чтобы корректно собрать массивы
+            const currentData = {};
+            cells.forEach(cell => {
+                const uid = cell.getAttribute('data-user-id');
+                const fname = cell.getAttribute('data-field-name');
+                const isMulti = cell.getAttribute('data-is-multiple') === 'true';
+                const idx = cell.getAttribute('data-index') || 0;
+                const val = cell.innerText.trim();
+                
+                if (!currentData[uid]) currentData[uid] = {};
+                if (!currentData[uid][fname]) currentData[uid][fname] = isMulti ? [] : null;
+                
+                if (isMulti) {
+                    currentData[uid][fname][idx] = val;
+                } else {
+                    currentData[uid][fname] = val;
+                }
+            });
+
             const updates = [];
             const cellsToUpdate = [];
+            const updatesMap = {}; // для избежания дубликатов отправки
             
             cells.forEach(cell => {
                 const newValue = cell.innerText.trim();
@@ -467,11 +505,18 @@
                 const baseValue = cell.hasAttribute('data-original-value') ? originalValue : cell.getAttribute('data-initial');
 
                 if (newValue !== baseValue) {
-                    updates.push({
-                        user_id: cell.getAttribute('data-user-id'),
-                        field_name: cell.getAttribute('data-field-name'),
-                        value: newValue
-                    });
+                    const uid = cell.getAttribute('data-user-id');
+                    const fname = cell.getAttribute('data-field-name');
+                    const key = uid + '_' + fname;
+                    
+                    if (!updatesMap[key]) {
+                        updatesMap[key] = true;
+                        updates.push({
+                            user_id: uid,
+                            field_name: fname,
+                            value: currentData[uid][fname]
+                        });
+                    }
                     cellsToUpdate.push(cell);
                 }
             });

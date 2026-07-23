@@ -4,6 +4,10 @@ from app.models import User
 app = create_app()
 
 if __name__ == '__main__':
+    # При локальном запуске отключаем HTTPS-only куки
+    app.config['SESSION_COOKIE_SECURE'] = False
+    app.config['REMEMBER_COOKIE_SECURE'] = False
+    
     with app.app_context():
         db.create_all()
         if not User.query.filter_by(username='admin').first():
@@ -13,4 +17,4 @@ if __name__ == '__main__':
             db.session.commit()
             print("=== Система готова. Учетная запись администратора: admin / admin123 ===")
             
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)

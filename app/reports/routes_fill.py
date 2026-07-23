@@ -62,22 +62,27 @@ def fill_report(template_id):
             for field in sheet.get('fields', []):
                 val = json_data.get(field['name'])
                 
+                # Приводим к списку для унифицированной проверки
+                vals_to_check = val if isinstance(val, list) else [val]
+                
                 # 1. Проверка обязательных полей
-                if field.get('required') and (val is None or str(val).strip() == ''):
-                    return jsonify({'status': 'error', 'message': f'Обязательное поле "{field["label"]}" не заполнено.'}), 400
-                    
-                # Если значение есть, проверяем его тип
-                if val is not None and str(val).strip() != '':
-                    if field.get('type') == 'number':
-                        # 2. Проверка числовых значений (>= 0)
-                        try:
-                            num_val = float(val)
-                            if num_val < 0:
-                                return jsonify({'status': 'error', 'message': f'Поле "{field["label"]}" не может быть отрицательным.'}), 400
-                        except ValueError:
-                            return jsonify({'status': 'error', 'message': f'Поле "{field["label"]}" должно быть числом.'}), 400
-                    elif field.get('type') == 'text':
-                        pass # No length restriction needed
+                if field.get('required'):
+                    # Должно быть хотя бы одно непустое значение
+                    if not vals_to_check or all(v is None or str(v).strip() == '' for v in vals_to_check):
+                        return jsonify({'status': 'error', 'message': f'Обязательное поле "{field["label"]}" не заполнено.'}), 400
+                        
+                # 2. Проверка типов и значений
+                for v in vals_to_check:
+                    if v is not None and str(v).strip() != '':
+                        if field.get('type') == 'number':
+                            try:
+                                num_val = float(v)
+                                if num_val < 0:
+                                    return jsonify({'status': 'error', 'message': f'Значения в поле "{field["label"]}" не могут быть отрицательными.'}), 400
+                            except ValueError:
+                                return jsonify({'status': 'error', 'message': f'Значение в поле "{field["label"]}" должно быть числом.'}), 400
+                        elif field.get('type') == 'text':
+                            pass # No length restriction needed
         # ----------------------------
 
         submission.data = json_data

@@ -69,37 +69,54 @@
                     {% set is_urgent = days_left is not none and days_left >= 0 and days_left <= 3 %}
                     
                     <div class="col-md-4 user-report-item" data-title="{{ template.name|lower }} {{ template.short_name|lower }}" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '2099-12-31' }}" data-id="{{ template.id }}">
-                        <div class="card hoverable h-100 p-2 position-relative {% if is_overdue %}border-danger shadow-sm{% elif is_urgent %}border-warning{% endif %}">
-                            <div class="card-body d-flex flex-column justify-content-between">
-                                <div>
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="badge bg-light text-dark border">{{ template.period or 'Период не указан' }}</span>
-                                        {% if is_overdue %}
-                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Просрочено</span>
-                                        {% elif is_urgent %}
-                                        <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25">Осталось {{ days_left }} дн.</span>
-                                        {% endif %}
-                                    </div>
-                                    <h5 class="card-title fw-bold text-dark mb-2">{{ template.short_name or template.name }}</h5>
-                                    <p class="text-muted small mb-4 line-clamp-2" title="{{ template.name }}">{{ template.name }}</p>
+                        {% set card_style = "" %}
+                        {% if is_overdue or days_left == 0 %}
+                            {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe3e3 50%, #ffcaca 100%);" %}
+                        {% elif days_left == 1 %}
+                            {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe8d4 50%, #ffd0a6 100%);" %}
+                        {% elif days_left == 2 or days_left == 3 %}
+                            {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #fff8cc 50%, #ffef99 100%);" %}
+                        {% endif %}
+                        <div class="card hoverable h-100 p-3 position-relative shadow-sm d-flex flex-column" style="{{ card_style }}">
+                            <!-- Верхняя часть с бейджами -->
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="badge bg-white text-dark border"><i class="bi bi-calendar"></i> Период: {{ template.period or 'не указан' }}</span>
+                                {% if is_overdue %}
+                                <span class="badge bg-danger text-white border border-danger">Просрочено</span>
+                                {% elif days_left != None %}
+                                    {% if days_left == 0 %}
+                                    <span class="badge bg-danger text-white border border-danger">Осталось 0 дн.</span>
+                                    {% elif days_left <= 3 %}
+                                    <span class="badge bg-warning text-dark border border-warning">Осталось {{ days_left }} дн.</span>
+                                    {% else %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Осталось {{ days_left }} дн.</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Название и Описание -->
+                            <h5 class="card-title fw-bold text-dark mb-2">{{ template.short_name or template.name }}</h5>
+                            {% if template.name and template.name != template.short_name %}
+                            <p class="text-muted small mb-3 line-clamp-2" title="{{ template.name }}">{{ template.name }}</p>
+                            {% endif %}
+                            
+                            <!-- Нижняя часть (Сроки и Кнопка) -->
+                            <div class="mt-auto pt-2">
+                                <div class="d-flex justify-content-between align-items-center mb-3 small">
+                                    <span class="fw-medium text-dark">Срок сдачи до:</span>
+                                    {% if template.deadline %}
+                                    <span class="{% if is_overdue or days_left == 0 %}text-danger fw-bold{% elif days_left != None and days_left <= 3 %}text-warning fw-bold{% else %}text-muted{% endif %} d-flex align-items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
+                                        {{ template.deadline.strftime('%d.%m.%Y') }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">Без срока</span>
+                                    {% endif %}
                                 </div>
-                                <div class="border-top pt-3 border-secondary border-opacity-25 mt-auto">
-                                    <div class="d-flex justify-content-between align-items-center mb-3 small">
-                                        <span class="fw-medium text-dark">Дедлайн:</span>
-                                        {% if template.deadline %}
-                                        <span class="{% if is_overdue %}text-danger fw-bold{% elif is_urgent %}text-warning fw-bold{% else %}text-muted{% endif %} d-flex align-items-center gap-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
-                                            {{ template.deadline.strftime('%d.%m.%Y') }}
-                                        </span>
-                                        {% else %}
-                                        <span class="text-muted">Без срока</span>
-                                        {% endif %}
-                                    </div>
-                                    <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
-                                        Заполнить форму
-                                    </a>
-                                </div>
+                                <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
+                                    Заполнить форму
+                                </a>
                             </div>
                         </div>
                     </div>

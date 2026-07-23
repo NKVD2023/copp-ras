@@ -74,16 +74,22 @@ def inline_update(template_id):
             None
         )
         if field_def and value is not None and str(value).strip() != '':
+            if field_def.get('is_multiple'):
+                if isinstance(value, str):
+                    value = [v.strip() for v in value.split('\n') if v.strip()]
+                    
             if field_def.get('type') == 'number':
                 try:
-                    num_val = float(value)
-                    if num_val < 0:
-                        return jsonify({'status': 'error', 'message': f'Поле "{field_def["label"]}" не может быть отрицательным.'}), 400
+                    # If it's multiple, we should probably check each, but inline_update only checks scalar currently. Let's adapt:
+                    vals_to_check = value if isinstance(value, list) else [value]
+                    for v in vals_to_check:
+                        num_val = float(v)
+                        if num_val < 0:
+                            return jsonify({'status': 'error', 'message': f'Поле "{field_def["label"]}" не может быть отрицательным.'}), 400
                 except (ValueError, TypeError):
                     return jsonify({'status': 'error', 'message': f'Поле "{field_def["label"]}" должно быть числом.'}), 400
             elif field_def.get('type') == 'text':
-                if len(str(value)) > 500:
-                    return jsonify({'status': 'error', 'message': f'Текст в поле "{field_def["label"]}" превышает 500 символов.'}), 400
+                pass
         # -----------------------------------
 
         submission = ReportSubmission.query.filter_by(template_id=template_id, user_id=user_id).first()
@@ -181,28 +187,46 @@ def export_excel(template_id):
         # 3. ДАННЫЕ (Ответы учреждений)
         current_row = 3
         for sub in submissions:
-            row_data = [sub.user.username]
+            # Вычисляем максимальное количество строк для этого учреждения (из-за мульти-полей)
+            max_rows = 1
             for f in sheet_data['fields']:
-                val = sub.data.get(f['name'], '-')
-                # Конвертируем строки в числа, если поле числовое, для корректной работы Excel-формул
-                if f['type'] == 'number' and val not in ['-', '', None]:
-                    try:
-                        val = float(val)
-                    except ValueError:
-                        pass
-                row_data.append(val)
-
-            ws.append(row_data)
-            ws.row_dimensions[current_row].height = 70 
-
-            # Стилизация данных
-            for col_idx, _ in enumerate(row_data, 1):
-                cell = ws.cell(row=current_row, column=col_idx)
-                cell.font = data_font
-                cell.border = thin_border
-                cell.alignment = align_left if col_idx == 1 else align_center
+                val = sub.data.get(f['name'])
+                if isinstance(val, list):
+                    max_rows = max(max_rows, len(val))
             
-            current_row += 1
+            # Подготавливаем данные для каждой подстроки
+            for r_idx in range(max_rows):
+                row_data = [sub.user.username if r_idx == 0 else ""]
+                for f in sheet_data['fields']:
+                    val = sub.data.get(f['name'], '-')
+                    
+                    if isinstance(val, list):
+                        v = val[r_idx] if r_idx < len(val) else '-'
+                    else:
+                        v = val if r_idx == 0 else ""
+                    
+                    # Конвертируем строки в числа, если поле числовое, для корректной работы Excel-формул
+                    if f['type'] == 'number' and v not in ['-', '', None]:
+                        try:
+                            v = float(v)
+                        except ValueError:
+                            pass
+                    row_data.append(v)
+                    
+                ws.append(row_data)
+                
+                # Стилизация данных
+                for col_idx, _ in enumerate(row_data, 1):
+                    cell = ws.cell(row=current_row + r_idx, column=col_idx)
+                    cell.font = data_font
+                    cell.border = thin_border
+                    cell.alignment = align_left if col_idx == 1 else align_center
+
+            # Объединяем ячейку с названием учреждения по вертикали, если строк > 1
+            if max_rows > 1:
+                ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row + max_rows - 1, end_column=1)
+                
+            current_row += max_rows
 
         # 4. ИТОГО (Вычисление суммы по колонкам)
         total_row = ['Итого']
@@ -213,11 +237,14 @@ def export_excel(template_id):
                 for sub in submissions:
                     val = sub.data.get(f['name'])
                     if val:
-                        try:
-                            col_total += float(val)
-                            has_data = True
-                        except ValueError:
-                            pass
+                        vals = val if isinstance(val, list) else [val]
+                        for v in vals:
+                            if v not in ['-', '', None]:
+                                try:
+                                    col_total += float(v)
+                                    has_data = True
+                                except ValueError:
+                                    pass
                 total_row.append(col_total if has_data else 0)
             else:
                 total_row.append('-') # Текстовые поля не суммируем

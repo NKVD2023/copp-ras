@@ -47,11 +47,37 @@
                                 {% endif %}
                             </label>
                             
-                            {% if field.type == 'text' %}
-                                <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                            {% if field.is_multiple %}
+                                {% set raw_val = submission.data.get(field.name) if submission else None %}
+                                {% set field_values = raw_val if raw_val and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val else ['']) %}
+                                
+                                <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
+                                    {% for v in field_values %}
+                                    <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
+                                        {% if field.type == 'text' %}
+                                            <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ v }}</textarea>
+                                        {% else %}
+                                            <input type="{{ field.type }}" class="form-control" data-multiple="true" name="{{ field.name }}"
+                                                value="{{ v }}" min="0" step="any" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                        {% endif %}
+                                        {% if not is_locked %}
+                                        <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if not is_locked %}
+                                    <button type="button" class="btn btn-add-dynamic" onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
+                                        <i class="bi bi-plus-circle"></i> Добавить еще поле
+                                    </button>
+                                    {% endif %}
+                                </div>
                             {% else %}
-                                <input type="{{ field.type }}" class="form-control" name="{{ field.name }}"
-                                    value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                {% if field.type == 'text' %}
+                                    <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                                {% else %}
+                                    <input type="{{ field.type }}" class="form-control" name="{{ field.name }}"
+                                        value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                {% endif %}
                             {% endif %}
                             
                         </div>
@@ -125,20 +151,35 @@
         
         // Настройка сохранения при изменении
         form.addEventListener('input', () => {
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
+            const data = getFormDataObj(form);
             localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
         });
         {% endif %}
     });
+
+    function getFormDataObj(formElement) {
+        const formData = new FormData(formElement);
+        const dataObj = {};
+        
+        const multipleInputs = Array.from(formElement.querySelectorAll('[data-multiple="true"]'));
+        const multipleNames = new Set(multipleInputs.map(el => el.name));
+        
+        for (const key of new Set(formData.keys())) {
+            if (multipleNames.has(key)) {
+                dataObj[key] = formData.getAll(key).filter(v => v.trim() !== '');
+            } else {
+                dataObj[key] = formData.get(key);
+            }
+        }
+        return dataObj;
+    }
 
     function submitFullForm() {
         if (!form.reportValidity()) {
             return;
         }
         
-        const formData = new FormData(form);
-        const dataObj = Object.fromEntries(formData.entries());
+        const dataObj = getFormDataObj(form);
         
         fetch("{{ url_for('reports.fill_report', template_id=template.id) }}", { 
             method: 'POST', 
@@ -156,6 +197,26 @@
             }
         })
         .catch(err => alert("Ошибка сети: " + err));
+    }
+
+    function addDynamicField(btn, type, name) {
+        const wrapper = btn.closest('.dynamic-field-wrapper');
+        const item = document.createElement('div');
+        item.className = 'dynamic-field-item d-flex gap-2 mb-2 align-items-start';
+        
+        let inputHtml = '';
+        if (type === 'text') {
+            inputHtml = `<textarea class="form-control" data-multiple="true" name="${name}" rows="2"></textarea>`;
+        } else {
+            inputHtml = `<input type="${type}" class="form-control" data-multiple="true" name="${name}" value="" min="0" step="any">`;
+        }
+        
+        item.innerHTML = inputHtml + `<button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>`;
+        wrapper.insertBefore(item, btn);
+    }
+    
+    function removeDynamicField(btn) {
+        btn.closest('.dynamic-field-item').remove();
     }
 
     {% if not is_locked %}
