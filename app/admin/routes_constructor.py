@@ -34,9 +34,22 @@ def constructor():
             period=data.get('period'),
             deadline=deadline_date,
             is_published=False,
+            is_template=False,
             schema=data['schema'] # Сохраняем JSON-структуру листов
         )
         db.session.add(template)
+        
+        # Создаем чистый шаблон "на будущее"
+        pure_template = ReportTemplate(
+            name=data['name'], 
+            short_name=data['short_name'], 
+            period=None,
+            deadline=None,
+            is_published=False,
+            is_template=True,
+            schema=data['schema']
+        )
+        db.session.add(pure_template)
         
         # Назначаем пользователей, выбранных галочками на фронтенде
         for u_id in data.get('user_ids', []):

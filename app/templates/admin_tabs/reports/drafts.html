@@ -1,0 +1,6 @@
+{% from 'admin_tabs/reports/reports_macro.html' import render_reports_list with context %}
+<div class="mb-3">
+    <h6 class="fw-bold text-dark mb-1">Черновики</h6>
+    <p class="small text-muted mb-4">Настроенные отчёты (с назначенными сроками и исполнителями), которые ожидают публикации.</p>
+</div>
+{{ render_reports_list(draft_templates) }}

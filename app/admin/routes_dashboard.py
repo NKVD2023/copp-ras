@@ -49,20 +49,40 @@ def dashboard():
     users = User.query.filter(User.id != current_user.id).all()
     
     # 2. Список шаблонов (новые сверху)
-    templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
+    all_templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
     
-    # Данные для вкладки "База Данных"
-    all_users = User.query.all()
-    all_submissions = ReportSubmission.query.all()
-    
-    # 3. Собираем словарь должников (кто из назначенных пользователей еще не сдал отчет)
+    # 3. Собираем словарь должников и распределяем шаблоны
+    pure_templates = []
+    published_templates = []
+    draft_templates = []
+    archived_templates = []
+    completed_templates = []
     debtors_map = {}
-    for t in templates:
+    
+    for t in all_templates:
         # ID пользователей, которые уже сдали отчет по этому шаблону
         submitted_user_ids = [sub.user_id for sub in ReportSubmission.query.filter_by(template_id=t.id).all()]
         # Должники = Назначенные пользователи МИНУС Сдавшие пользователи
         debtors = [u for u in t.assigned_users if u.id not in submitted_user_ids]
         debtors_map[t.id] = debtors
+        
+        if t.is_archived:
+            archived_templates.append(t)
+        elif t.is_template:
+            pure_templates.append(t)
+        elif not t.is_published:
+            draft_templates.append(t)
+        else:
+            # Отчет опубликован. Проверяем, сдали ли все
+            if t.assigned_users.count() > 0 and len(debtors) == 0:
+                completed_templates.append(t)
+            else:
+                published_templates.append(t)
+
+    # Данные для вкладки "База Данных" и "Сданные отчёты" (если нужны)
+    all_users = User.query.all()
+    all_submissions = ReportSubmission.query.order_by(ReportSubmission.id.desc()).all()
+    active_submissions = [sub for sub in all_submissions if getattr(sub, 'is_archived', False) == False]
 
     # 4. Сканируем папку backups для отображения списка резервных копий
     backups_dir = os.path.join(basedir, 'backups')
@@ -86,13 +106,20 @@ def dashboard():
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
                            users=users, 
-                           templates=templates, 
+                           templates=all_templates, 
+                           pure_templates=pure_templates,
+                           published_templates=published_templates,
+                           draft_templates=draft_templates,
+                           archived_templates=archived_templates,
+                           completed_templates=completed_templates,
                            debtors_map=debtors_map,
                            all_users=all_users,
                            all_submissions=all_submissions,
+                           active_submissions=active_submissions,
                            backups_list=backups_list,
                            logs_list=logs_list,
                            current_date=datetime.date.today())
+
 
 @admin_bp.route('/clear_logs', methods=['POST'])
 @login_required

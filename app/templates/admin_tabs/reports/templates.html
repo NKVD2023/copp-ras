@@ -1,0 +1,16 @@
+{% from 'admin_tabs/reports/reports_macro.html' import render_reports_list with context %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h6 class="fw-bold text-dark mb-1">Шаблоны отчётов</h6>
+        <p class="small text-muted mb-0">Библиотека шаблонов для создания новых черновиков и сбора отчётов.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-copp" data-bs-toggle="modal" data-bs-target="#importTemplateModal">
+            <i class="bi bi-file-earmark-excel me-1"></i> Создать из Excel
+        </button>
+        <a href="{{ url_for('admin.constructor') }}" class="btn btn-copp">
+            <i class="bi bi-plus-lg me-1"></i> Создать новый отчёт
+        </a>
+    </div>
+</div>
+{{ render_reports_list(pure_templates, is_template_tab=True) }}

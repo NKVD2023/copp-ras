@@ -52,6 +52,7 @@ class ReportTemplate(db.Model):
     deadline = db.Column(db.Date)             # Дедлайн сдачи
     is_published = db.Column(db.Boolean, default=False)  # Виден ли пользователям
     is_archived = db.Column(db.Boolean, default=False)   # Перенесен ли в архив
+    is_template = db.Column(db.Boolean, default=False)   # Является ли это чистым шаблоном (без дедлайна)
     schema = db.Column(JSON)                  # Структура: листы, столбцы, типы полей
 
 class ReportSubmission(db.Model):

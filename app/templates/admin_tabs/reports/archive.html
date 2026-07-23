@@ -1,0 +1,6 @@
+{% from 'admin_tabs/reports/reports_macro.html' import render_reports_list with context %}
+<div class="mb-3">
+    <h6 class="fw-bold text-dark mb-1">Архив</h6>
+    <p class="small text-muted mb-4">Устаревшие отчёты, которые больше не используются.</p>
+</div>
+{{ render_reports_list(archived_templates) }}

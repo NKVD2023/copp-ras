@@ -52,6 +52,23 @@ def toggle_publish(template_id):
     """
     template = ReportTemplate.query.get_or_404(template_id)
     template.is_published = not template.is_published
+    
+    if template.is_published:
+        # Check if a pure template with this name already exists
+        existing_pure = ReportTemplate.query.filter_by(name=template.name, is_template=True).first()
+        if not existing_pure:
+            # Create a pure template
+            pure_template = ReportTemplate(
+                name=template.name,
+                short_name=template.short_name,
+                period=None,
+                deadline=None,
+                is_published=False,
+                is_template=True,
+                schema=template.schema
+            )
+            db.session.add(pure_template)
+            
     db.session.commit()
     status_str = "опубликован" if template.is_published else "скрыт"
     log_action('Публикация отчета', f'Отчет {template.short_name} {status_str}')
@@ -71,6 +88,19 @@ def toggle_archive(template_id):
     log_action('Архивация отчета', f'Отчет {template.short_name} перенесен {status_str}')
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
+@admin_bp.route('/archive_submission/<int:submission_id>', methods=['POST'])
+@login_required
+def archive_submission(submission_id):
+    """
+    Архивация сданного отчета
+    """
+    from app.models import ReportSubmission
+    sub = ReportSubmission.query.get_or_404(submission_id)
+    sub.is_archived = True
+    db.session.commit()
+    log_action('Архивация сданного отчета', f'Сданный отчет {sub.id} от пользователя {sub.user.username} перенесен в архив')
+    return redirect(url_for('admin.dashboard') + '#reportsTab')
+
 @admin_bp.route('/clone_template/<int:template_id>', methods=['POST'])
 @login_required
 def clone_template(template_id):
@@ -82,14 +112,23 @@ def clone_template(template_id):
     deadline_str = request.form.get('new_deadline')
     deadline_date = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
     
+    action = request.form.get('action', 'draft')
+    is_published = (action == 'publish')
+    
     new_template = ReportTemplate(
         name=request.form.get('new_name'),
         short_name=request.form.get('new_short_name'),
         period=request.form.get('new_period'),
         deadline=deadline_date,
-        is_published=False,  # Новые копии по умолчанию являются черновиками
+        is_published=is_published,
+        is_template=False,   # Это рабочий отчет (черновик или опубликованный), а не чистый шаблон
         schema=original.schema
     )
+    
+    # Копируем пользователей, если они были назначены
+    for user in original.assigned_users:
+        new_template.assigned_users.append(user)
+        
     db.session.add(new_template)
     db.session.commit()
     log_action('Копирование отчета', f'Создана копия отчета {original.short_name} с новым именем {new_template.short_name}')
