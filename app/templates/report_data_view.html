@@ -190,9 +190,13 @@
     </nav>
 
     <div class="full-view-container">
-        <div class="view-header">
+        <div class="view-header d-flex justify-content-between align-items-center">
             <h5 class="fw-bold text-dark m-0">{{ template.name }}</h5>
-            <!-- <p class="text-muted small m-0">{{ template.name }}</p> -->
+            
+            <div class="input-group" style="width: 350px;">
+                <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" id="orgSearchInput" class="form-control border-start-0 ps-0" placeholder="Поиск по организации..." autocomplete="off">
+            </div>
         </div>
 
         <ul class="nav nav-tabs" id="dataSheetsTabs" role="tablist">
@@ -582,6 +586,31 @@
                 if(!e.target.hasAttribute('data-original-value') && !e.target.hasAttribute('data-initial')) {
                     e.target.setAttribute('data-initial', e.target.innerText.trim());
                 }
+            }
+        });
+    </script>
+    <!-- Логика поиска по организациям -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const searchInput = document.getElementById('orgSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    // Ищем все строки данных (игнорируем строку Итого в tfoot)
+                    const rows = document.querySelectorAll('.table-custom tbody tr');
+                    
+                    rows.forEach(row => {
+                        const orgCell = row.querySelector('td:first-child');
+                        if (orgCell) {
+                            const orgName = orgCell.textContent.toLowerCase();
+                            if (orgName.includes(searchTerm)) {
+                                row.style.display = '';
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        }
+                    });
+                });
             }
         });
     </script>
