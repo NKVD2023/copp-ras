@@ -12,106 +12,204 @@
         <input type="text" id="userSearch" class="form-control border-start-0 ps-0" placeholder="Поиск по логину или названию..." autocomplete="off">
     </div>
 
-    <div class="row g-3" id="usersList">
-        {% for user in users %}
-        <div class="col-md-6 col-lg-4 user-card-item">
-            <div class="border rounded h-100 p-3 bg-white d-flex flex-column shadow-sm">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="fw-bold text-dark">{{ user.username }}</span>
-                    {% if user.role == 'viewer' %}
-                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size: 0.7em;">Наблюдатель</span>
-                    {% endif %}
-                    {% if user.group %}
-                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 ms-1" style="font-size: 0.7em;">{{ user.group }}</span>
-                    {% endif %}
-                </div>
-                {% if user.description %}
-                <p class="text-muted small mb-3 flex-grow-1">{{ user.description }}</p>
-                {% else %}
-                <div class="flex-grow-1"></div>
-                {% endif %}
-                
-                <button class="btn btn-sm btn-outline-secondary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#userModal-{{ user.id }}">
-                    Управление
-                </button>
-            </div>
-        </div>
-
-        <div class="modal fade" id="userModal-{{ user.id }}" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header border-bottom-0 pt-4 px-4">
-                        <h6 class="modal-title fw-bold text-dark m-0">Пользователь: {{ user.username }}</h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body px-4 py-2">
-                        <h6 class="fw-bold text-dark small mb-2">Сброс пароля</h6>
-                        <form action="{{ url_for('admin.reset_password', user_id=user.id) }}" method="POST" class="d-flex gap-2 mb-4">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <input type="text" name="new_password" class="form-control form-control-sm" placeholder="Новый пароль" required autocomplete="off">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Изменить</button>
-                        </form>
-
-                        <h6 class="fw-bold text-dark small mb-2">Изменение группы</h6>
-                        <form action="{{ url_for('admin.change_user_group', user_id=user.id) }}" method="POST" class="d-flex gap-2 mb-4">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <input type="text" name="group" class="form-control form-control-sm" list="groupsDataListList-{{ user.id }}" value="{{ user.group or '' }}" placeholder="Без группы">
-                            <datalist id="groupsDataListList-{{ user.id }}">
-                                {% for g in all_groups %}
-                                <option value="{{ g }}">
-                                {% endfor %}
-                            </datalist>
-                            <button type="submit" class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Сохранить</button>
-                        </form>
-
-                        {% if user.role == 'user' %}
-                        <h6 class="fw-bold text-dark small mb-2">Доступ к отчетам</h6>
-                        <form action="{{ url_for('admin.assign_access') }}" method="POST" class="mb-4">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <input type="hidden" name="user_id" value="{{ user.id }}">
-                            <div class="border rounded p-2 mb-3 bg-light access-list-scrollable">
-                                {% for t in templates %}
-                                <div class="form-check mb-2 {% if not loop.last %}border-bottom pb-2{% endif %}">
-                                    <input class="form-check-input" type="checkbox" name="template_ids" value="{{ t.id }}" {% if t in user.assigned_templates %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
-                                    <label class="form-check-label small" for="access-{{ user.id }}-{{ t.id }}">{{ t.short_name }}</label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            <button type="submit" class="btn btn-sm btn-copp w-100">Сохранить доступы</button>
-                        </form>
+    <div class="table-responsive bg-white rounded shadow-sm border">
+        <table class="table table-hover align-middle mb-0" id="usersTable">
+            <thead class="table-light text-muted small text-uppercase">
+                <tr>
+                    <th class="ps-4 fw-medium border-bottom-0" style="min-width: 200px;">Пользователь</th>
+                    <th class="fw-medium border-bottom-0" style="min-width: 150px;">Роль и Группа</th>
+                    <th class="fw-medium border-bottom-0">Доступные отчеты</th>
+                    <th class="pe-4 fw-medium border-bottom-0 text-end">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr class="user-table-row">
+                    <td class="ps-4 py-3">
+                        <div class="fw-bold text-dark">{{ user.username }}</div>
+                        <div class="text-muted small" style="max-width: 350px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ user.description or '' }}</div>
+                    </td>
+                    <td class="py-3">
+                        {% if user.role == 'viewer' %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal d-inline-block mb-1">Наблюдатель</span>
+                        {% else %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fw-normal d-inline-block mb-1">Пользователь</span>
                         {% endif %}
+                        <br>
+                        {% if user.group %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal d-inline-block">{{ user.group }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3">
+                        <div class="d-flex flex-wrap gap-1" style="max-width: 350px;">
+                            {% for t in user.assigned_templates %}
+                            <span class="badge bg-light text-secondary border fw-normal">{{ t.short_name }}</span>
+                            {% endfor %}
+                            {% if not user.assigned_templates and user.role == 'user' %}
+                            <span class="text-muted small">Нет доступов</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="pe-4 py-3 text-end">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#userModal-{{ user.id }}">Управление</button>
+                    </td>
+                </tr>
 
-                        <div class="border-top pt-3 text-center">
-                            <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите полностью удалить этого пользователя?');">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">Удалить учетную запись</button>
+                <!-- Modal -->
+                <div class="modal fade" id="userModal-{{ user.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content border-0 shadow">
+                            <form action="{{ url_for('admin.edit_user', user_id=user.id) }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                
+                                <div class="modal-header border-bottom-0 pt-4 px-4 pb-0">
+                                    <h5 class="modal-title fw-bold text-dark mb-3">Пользователь: {{ user.username }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="position: absolute; top: 1.5rem; right: 1.5rem;"></button>
+                                </div>
+
+                                <!-- Навигация по вкладкам -->
+                                <div class="px-4 border-bottom">
+                                    <ul class="nav nav-tabs border-0" id="userTabs-{{ user.id }}" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active bg-transparent text-dark fw-medium border-0 border-bottom border-primary border-3" style="border-radius: 0;" id="main-tab-{{ user.id }}" data-bs-toggle="tab" data-bs-target="#main-{{ user.id }}" type="button" role="tab">Основное</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link bg-transparent text-muted fw-medium border-0" style="border-radius: 0;" id="access-tab-{{ user.id }}" data-bs-toggle="tab" data-bs-target="#access-{{ user.id }}" type="button" role="tab">Права доступа</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link bg-transparent text-muted fw-medium border-0" style="border-radius: 0;" id="sec-tab-{{ user.id }}" data-bs-toggle="tab" data-bs-target="#sec-{{ user.id }}" type="button" role="tab">Безопасность</button>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="modal-body px-4 py-4 tab-content" id="userTabsContent-{{ user.id }}">
+                                    <!-- Вкладка Основное -->
+                                    <div class="tab-pane fade show active" id="main-{{ user.id }}" role="tabpanel">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label small text-muted">Логин</label>
+                                                <input type="text" name="username" class="form-control" value="{{ user.username }}" required autocomplete="off">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small text-muted">Описание (Название учреждения)</label>
+                                                <input type="text" name="description" class="form-control" value="{{ user.description or '' }}" autocomplete="off">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small text-muted">Роль</label>
+                                                <select name="role" class="form-select">
+                                                    <option value="user" {% if user.role == 'user' %}selected{% endif %}>Пользователь (Заполнение данных)</option>
+                                                    <option value="viewer" {% if user.role == 'viewer' %}selected{% endif %}>Наблюдатель (Только просмотр)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small text-muted">Группа</label>
+                                                <input type="text" name="group" class="form-control" list="groupsDataListList-{{ user.id }}" value="{{ user.group or '' }}" placeholder="Без группы">
+                                                <datalist id="groupsDataListList-{{ user.id }}">
+                                                    {% for g in all_groups %}
+                                                    <option value="{{ g }}">
+                                                    {% endfor %}
+                                                </datalist>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Вкладка Права доступа -->
+                                    <div class="tab-pane fade" id="access-{{ user.id }}" role="tabpanel">
+                                        <p class="small text-muted mb-3">Выберите отчеты, к которым у пользователя будет доступ:</p>
+                                        <div class="border rounded p-3 bg-light" style="max-height: 250px; overflow-y: auto;">
+                                            <div class="row g-2">
+                                                {% for t in templates %}
+                                                <div class="col-md-6">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="template_ids" value="{{ t.id }}" {% if t in user.assigned_templates %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
+                                                        <label class="form-check-label small" for="access-{{ user.id }}-{{ t.id }}">{{ t.short_name }}</label>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Вкладка Безопасность -->
+                                    <div class="tab-pane fade" id="sec-{{ user.id }}" role="tabpanel">
+                                        <div class="mb-3">
+                                            <label class="form-label small text-muted">Сброс пароля (новый пароль)</label>
+                                            <input type="text" name="new_password" class="form-control" placeholder="Оставьте пустым, чтобы не менять пароль" autocomplete="off">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer px-4 py-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                    <button type="button" class="btn btn-outline-danger btn-sm px-3 shadow-sm rounded-pill" onclick="if(confirm('Вы уверены, что хотите полностью удалить этого пользователя? Эта операция необратима.')) { document.getElementById('deleteUserForm-{{ user.id }}').submit(); }">Удалить учетную запись</button>
+                                    <div>
+                                        <button type="button" class="btn btn-light btn-sm px-3 me-2 border shadow-sm rounded-pill" data-bs-dismiss="modal">Отмена</button>
+                                        <button type="submit" class="btn btn-copp btn-sm px-4 shadow-sm rounded-pill">Сохранить изменения</button>
+                                    </div>
+                                </div>
+                            </form>
+                            
+                            <!-- Скрытая форма для удаления -->
+                            <form id="deleteUserForm-{{ user.id }}" action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" style="display: none;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             </form>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // Логика поиска
         const userSearch = document.getElementById('userSearch');
         if (userSearch) {
             userSearch.addEventListener('input', function () {
                 const query = this.value.toLowerCase();
-                const userItems = document.querySelectorAll('.user-card-item');
+                const rows = document.querySelectorAll('.user-table-row');
 
-                userItems.forEach(function (item) {
-                    const textContent = item.textContent.toLowerCase();
+                rows.forEach(function (row) {
+                    const textContent = row.textContent.toLowerCase();
                     if (textContent.includes(query)) {
-                        item.style.display = '';
+                        row.style.display = '';
                     } else {
-                        item.style.display = 'none';
+                        row.style.display = 'none';
                     }
                 });
             });
         }
+
+        // Логика переключения вкладок в модалках
+        const tabButtons = document.querySelectorAll('.nav-tabs .nav-link');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                // Убираем active у всех кнопок в этом ul
+                const ul = this.closest('ul');
+                ul.querySelectorAll('.nav-link').forEach(b => {
+                    b.classList.remove('active', 'border-primary', 'border-bottom', 'border-3', 'text-dark');
+                    b.classList.add('text-muted');
+                });
+                
+                // Добавляем active текущей
+                this.classList.add('active', 'border-primary', 'border-bottom', 'border-3', 'text-dark');
+                this.classList.remove('text-muted');
+
+                // Скрываем все tab-pane в соседнем tab-content
+                const tabContent = ul.parentElement.nextElementSibling;
+                tabContent.querySelectorAll('.tab-pane').forEach(p => {
+                    p.classList.remove('show', 'active');
+                });
+
+                // Показываем нужный tab-pane
+                const targetId = this.getAttribute('data-bs-target');
+                const targetPane = document.querySelector(targetId);
+                if(targetPane) {
+                    targetPane.classList.add('show', 'active');
+                }
+            });
+        });
     });
 </script>
