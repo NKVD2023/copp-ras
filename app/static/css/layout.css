@@ -58,8 +58,7 @@
     padding: 0.5rem 0.5rem 0.5rem 0.5rem;
     transition: var(--transition);
     border-bottom: 2px solid transparent;
-    position: relative;
-    top: 1px;
+    margin-bottom: -1px;
 }
 
 .admin-nav-link:hover {

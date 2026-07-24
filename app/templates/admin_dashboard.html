@@ -61,7 +61,7 @@
     {% endif %}
 
     <div class="tab-pane fade {% if current_user.role == 'viewer' %}show active{% endif %}" id="reportsTab" role="tabpanel">
-        <div class="p-4">
+        <div class="card p-4">
             {% include 'admin_tabs/reports_tabs.html' %}
         </div>
     </div>
