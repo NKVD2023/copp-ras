@@ -74,6 +74,32 @@
                 </div>
                 {% endfor %}
             </div>
+            
+            <hr class="my-4">
+            
+            <label class="form-label small fw-bold text-dark mb-3">Прикрепленные файлы (инструкции, бланки, письма):</label>
+            <div class="row px-2">
+                {% for f in all_files %}
+                <div class="form-check col-md-6 mb-2">
+                    <input class="form-check-input file-cb" type="checkbox"
+                        value="{{ f.id }}" id="f-cb-{{ f.id }}" {% if template and f in template.attachments %}checked{% endif %}>
+                    <label class="form-check-label small text-truncate d-inline-block w-100" for="f-cb-{{ f.id }}" title="{{ f.filename }}">
+                        {{ f.filename }} <span class="text-muted">({{ (f.file_size / 1024 / 1024)|round(2) }} МБ)</span>
+                    </label>
+                </div>
+                {% endfor %}
+                {% if not all_files %}
+                <div class="col-12 text-muted small">
+                    Нет загруженных файлов.
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="mt-3 border-top pt-3">
+                <label class="form-label small fw-bold text-dark mb-2">Или загрузите новые файлы прямо сейчас:</label>
+                <input type="file" id="newFiles" class="form-control form-control-sm" multiple accept=".pdf,.docx,.xlsx">
+                <div class="form-text small">Разрешены: PDF, DOCX, XLSX. До 50 МБ на файл.</div>
+            </div>
         </div>
 
         <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
@@ -284,14 +310,33 @@
         
         const userIds = Array.from(document.querySelectorAll('.user-cb:checked')).map(cb => parseInt(cb.value));
         const groupNames = Array.from(document.querySelectorAll('.group-cb:checked')).map(cb => cb.value);
+        const fileIds = Array.from(document.querySelectorAll('.file-cb:checked')).map(cb => parseInt(cb.value));
         
         const editTemplateId = {% if template %}{{ template.id }}{% else %}null{% endif %};
         const fetchUrl = editTemplateId ? `/admin/edit_constructor/${editTemplateId}` : "{{ url_for('admin.constructor') }}";
 
-        fetch(fetchUrl, { headers: { 'X-CSRFToken': '{{ csrf_token() }}' }, 
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('short_name', shortName);
+        formData.append('period', period);
+        if (deadline) formData.append('deadline', deadline);
+        formData.append('schema', JSON.stringify(reportStructure));
+        formData.append('user_ids', JSON.stringify(userIds));
+        formData.append('group_names', JSON.stringify(groupNames));
+        formData.append('file_ids', JSON.stringify(fileIds));
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        
+        const fileInput = document.getElementById('newFiles');
+        if (fileInput.files.length > 0) {
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('new_files', fileInput.files[i]);
+            }
+        }
+
+        fetch(fetchUrl, { 
             method: 'POST', 
-            headers: { 'Content-Type': 'application/json' , 'X-CSRFToken': '{{ csrf_token() }}'}, 
-            body: JSON.stringify({ name, short_name: shortName, period, deadline, schema: reportStructure, user_ids: userIds, group_names: groupNames }) 
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
         })
         .then(res => res.json())
         .then(data => { 

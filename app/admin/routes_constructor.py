@@ -24,18 +24,21 @@ def constructor():
           и сохраняет новый шаблон в базу данных.
     """
     if request.method == 'POST':
-        data = request.get_json()
+        import json
+        data = request.form
         deadline_str = data.get('deadline')
         deadline_date = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
         
+        schema = json.loads(data.get('schema', '[]'))
+        
         template = ReportTemplate(
-            name=data['name'], 
-            short_name=data['short_name'], 
+            name=data.get('name'), 
+            short_name=data.get('short_name'), 
             period=data.get('period'),
             deadline=deadline_date,
             is_published=False,
             is_template=False,
-            schema=data['schema'] # Сохраняем JSON-структуру листов
+            schema=schema # Сохраняем JSON-структуру листов
         )
         db.session.add(template)
         
@@ -47,22 +50,63 @@ def constructor():
             deadline=None,
             is_published=False,
             is_template=True,
-            schema=data['schema']
+            schema=schema
         )
         db.session.add(pure_template)
         
         # Назначаем пользователей, выбранных галочками на фронтенде
-        for u_id in data.get('user_ids', []):
+        user_ids = json.loads(data.get('user_ids', '[]'))
+        for u_id in user_ids:
             user = User.query.get(u_id)
             if user and user not in template.assigned_users:
                 template.assigned_users.append(user)
                 
         # Назначаем пользователей по выбранным группам
-        for group_name in data.get('group_names', []):
+        group_names = json.loads(data.get('group_names', '[]'))
+        for group_name in group_names:
             users_in_group = User.query.filter_by(group=group_name).all()
             for user in users_in_group:
                 if user not in template.assigned_users:
                     template.assigned_users.append(user)
+                    
+        # Назначаем уже существующие прикрепленные файлы
+        from app.models import UploadedFile
+        file_ids = json.loads(data.get('file_ids', '[]'))
+        for f_id in file_ids:
+            file_obj = UploadedFile.query.get(f_id)
+            if file_obj and file_obj not in template.attachments:
+                template.attachments.append(file_obj)
+                
+        # Загружаем НОВЫЕ файлы прямо из конструктора
+        import os, uuid
+        from werkzeug.utils import secure_filename
+        from config import basedir
+        from flask_login import current_user
+        
+        UPLOAD_FOLDER = os.path.join(basedir, 'app', 'uploads', 'reports')
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        
+        new_files = request.files.getlist('new_files')
+        for file in new_files:
+            if file and file.filename:
+                original_name = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4().hex}_{original_name}"
+                file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+                
+                file.seek(0, os.SEEK_END)
+                size = file.tell()
+                file.seek(0)
+                
+                file.save(file_path)
+                
+                new_file_obj = UploadedFile(
+                    filename=file.filename,
+                    filepath=unique_filename,
+                    uploader_id=current_user.id,
+                    file_size=size
+                )
+                db.session.add(new_file_obj)
+                template.attachments.append(new_file_obj)
                 
         db.session.commit()
         log_action('Создание отчета (Конструктор)', f'Создан новый шаблон отчета: {template.short_name}')
@@ -76,7 +120,10 @@ def constructor():
     if not all_groups:
         all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
         
-    return render_template('constructor.html', users=users, all_groups=all_groups)
+    from app.models import UploadedFile
+    all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
+        
+    return render_template('constructor.html', users=users, all_groups=all_groups, all_files=all_files)
 
 @admin_bp.route('/edit_constructor/<int:template_id>', methods=['GET', 'POST'])
 @login_required
@@ -89,28 +136,71 @@ def edit_constructor(template_id):
     template = ReportTemplate.query.get_or_404(template_id)
     
     if request.method == 'POST':
-        data = request.get_json()
+        import json
+        data = request.form
         deadline_str = data.get('deadline')
         
         # Обновляем мета-информацию и структуру
-        template.name = data['name']
-        template.short_name = data['short_name']
+        template.name = data.get('name')
+        template.short_name = data.get('short_name')
         template.period = data.get('period')
         template.deadline = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
-        template.schema = data['schema']
+        template.schema = json.loads(data.get('schema', '[]'))
         
         # Полностью пересобираем список назначенных пользователей (удаляем старые, добавляем новые)
         template.assigned_users = []
-        for u_id in data.get('user_ids', []):
+        user_ids = json.loads(data.get('user_ids', '[]'))
+        for u_id in user_ids:
             user = User.query.get(u_id)
             if user and user not in template.assigned_users:
                 template.assigned_users.append(user)
                 
-        for group_name in data.get('group_names', []):
+        group_names = json.loads(data.get('group_names', '[]'))
+        for group_name in group_names:
             users_in_group = User.query.filter_by(group=group_name).all()
             for user in users_in_group:
                 if user not in template.assigned_users:
                     template.assigned_users.append(user)
+                    
+        # Полностью пересобираем список прикрепленных файлов
+        template.attachments = []
+        from app.models import UploadedFile
+        file_ids = json.loads(data.get('file_ids', '[]'))
+        for f_id in file_ids:
+            file_obj = UploadedFile.query.get(f_id)
+            if file_obj and file_obj not in template.attachments:
+                template.attachments.append(file_obj)
+                
+        # Загружаем НОВЫЕ файлы прямо из конструктора
+        import os, uuid
+        from werkzeug.utils import secure_filename
+        from config import basedir
+        from flask_login import current_user
+        
+        UPLOAD_FOLDER = os.path.join(basedir, 'app', 'uploads', 'reports')
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        
+        new_files = request.files.getlist('new_files')
+        for file in new_files:
+            if file and file.filename:
+                original_name = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4().hex}_{original_name}"
+                file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+                
+                file.seek(0, os.SEEK_END)
+                size = file.tell()
+                file.seek(0)
+                
+                file.save(file_path)
+                
+                new_file_obj = UploadedFile(
+                    filename=file.filename,
+                    filepath=unique_filename,
+                    uploader_id=current_user.id,
+                    file_size=size
+                )
+                db.session.add(new_file_obj)
+                template.attachments.append(new_file_obj)
                 
         db.session.commit()
         log_action('Редактирование структуры отчета', f'Обновлена структура шаблона отчета: {template.short_name}')
@@ -124,7 +214,10 @@ def edit_constructor(template_id):
     if not all_groups:
         all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
         
-    return render_template('constructor.html', users=users, template=template, all_groups=all_groups)
+    from app.models import UploadedFile
+    all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
+        
+    return render_template('constructor.html', users=users, template=template, all_groups=all_groups, all_files=all_files)
 
 @admin_bp.route('/constructor/import_excel', methods=['POST'])
 @login_required

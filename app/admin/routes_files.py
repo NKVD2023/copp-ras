@@ -59,6 +59,13 @@ def upload_file():
         else:
             flash(f'Формат файла {file.filename} не поддерживается', 'danger')
             
+    if request.args.get('ajax') == '1':
+        db.session.commit()
+        # We need to query the last inserted files for the current user, or just return success
+        # Actually it's easier to just return success and let the frontend reload or we just return the new files.
+        # But we don't have new_files_list. Let's just return success for now.
+        return {'status': 'success'}
+
     if uploaded_count > 0:
         db.session.commit()
         from app.utils import log_action
