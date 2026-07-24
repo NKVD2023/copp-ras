@@ -27,7 +27,7 @@
                     <strong>{{ f.filename }}</strong>
                 </td>
                 <td>{{ (f.file_size / 1024 / 1024)|round(2) }} МБ</td>
-                <td>{{ f.upload_date|msk_time|date(format='%d.%m.%Y %H:%M') }}</td>
+                <td>{{ (f.upload_date|msk_time).strftime('%d.%m.%Y %H:%M') if f.upload_date else '' }}</td>
                 <td>{{ f.uploader.username if f.uploader else 'Неизвестно' }}</td>
                 <td>
                     {% if f.reports.count() > 0 %}
