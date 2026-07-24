@@ -37,10 +37,12 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <select id="userReportSort" class="form-select shadow-sm text-muted">
-                    <option value="deadline">Сначала горящие дедлайны</option>
-                    <option value="newest">Сначала новые</option>
-                    <option value="oldest">Сначала старые</option>
+                <select id="userReportSort" class="form-select shadow-sm text-muted" onchange="window.location.href='?sort=' + this.value">
+                    <option value="deadline_asc" {% if current_sort == 'deadline_asc' %}selected{% endif %}>Срок сдачи (сначала ближайшие)</option>
+                    <option value="deadline_desc" {% if current_sort == 'deadline_desc' %}selected{% endif %}>Срок сдачи (сначала дальние)</option>
+                    <option value="name_asc" {% if current_sort == 'name_asc' %}selected{% endif %}>По названию (А-Я)</option>
+                    <option value="name_desc" {% if current_sort == 'name_desc' %}selected{% endif %}>По названию (Я-А)</option>
+                    <option value="id_desc" {% if current_sort == 'id_desc' %}selected{% endif %}>Сначала новые созданные</option>
                 </select>
             </div>
         </div>
@@ -196,22 +198,6 @@
                         }
                     });
                     
-                    const visibleItems = items.filter(item => item.style.display !== 'none');
-                    visibleItems.sort((a, b) => {
-                        if (sortVal === 'newest') {
-                            return parseInt(b.getAttribute('data-id')) - parseInt(a.getAttribute('data-id'));
-                        } else if (sortVal === 'oldest') {
-                            return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
-                        } else if (sortVal === 'deadline') {
-                            return a.getAttribute('data-deadline').localeCompare(b.getAttribute('data-deadline'));
-                        }
-                        return 0;
-                    });
-                    
-                    visibleItems.forEach(item => container.appendChild(item));
-                }
-
                 if (searchInput) searchInput.addEventListener('input', applyFilterAndSort);
-                if (sortSelect) sortSelect.addEventListener('change', applyFilterAndSort);
             });
         </script>

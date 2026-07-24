@@ -45,6 +45,9 @@ def dashboard():
     и передает их в единый шаблон `admin_dashboard.html`, который использует
     систему вкладок (tabs) для их отображения.
     """
+    
+    sort_param = request.args.get('sort', 'deadline_asc')
+    
     # 1. Данные пользователей (исключая текущего)
     users = User.query.filter(User.id != current_user.id).all()
     
@@ -78,6 +81,26 @@ def dashboard():
                 completed_templates.append(t)
             else:
                 published_templates.append(t)
+
+    # Сортируем все списки
+    def sort_templates(templates, sort_by):
+        if sort_by == 'deadline_asc':
+            return sorted(templates, key=lambda x: x.deadline or datetime.date.max)
+        elif sort_by == 'deadline_desc':
+            return sorted(templates, key=lambda x: x.deadline or datetime.date.min, reverse=True)
+        elif sort_by == 'name_asc':
+            return sorted(templates, key=lambda x: x.name.lower())
+        elif sort_by == 'name_desc':
+            return sorted(templates, key=lambda x: x.name.lower(), reverse=True)
+        elif sort_by == 'id_desc':
+            return sorted(templates, key=lambda x: x.id, reverse=True)
+        return sorted(templates, key=lambda x: x.deadline or datetime.date.max)
+        
+    pure_templates = sort_templates(pure_templates, sort_param)
+    published_templates = sort_templates(published_templates, sort_param)
+    draft_templates = sort_templates(draft_templates, sort_param)
+    archived_templates = sort_templates(archived_templates, sort_param)
+    completed_templates = sort_templates(completed_templates, sort_param)
 
     # Данные для вкладки "База Данных" и "Сданные отчёты" (если нужны)
     all_users = User.query.all()
@@ -129,6 +152,7 @@ def dashboard():
                            logs_list=logs_list,
                            all_groups=all_groups,
                            all_files=all_files,
+                           current_sort=sort_param,
                            current_date=datetime.date.today())
 
 

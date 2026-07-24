@@ -16,15 +16,32 @@ reports_bp = Blueprint('reports', __name__)
 def dashboard():
     if current_user.role in ['admin', 'viewer']:
         return redirect(url_for('admin.dashboard'))
+        
+    sort_param = request.args.get('sort', 'deadline_asc')
+    
     submissions = ReportSubmission.query.filter_by(user_id=current_user.id).all()
     filled_ids = [s.template_id for s in submissions]
     assigned = [t for t in current_user.assigned_templates if t.is_published]
     
     unfilled = [t for t in assigned if t.id not in filled_ids]
     filled = [t for t in assigned if t.id in filled_ids]
-    unfilled.sort(key=lambda x: x.deadline or date.max)
     
-    return render_template('base.html', unfilled_templates=unfilled, filled_templates=filled, current_date=date.today())
+    def sort_templates(templates, sort_by):
+        if sort_by == 'deadline_asc':
+            return sorted(templates, key=lambda x: x.deadline or date.max)
+        elif sort_by == 'deadline_desc':
+            return sorted(templates, key=lambda x: x.deadline or date.min, reverse=True)
+        elif sort_by == 'name_asc':
+            return sorted(templates, key=lambda x: x.name.lower())
+        elif sort_by == 'name_desc':
+            return sorted(templates, key=lambda x: x.name.lower(), reverse=True)
+        elif sort_by == 'id_desc':
+            return sorted(templates, key=lambda x: x.id, reverse=True)
+        return sorted(templates, key=lambda x: x.deadline or date.max)
+
+    unfilled = sort_templates(unfilled, sort_param)
+    filled = sort_templates(filled, sort_param)
+    return render_template('user_dashboard.html', unfilled_templates=unfilled, filled_templates=filled, current_sort=sort_param, current_date=date.today())
 
 @reports_bp.route('/fill/<int:template_id>', methods=['GET', 'POST'])
 @login_required
