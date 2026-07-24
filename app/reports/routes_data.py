@@ -166,7 +166,7 @@ def export_excel(template_id):
         ws.row_dimensions[1].height = 100 
 
         # 2. ШАПКА ТАБЛИЦЫ (Названия полей)
-        headers = ['Организация'] + [f['label'] for f in sheet_data['fields']]
+        headers = ['Наименование образовательного учреждения'] + [f['label'] for f in sheet_data['fields']]
         ws.append(headers) 
         ws.row_dimensions[2].height = 100
 
@@ -196,7 +196,7 @@ def export_excel(template_id):
             
             # Подготавливаем данные для каждой подстроки
             for r_idx in range(max_rows):
-                row_data = [sub.user.username if r_idx == 0 else ""]
+                row_data = [sub.user.description if r_idx == 0 else ""]
                 for f in sheet_data['fields']:
                     val = sub.data.get(f['name'], '-')
                     

@@ -219,7 +219,7 @@
                     <table class="table table-hover table-bordered table-custom align-middle small">
                         <thead>
                             <tr>
-                                <th class="p-3 sticky-col">Организация</th>
+                                <th class="p-3 sticky-col">Наименование образовательного учреждения</th>
                                 {% for field in sheet.fields %}
                                 <th class="p-3 text-center report-col-header">
                                     {{ field.label }}
@@ -236,7 +236,7 @@
                         <tbody>
                             {% for sub in submissions %}
                             <tr>
-                                <td class="p-3 fw-bold sticky-col">{{ sub.user.username }}</td>
+                                <td class="p-3 fw-bold sticky-col">{{ sub.user.description }}</td>
                                 {% for field in sheet.fields %}
                                 <td class="p-0 align-top text-center text-dark" title="Кликните для редактирования">
                                     {% set val = sub.data.get(field.name, '') %}
