@@ -7,7 +7,8 @@
     {% set submitted = total_assigned - debtors_count %}
     {% set progress = (submitted / total_assigned * 100)|int if total_assigned > 0 else 0 %}
     {% set progress_color = "success" if progress == 100 else ("warning" if progress > 0 else "danger") %}
-    {% set is_overdue = t.deadline and current_date and current_date > t.deadline %}
+    {% set days_left = (t.deadline - current_date).days if t.deadline and current_date else none %}
+    {% set is_overdue = days_left is not none and days_left < 0 %}
     
     <div class="col-md-6 report-item" 
          data-status="{% if t.is_published %}published{% else %}draft{% endif %}" 
@@ -95,15 +96,24 @@
 
             <div class="d-flex flex-column justify-content-between h-100 pe-4">
                 <div>
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="badge bg-light border text-dark">{{ t.period or 'Период не указан' }}</span>
+                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                        <span class="badge bg-light border text-dark"><i class="bi bi-calendar"></i> Период: {{ t.period or 'не указан' }}</span>
                         {% if t.is_published %}
                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Опубликовано</span>
                         {% else %}
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Черновик</span>
                         {% endif %}
+                        
                         {% if is_overdue %}
                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="bi bi-exclamation-triangle-fill me-1"></i>Просрочено</span>
+                        {% elif days_left != None %}
+                            {% if days_left == 0 %}
+                            <span class="badge bg-danger text-white border border-danger">Осталось 0 дн.</span>
+                            {% elif days_left <= 3 %}
+                            <span class="badge bg-warning text-dark border border-warning">Осталось {{ days_left }} дн.</span>
+                            {% else %}
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Осталось {{ days_left }} дн.</span>
+                            {% endif %}
                         {% endif %}
                     </div>
 
