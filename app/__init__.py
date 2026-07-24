@@ -39,6 +39,11 @@ def create_app(config_class: type = Config) -> Flask:
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    
+    # Автоматическое создание недостающих таблиц (чтобы избежать 500 ошибки после пуша)
+    with app.app_context():
+        import app.models
+        db.create_all()
 
     @app.after_request
     def add_security_headers(response):
