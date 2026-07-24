@@ -42,7 +42,7 @@ def create_app(config_class: type = Config) -> Flask:
     
     # Автоматическое создание недостающих таблиц (чтобы избежать 500 ошибки после пуша)
     with app.app_context():
-        import app.models
+        from app import models
         db.create_all()
 
     @app.after_request
