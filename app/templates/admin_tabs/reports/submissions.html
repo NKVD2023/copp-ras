@@ -1,7 +1,4 @@
 {% from 'admin_tabs/reports/reports_macro.html' import render_reports_list with context %}
-<div class="mb-3">
-    <h6 class="fw-bold text-dark mb-1">Сданные отчеты</h6>
-    <p class="small text-muted mb-4">Отчеты, которые 100% учреждений уже успешно сдали.</p>
-</div>
+
 
 {{ render_reports_list(completed_templates) }}
