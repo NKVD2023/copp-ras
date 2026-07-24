@@ -43,6 +43,24 @@ def assign_template_users(template_id):
     log_action('Назначение исполнителей отчета', f'Изменены исполнители для отчета {template.short_name}')
     return redirect(request.referrer or url_for('reports.dashboard'))
 
+@admin_bp.route('/reset_to_pure/<int:template_id>', methods=['POST'])
+@login_required
+def reset_to_pure(template_id):
+    """
+    Сброс черновика в "Чистый шаблон": очистка периода, дедлайна и исполнителей.
+    Отчет автоматически переместится во вкладку "Шаблоны".
+    """
+    template = ReportTemplate.query.get_or_404(template_id)
+    template.period = None
+    template.deadline = None
+    template.assigned_users = []
+    template.is_published = False
+    
+    db.session.commit()
+    log_action('Сброс в Шаблоны', f'Отчет {template.short_name} очищен и перенесен в шаблоны')
+    return redirect(request.referrer or url_for('admin.dashboard'))
+
+
 @admin_bp.route('/toggle_publish/<int:template_id>', methods=['POST'])
 @login_required
 def toggle_publish(template_id):

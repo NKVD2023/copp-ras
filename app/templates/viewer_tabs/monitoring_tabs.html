@@ -96,7 +96,7 @@
                     </div>
 
                     <button type="button" class="btn btn-sm btn-custom-outline w-100 py-2" data-bs-toggle="modal"
-                        data-bs-target="#access-{{ template.id }}">
+                        data-bs-target="#access-template-{{ template.id }}">
                         <i class="bi bi-people me-1"></i>Назначить исполнителей
                     </button>
 
@@ -110,7 +110,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="access-{{ template.id }}" tabindex="-1">
+    <div class="modal fade" id="access-template-{{ template.id }}" tabindex="-1">
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('admin.assign_template_users', template_id=template.id) }}" method="POST">
@@ -195,7 +195,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="access-{{ template.id }}" tabindex="-1">
+    <div class="modal fade" id="access-template-duplicate-{{ template.id }}" tabindex="-1">
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('admin.assign_template_users', template_id=template.id) }}" method="POST">

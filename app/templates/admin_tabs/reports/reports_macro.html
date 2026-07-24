@@ -51,7 +51,7 @@
                         </button>
                     </li>
                     <li>
-                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#access-{{ t.id }}">
+                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#access-template-{{ t.id }}">
                             <i class="bi bi-people"></i>Назначить исполнителей
                         </button>
                     </li>
@@ -60,6 +60,16 @@
                             <i class="bi bi-copy"></i>Запустить новый период
                         </button>
                     </li>
+                    {% if not t.is_published and (t.period or t.deadline or t.assigned_users.count() > 0) %}
+                    <li>
+                        <form action="{{ url_for('admin.reset_to_pure', template_id=t.id) }}" method="POST" onsubmit="return confirm('Отчет будет перенесен во вкладку Шаблоны. Период, дедлайн и исполнители будут очищены. Продолжить?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 text-primary">
+                                <i class="bi bi-arrow-counterclockwise"></i>В чистые шаблоны
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
                     <li>
                         <form action="{{ url_for('admin.toggle_archive', template_id=t.id) }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -223,7 +233,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="access-{{ t.id }}" tabindex="-1">
+    <div class="modal fade" id="access-template-{{ t.id }}" tabindex="-1">
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('admin.assign_template_users', template_id=t.id) }}" method="POST">
