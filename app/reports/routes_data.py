@@ -265,7 +265,8 @@ def export_excel(template_id):
     wb.save(output)
     output.seek(0)
 
-    filename = f"Свод_{template.short_name}.xlsx".replace(" ", "_")
+    period_str = f"_{template.period}" if template.period else ""
+    filename = f"{template.short_name}{period_str}.xlsx".replace(" ", "_")
 
     log_action('Экспорт данных', f'Скачан Excel файл по отчету {template.short_name}')
 
