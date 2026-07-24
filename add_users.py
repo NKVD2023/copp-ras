@@ -306,11 +306,9 @@ with app.app_context():
             db.session.add(user)
             added_count += 1
         else:
-            # Обновляем только группу, если она изменилась (чтобы проставить её существующим пользователям)
-            if existing.group != ud['group']:
-                existing.group = ud['group']
-                updated_count += 1
-            # Пропускаем обновление пароля и описания (как просили)
+            # ПРОПУСКАЕМ ОБНОВЛЕНИЕ ГРУППЫ.
+            # Если перезаписывать группу из словаря, это будет стирать
+            # ручные изменения, которые админ сделал через интерфейс.
             pass
     db.session.commit()
     print(f"Successfully added {added_count} users. Updated groups for {updated_count} users.")
