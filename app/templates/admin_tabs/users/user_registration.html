@@ -18,13 +18,12 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label small text-muted">Группа</label>
-                    <select name="group" class="form-select">
-                        <option value="">Без группы</option>
-                        <option value="СПО">СПО</option>
-                        <option value="ВУЗ">ВУЗ</option>
-                        <option value="Школы">Школы</option>
-                        <option value="Работодатели">Работодатели</option>
-                    </select>
+                    <input type="text" name="group" class="form-control" list="groupsDataListReg" placeholder="Выберите или введите новую">
+                    <datalist id="groupsDataListReg">
+                        {% for g in all_groups %}
+                        <option value="{{ g }}">
+                        {% endfor %}
+                    </datalist>
                 </div>
                 <div class="mb-4">
                     <label class="form-label small text-muted">Тип пользователя (Роль)</label>

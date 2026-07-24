@@ -103,6 +103,12 @@ def dashboard():
     # 5. Загружаем последние 500 записей журнала действий
     logs_list = ActionLog.query.order_by(ActionLog.timestamp.desc()).limit(500).all()
 
+    # 6. Получение всех уникальных существующих групп
+    groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
+    all_groups = sorted([g[0] for g in groups_query if g[0]])
+    if not all_groups:
+        all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
                            users=users, 
@@ -118,6 +124,7 @@ def dashboard():
                            active_submissions=active_submissions,
                            backups_list=backups_list,
                            logs_list=logs_list,
+                           all_groups=all_groups,
                            current_date=datetime.date.today())
 
 

@@ -55,13 +55,12 @@
                         <h6 class="fw-bold text-dark small mb-2">Изменение группы</h6>
                         <form action="{{ url_for('admin.change_user_group', user_id=user.id) }}" method="POST" class="d-flex gap-2 mb-4">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <select name="group" class="form-select form-select-sm">
-                                <option value="" {% if not user.group %}selected{% endif %}>Без группы</option>
-                                <option value="СПО" {% if user.group == 'СПО' %}selected{% endif %}>СПО</option>
-                                <option value="ВУЗ" {% if user.group == 'ВУЗ' %}selected{% endif %}>ВУЗ</option>
-                                <option value="Школы" {% if user.group == 'Школы' %}selected{% endif %}>Школы</option>
-                                <option value="Работодатели" {% if user.group == 'Работодатели' %}selected{% endif %}>Работодатели</option>
-                            </select>
+                            <input type="text" name="group" class="form-control form-control-sm" list="groupsDataListList-{{ user.id }}" value="{{ user.group or '' }}" placeholder="Без группы">
+                            <datalist id="groupsDataListList-{{ user.id }}">
+                                {% for g in all_groups %}
+                                <option value="{{ g }}">
+                                {% endfor %}
+                            </datalist>
                             <button type="submit" class="btn btn-sm btn-outline-secondary px-3 text-nowrap">Сохранить</button>
                         </form>
 

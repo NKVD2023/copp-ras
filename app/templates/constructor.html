@@ -49,22 +49,12 @@
             <div class="mb-3 pb-3 border-bottom border-2 border-light-subtle">
                 <label class="fw-bold text-dark mb-2" style="font-size: 0.9rem;">Назначить целой группе:</label>
                 <div class="d-flex flex-wrap gap-3">
+                    {% for g in all_groups %}
                     <div class="form-check">
-                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="СПО" id="group-spo-c">
-                        <label class="form-check-label" for="group-spo-c">СПО</label>
+                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="{{ g }}" id="group-{{ loop.index }}-c">
+                        <label class="form-check-label" for="group-{{ loop.index }}-c">{{ g }}</label>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="ВУЗ" id="group-vuz-c">
-                        <label class="form-check-label" for="group-vuz-c">ВУЗ</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="Школы" id="group-school-c">
-                        <label class="form-check-label" for="group-school-c">Школы</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input group-cb shadow-sm border-secondary" type="checkbox" value="Работодатели" id="group-emp-c">
-                        <label class="form-check-label" for="group-emp-c">Работодатели</label>
-                    </div>
+                    {% endfor %}
                 </div>
             </div>
             <div class="form-check mb-3 pb-3 border-bottom border-2 border-light-subtle">

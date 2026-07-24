@@ -70,7 +70,13 @@ def constructor():
         
     # GET запрос - просто отдаем пустую страницу конструктора
     users = User.query.filter(User.role == 'user').all()
-    return render_template('constructor.html', users=users)
+    
+    groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
+    all_groups = sorted([g[0] for g in groups_query if g[0]])
+    if not all_groups:
+        all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+        
+    return render_template('constructor.html', users=users, all_groups=all_groups)
 
 @admin_bp.route('/edit_constructor/<int:template_id>', methods=['GET', 'POST'])
 @login_required
@@ -112,7 +118,13 @@ def edit_constructor(template_id):
 
     # GET запрос - загружаем форму и передаем в неё старый шаблон
     users = User.query.filter(User.role == 'user').all()
-    return render_template('constructor.html', users=users, template=template)
+    
+    groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
+    all_groups = sorted([g[0] for g in groups_query if g[0]])
+    if not all_groups:
+        all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+        
+    return render_template('constructor.html', users=users, template=template, all_groups=all_groups)
 
 @admin_bp.route('/constructor/import_excel', methods=['POST'])
 @login_required
