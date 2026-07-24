@@ -1,0 +1,92 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Управление файлами</h4>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadFileModal">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" class="me-1"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+        Загрузить файл
+    </button>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Имя файла</th>
+                <th>Размер</th>
+                <th>Дата загрузки</th>
+                <th>Кем загружен</th>
+                <th>Отчеты</th>
+                <th class="text-end">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in all_files %}
+            <tr>
+                <td>{{ f.id }}</td>
+                <td>
+                    <strong>{{ f.filename }}</strong>
+                </td>
+                <td>{{ (f.file_size / 1024 / 1024)|round(2) }} МБ</td>
+                <td>{{ f.upload_date|msk_time|date(format='%d.%m.%Y %H:%M') }}</td>
+                <td>{{ f.uploader.username if f.uploader else 'Неизвестно' }}</td>
+                <td>
+                    {% if f.reports.count() > 0 %}
+                    <span class="badge bg-info">{{ f.reports.count() }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">0</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <!-- Заглушка для скачивания, сделаем позже роут в reports -->
+                    <a href="{{ url_for('reports.download_file', file_id=f.id) }}" class="btn btn-sm btn-outline-primary" title="Скачать">
+                        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                    </a>
+                    
+                    {% if f.reports.count() == 0 %}
+                    <form action="{{ url_for('admin.delete_file', file_id=f.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите удалить этот файл?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
+                            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
+                        </button>
+                    </form>
+                    {% else %}
+                    <button class="btn btn-sm btn-outline-secondary" disabled title="Файл прикреплен к отчетам, удаление невозможно">
+                        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">Файлы еще не загружены</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Модальное окно загрузки файлов -->
+<div class="modal fade" id="uploadFileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form action="{{ url_for('admin.upload_file') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Загрузить файлы</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Выберите файлы (до 50 МБ)</label>
+                        <input type="file" name="file" class="form-control" multiple accept=".pdf,.docx,.xlsx" required>
+                        <div class="form-text">Поддерживаемые форматы: PDF, DOCX, XLSX.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

@@ -26,6 +26,23 @@
         </div>
         {% endif %}
 
+        {% if template.attachments|length > 0 %}
+        <div class="card bg-light border-0 mb-4 shadow-sm">
+            <div class="card-body p-3">
+                <h6 class="card-title fw-bold text-dark mb-3"><i class="bi bi-paperclip me-2"></i>Прикрепленные файлы для скачивания</h6>
+                <div class="d-flex flex-column gap-2">
+                    {% for file in template.attachments %}
+                    <a href="{{ url_for('reports.download_file', file_id=file.id) }}" class="text-decoration-none text-primary d-flex align-items-center gap-2" download>
+                        <i class="bi bi-file-earmark-arrow-down-fill fs-5"></i>
+                        <span>{{ file.filename }}</span>
+                        <span class="text-muted small">({{ (file.file_size / 1024 / 1024)|round(2) }} МБ)</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <form id="reportForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="tab-content">

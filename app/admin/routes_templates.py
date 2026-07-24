@@ -148,6 +148,14 @@ def clone_template(template_id):
     for user in original.assigned_users:
         new_template.assigned_users.append(user)
         
+    # Прикрепляем выбранные файлы
+    from app.models import UploadedFile
+    attached_file_ids = request.form.getlist('attached_files')
+    if attached_file_ids:
+        files_to_attach = UploadedFile.query.filter(UploadedFile.id.in_(attached_file_ids)).all()
+        for f in files_to_attach:
+            new_template.attachments.append(f)
+            
     db.session.add(new_template)
     db.session.commit()
     log_action('Копирование отчета', f'Создана копия отчета {original.short_name} с новым именем {new_template.short_name}')
@@ -189,6 +197,15 @@ def edit_template_meta(template_id):
     
     deadline_str = request.form.get('deadline')
     template.deadline = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
+    
+    # Прикрепляем выбранные файлы
+    from app.models import UploadedFile
+    attached_file_ids = request.form.getlist('attached_files')
+    template.attachments.clear()
+    if attached_file_ids:
+        files_to_attach = UploadedFile.query.filter(UploadedFile.id.in_(attached_file_ids)).all()
+        for f in files_to_attach:
+            template.attachments.append(f)
     
     db.session.commit()
     log_action('Редактирование отчета', f'Изменены метаданные отчета {template.short_name}')

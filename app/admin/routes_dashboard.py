@@ -8,7 +8,7 @@ import datetime
 from flask import render_template, request, redirect, url_for
 from flask_login import login_required, current_user
 from app.admin import admin_bp
-from app.models import User, ReportTemplate, ReportSubmission, ActionLog
+from app.models import User, ReportTemplate, ReportSubmission, ActionLog, UploadedFile
 from app import db
 from config import basedir
 
@@ -28,7 +28,7 @@ def require_admin():
         return
         
     # Разрешенные маршруты для роли "наблюдатель"
-    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.edit_constructor', 'admin.toggle_publish', 'admin.toggle_archive', 'admin.clone_template', 'admin.assign_template_users', 'admin.import_excel_template', 'admin.change_my_password', 'admin.export_debtors', 'admin.edit_template_meta']
+    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.edit_constructor', 'admin.toggle_publish', 'admin.toggle_archive', 'admin.clone_template', 'admin.assign_template_users', 'admin.import_excel_template', 'admin.change_my_password', 'admin.export_debtors', 'admin.edit_template_meta', 'admin.upload_file', 'admin.delete_file']
     if current_user.role == 'viewer' and request.endpoint in allowed_for_viewer:
         return
         
@@ -109,6 +109,9 @@ def dashboard():
     if not all_groups:
         all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
 
+    # 6. Файлы
+    all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
+
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
                            users=users, 
@@ -125,6 +128,7 @@ def dashboard():
                            backups_list=backups_list,
                            logs_list=logs_list,
                            all_groups=all_groups,
+                           all_files=all_files,
                            current_date=datetime.date.today())
 
 

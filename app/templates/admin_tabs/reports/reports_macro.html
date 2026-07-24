@@ -198,6 +198,15 @@
                             <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Период</label><input type="text" name="period" class="form-control bg-light" value="{{ t.period or '' }}" autocomplete="off"></div>
                             <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Дедлайн</label><input type="date" name="deadline" class="form-control bg-light" value="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '' }}"></div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-dark fw-bold">Прикрепленные файлы</label>
+                            <select name="attached_files" class="form-select bg-light" multiple size="3">
+                                {% for f in all_files %}
+                                <option value="{{ f.id }}" {% if f in t.attachments %}selected{% endif %}>{{ f.filename }} ({{ (f.file_size/1024/1024)|round(2) }} МБ)</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small">Удерживайте Ctrl (Win) / Cmd (Mac), чтобы выбрать несколько.</div>
+                        </div>
                     </div>
                     <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Сохранить изменения</button>
@@ -222,6 +231,15 @@
                         <div class="row g-3">
                             <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый период</label><input type="text" name="new_period" class="form-control bg-light" required autocomplete="off"></div>
                             <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый дедлайн</label><input type="date" name="new_deadline" class="form-control bg-light" required></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-dark fw-bold">Прикрепленные файлы</label>
+                            <select name="attached_files" class="form-select bg-light" multiple size="3">
+                                {% for f in all_files %}
+                                <option value="{{ f.id }}" {% if f in t.attachments %}selected{% endif %}>{{ f.filename }} ({{ (f.file_size/1024/1024)|round(2) }} МБ)</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small">Будут скопированы из текущего отчета, если не менять.</div>
                         </div>
                     </div>
                     <div class="modal-footer border-top-0 pb-4 px-4 mt-2 flex-column">

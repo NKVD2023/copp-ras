@@ -14,6 +14,26 @@ user_template_access = db.Table('user_template_access',
     db.Column('template_id', db.Integer, db.ForeignKey('report_templates.id'), primary_key=True)
 )
 
+# Таблица связи "Многие-ко-Многим" для файлов, прикрепленных к шаблонам
+report_attachments = db.Table('report_attachments',
+    db.Column('template_id', db.Integer, db.ForeignKey('report_templates.id'), primary_key=True),
+    db.Column('file_id', db.Integer, db.ForeignKey('uploaded_files.id'), primary_key=True)
+)
+
+class UploadedFile(db.Model):
+    """
+    Модель загруженного файла (письмо, инструкция).
+    """
+    __tablename__ = 'uploaded_files'
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(256))          # Оригинальное имя файла
+    filepath = db.Column(db.String(256))          # Внутренний путь на сервере (со случайным именем)
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    uploader_id = db.Column(db.Integer, db.ForeignKey('users.id')) # Кто загрузил
+    file_size = db.Column(db.Integer)             # Размер в байтах
+
+    uploader = db.relationship('User', backref='uploaded_files')
+
 class User(UserMixin, db.Model):
     """
     Модель пользователя системы.
@@ -54,6 +74,9 @@ class ReportTemplate(db.Model):
     is_archived = db.Column(db.Boolean, default=False)   # Перенесен ли в архив
     is_template = db.Column(db.Boolean, default=False)   # Является ли это чистым шаблоном (без дедлайна)
     schema = db.Column(JSON)                  # Структура: листы, столбцы, типы полей
+    
+    # Отношение: какие файлы прикреплены к отчету
+    attachments = db.relationship('UploadedFile', secondary=report_attachments, backref=db.backref('reports', lazy='dynamic'))
 
 class ReportSubmission(db.Model):
     """
