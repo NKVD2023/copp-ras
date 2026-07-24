@@ -50,7 +50,13 @@
 }
 
 /* Ссылки навигации админ панели */
+.admin-nav-item {
+    margin-bottom: -1px;
+}
+
 .admin-nav-link {
+    display: block;
+    height: 100%;
     border: none;
     background: transparent;
     color: var(--text-muted);
@@ -58,7 +64,6 @@
     padding: 0.5rem 0.5rem 0.5rem 0.5rem;
     transition: var(--transition);
     border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
 }
 
 .admin-nav-link:hover {
