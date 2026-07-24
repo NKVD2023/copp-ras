@@ -53,7 +53,7 @@
         <tbody>
             {% for log in logs_list %}
             <tr class="log-row">
-                <td class="text-muted text-nowrap align-middle" data-sort-value="{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}">{{ log.timestamp.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+                <td class="text-muted text-nowrap align-middle" data-sort-value="{{ (log.timestamp|msk_time).strftime('%Y-%m-%d %H:%M:%S') }}">{{ (log.timestamp|msk_time).strftime('%d.%m.%Y %H:%M:%S') }}</td>
                 <td class="align-middle fw-bold">
                     {% if log.user %}
                         {% if log.user.role == 'admin' %}

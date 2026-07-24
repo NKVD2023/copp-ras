@@ -67,6 +67,19 @@ def create_app(config_class: type = Config) -> Flask:
         """
         return dict(config=app.config)
 
+    from datetime import timedelta
+
+    @app.template_filter('msk_time')
+    def msk_time_filter(dt):
+        """
+        Jinja фильтр: Сдвигает время из базы данных (UTC) на Московское (UTC+3) 
+        для корректного отображения в интерфейсе.
+        Использование в шаблоне: {{ dt_obj | msk_time }}
+        """
+        if dt:
+            return dt + timedelta(hours=3)
+        return dt
+
     # Импортируем блюпринты локально, чтобы избежать циклических импортов
     from app.auth.routes import auth_bp
     from app.admin import admin_bp
