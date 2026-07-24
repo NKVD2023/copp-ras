@@ -55,6 +55,7 @@ def reset_to_pure(template_id):
     template.deadline = None
     template.assigned_users = []
     template.is_published = False
+    template.is_template = True
     
     db.session.commit()
     log_action('Сброс в Шаблоны', f'Отчет {template.short_name} очищен и перенесен в шаблоны')

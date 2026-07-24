@@ -60,7 +60,7 @@
                             <i class="bi bi-copy"></i>Запустить новый период
                         </button>
                     </li>
-                    {% if not t.is_published and (t.period or t.deadline or t.assigned_users.count() > 0) %}
+                    {% if not t.is_published and not t.is_template %}
                     <li>
                         <form action="{{ url_for('admin.reset_to_pure', template_id=t.id) }}" method="POST" onsubmit="return confirm('Отчет будет перенесен во вкладку Шаблоны. Период, дедлайн и исполнители будут очищены. Продолжить?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
