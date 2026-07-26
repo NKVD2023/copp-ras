@@ -13,6 +13,8 @@ from app import db
 from app.admin import admin_bp
 from app.models import User, ReportTemplate, ReportSubmission
 from app.utils import log_action
+from app.services.excel_service import ExcelService
+from app.auth.decorators import roles_required
 
 # ==========================================
 # УПРАВЛЕНИЕ ГОТОВЫМИ ШАБЛОНАМИ
@@ -45,6 +47,7 @@ def assign_template_users(template_id):
 
 @admin_bp.route('/reset_to_pure/<int:template_id>', methods=['POST'])
 @login_required
+@roles_required('admin')
 def reset_to_pure(template_id):
     """
     Сброс черновика в "Чистый шаблон": очистка периода, дедлайна и исполнителей.
@@ -109,6 +112,7 @@ def toggle_archive(template_id):
 
 @admin_bp.route('/archive_submission/<int:submission_id>', methods=['POST'])
 @login_required
+@roles_required('admin')
 def archive_submission(submission_id):
     """
     Архивация сданного отчета
@@ -163,14 +167,12 @@ def clone_template(template_id):
 
 @admin_bp.route('/delete_template/<int:template_id>', methods=['POST'])
 @login_required
+@roles_required('admin')
 def delete_template(template_id):
     """
     Полное удаление отчета из системы вместе со всеми ответами пользователей.
     Доступно исключительно администратору.
     """
-    if current_user.role != 'admin':
-        return "Доступ запрещен", 403
-        
     template = ReportTemplate.query.get_or_404(template_id)
     
     # Каскадно очищаем связанные ответы пользователей (Submissions),
@@ -226,20 +228,8 @@ def export_debtors(template_id):
     # Вычитаем сдавших из всех назначенных
     debtors = [u for u in template.assigned_users if u.id not in submitted_user_ids]
 
-    # Генерируем Excel-файл в оперативной памяти (BytesIO)
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Должники"
-    ws.append(["Организация", "Описание"])
+    output, filename = ExcelService.export_debtors(template, debtors)
     
-    for d in debtors:
-        ws.append([d.username, d.description or ""])
-        
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    
-    filename = f"Должники_{template.short_name}.xlsx".replace(" ", "_")
     return send_file(
         output,
         as_attachment=True,

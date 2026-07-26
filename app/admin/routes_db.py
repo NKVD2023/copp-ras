@@ -13,9 +13,11 @@ import os
 import shutil
 from config import basedir
 from app.utils import log_action
+from app.auth.decorators import roles_required
 
 @admin_bp.route('/db_update', methods=['POST'])
 @login_required
+@roles_required('admin')
 def db_update():
     """
     Массовое или одиночное обновление полей напрямую в базе данных.
@@ -91,6 +93,7 @@ def db_update():
 
 @admin_bp.route('/db/backup/create', methods=['POST'])
 @login_required
+@roles_required('admin')
 def create_backup():
     """
     Создает физическую резервную копию файла базы данных SQLite (reports.db)
@@ -122,6 +125,7 @@ def create_backup():
 
 @admin_bp.route('/db/backup/download_current')
 @login_required
+@roles_required('admin')
 def download_current_db():
     """Скачивание текущего (рабочего) файла базы данных."""
     if current_user.role != 'admin':
@@ -135,6 +139,7 @@ def download_current_db():
 
 @admin_bp.route('/db/backup/download/<filename>')
 @login_required
+@roles_required('admin')
 def download_backup(filename):
     """Скачивание конкретной исторической резервной копии из папки /backups."""
     if current_user.role != 'admin':
@@ -153,6 +158,7 @@ def download_backup(filename):
 
 @admin_bp.route('/db/backup/delete/<filename>', methods=['POST'])
 @login_required
+@roles_required('admin')
 def delete_backup(filename):
     """Удаление резервной копии из папки /backups."""
     if current_user.role != 'admin':
@@ -176,6 +182,7 @@ def delete_backup(filename):
 
 @admin_bp.route('/db/backup/restore/<filename>', methods=['POST'])
 @login_required
+@roles_required('admin')
 def restore_backup(filename):
     """
     Восстановление базы данных из старого бэкапа.
@@ -212,6 +219,7 @@ def restore_backup(filename):
 
 @admin_bp.route('/db/backup/upload', methods=['POST'])
 @login_required
+@roles_required('admin')
 def upload_backup():
     """
     Загрузка пользовательского SQLite файла на сервер.

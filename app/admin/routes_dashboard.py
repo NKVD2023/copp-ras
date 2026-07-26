@@ -9,8 +9,10 @@ from flask import render_template, request, redirect, url_for
 from flask_login import login_required, current_user
 from app.admin import admin_bp
 from app.models import User, ReportTemplate, ReportSubmission, ActionLog, UploadedFile
+from app.auth.decorators import roles_required
 from app import db
 from config import basedir
+from app.services.template_service import TemplateService
 
 # ==========================================
 # ПРОВЕРКА ПРАВ ДОСТУПА ДЛЯ ВСЕХ МАРШРУТОВ
@@ -20,19 +22,11 @@ from config import basedir
 def require_admin():
     """
     Middleware: Перехватывает каждый запрос к админ-панели (с префиксом /admin).
-    - Если пользователь 'admin' -> пропускает дальше.
-    - Если пользователь 'viewer' (наблюдатель) -> пускает только на чтение отчетов.
-    - Всех остальных (обычных пользователей) выкидывает на их личный дашборд.
+    - Разрешает доступ только пользователям с ролями 'admin' и 'viewer'.
+    - Обычных пользователей перенаправляет на их личный дашборд.
     """
-    if current_user.role == 'admin':
-        return
-        
-    # Разрешенные маршруты для роли "наблюдатель"
-    allowed_for_viewer = ['admin.dashboard', 'admin.constructor', 'admin.edit_constructor', 'admin.toggle_publish', 'admin.toggle_archive', 'admin.clone_template', 'admin.assign_template_users', 'admin.import_excel_template', 'admin.change_my_password', 'admin.export_debtors', 'admin.edit_template_meta', 'admin.upload_file', 'admin.delete_file']
-    if current_user.role == 'viewer' and request.endpoint in allowed_for_viewer:
-        return
-        
-    return redirect(url_for('reports.dashboard'))
+    if current_user.role not in ['admin', 'viewer']:
+        return redirect(url_for('reports.dashboard'))
 
 # ==========================================
 # ГЛАВНАЯ СТРАНИЦА (ДАШБОРД)
@@ -55,52 +49,13 @@ def dashboard():
     all_templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
     
     # 3. Собираем словарь должников и распределяем шаблоны
-    pure_templates = []
-    published_templates = []
-    draft_templates = []
-    archived_templates = []
-    completed_templates = []
-    debtors_map = {}
-    
-    for t in all_templates:
-        # ID пользователей, которые уже сдали отчет по этому шаблону
-        submitted_user_ids = [sub.user_id for sub in ReportSubmission.query.filter_by(template_id=t.id).all()]
-        # Должники = Назначенные пользователи МИНУС Сдавшие пользователи
-        debtors = [u for u in t.assigned_users if u.id not in submitted_user_ids]
-        debtors_map[t.id] = debtors
-        
-        if t.is_archived:
-            archived_templates.append(t)
-        elif t.is_template:
-            pure_templates.append(t)
-        elif not t.is_published:
-            draft_templates.append(t)
-        else:
-            # Отчет опубликован. Проверяем, сдали ли все
-            if t.assigned_users.count() > 0 and len(debtors) == 0:
-                completed_templates.append(t)
-            else:
-                published_templates.append(t)
+    debtors_map, pure_templates, published_templates, draft_templates, archived_templates, completed_templates = TemplateService.get_dashboard_stats(all_templates)
 
-    # Сортируем все списки
-    def sort_templates(templates, sort_by):
-        if sort_by == 'deadline_asc':
-            return sorted(templates, key=lambda x: x.deadline or datetime.date.max)
-        elif sort_by == 'deadline_desc':
-            return sorted(templates, key=lambda x: x.deadline or datetime.date.min, reverse=True)
-        elif sort_by == 'name_asc':
-            return sorted(templates, key=lambda x: x.name.lower())
-        elif sort_by == 'name_desc':
-            return sorted(templates, key=lambda x: x.name.lower(), reverse=True)
-        elif sort_by == 'id_desc':
-            return sorted(templates, key=lambda x: x.id, reverse=True)
-        return sorted(templates, key=lambda x: x.deadline or datetime.date.max)
-        
-    pure_templates = sort_templates(pure_templates, sort_param)
-    published_templates = sort_templates(published_templates, sort_param)
-    draft_templates = sort_templates(draft_templates, sort_param)
-    archived_templates = sort_templates(archived_templates, sort_param)
-    completed_templates = sort_templates(completed_templates, sort_param)
+    pure_templates = TemplateService.sort_templates(pure_templates, sort_param)
+    published_templates = TemplateService.sort_templates(published_templates, sort_param)
+    draft_templates = TemplateService.sort_templates(draft_templates, sort_param)
+    archived_templates = TemplateService.sort_templates(archived_templates, sort_param)
+    completed_templates = TemplateService.sort_templates(completed_templates, sort_param)
 
     # Данные для вкладки "База Данных" и "Сданные отчёты" (если нужны)
     all_users = User.query.all()
@@ -158,6 +113,7 @@ def dashboard():
 
 @admin_bp.route('/clear_logs', methods=['POST'])
 @login_required
+@roles_required('admin')
 def clear_logs():
     """
     Маршрут для полной очистки таблицы `action_logs`.

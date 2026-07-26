@@ -9,6 +9,7 @@ from app import db, limiter
 from app.admin import admin_bp
 from app.models import User, ReportSubmission, ReportTemplate
 from app.utils import log_action
+from app.auth.decorators import roles_required
 
 # ==========================================
 # УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ
@@ -16,6 +17,7 @@ from app.utils import log_action
 
 @admin_bp.route('/create_user', methods=['POST'])
 @login_required
+@roles_required('admin')
 def create_user():
     """
     Создание нового аккаунта. 
@@ -49,6 +51,7 @@ def create_user():
 
 @admin_bp.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
+@roles_required('admin')
 def delete_user(user_id):
     """
     Удаление пользователя и каскадное удаление всех его сданных отчетов.
@@ -65,6 +68,7 @@ def delete_user(user_id):
 
 @admin_bp.route('/edit_user/<int:user_id>', methods=['POST'])
 @login_required
+@roles_required('admin')
 def edit_user(user_id):
     """Единый маршрут для редактирования всех данных пользователя (основные данные, пароль, доступы)."""
     user = User.query.get_or_404(user_id)
