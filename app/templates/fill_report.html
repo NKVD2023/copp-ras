@@ -112,7 +112,7 @@
                     <button type="button" onclick="loadPreviousData()" class="btn btn-outline-secondary px-4 py-2 d-flex align-items-center gap-2" id="btn-no-changes">
                         <i class="bi bi-clock-history"></i> Без изменений (Заполнить из прошлого)
                     </button>
-                    <button type="button" onclick="submitFullForm()" class="btn btn-copp px-5 py-2">Сохранить данные</button>
+                    <button type="button" onclick="submitFullForm(this)" class="btn btn-copp px-5 py-2">Сохранить данные</button>
                 </div>
                 {% endif %}
             </div>
@@ -191,10 +191,15 @@
         return dataObj;
     }
 
-    function submitFullForm() {
+    function submitFullForm(btn) {
         if (!form.reportValidity()) {
             return;
         }
+        
+        // Блокируем кнопку от спама и показываем лоадер
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Отправка...';
         
         const dataObj = getFormDataObj(form);
         
@@ -206,14 +211,24 @@
         .then(res => res.json())
         .then(res => { 
             if (res.status === 'success') {
+                btn.innerHTML = '<i class="bi bi-check-circle me-2"></i> Сохранено';
+                btn.classList.replace('btn-copp', 'btn-success');
                 // Очищаем черновик после успешной отправки
                 localStorage.removeItem(DRAFT_KEY);
-                window.location.href = "/"; 
+                setTimeout(() => {
+                    window.location.href = "/"; 
+                }, 1000);
             } else {
                 alert("Ошибка: " + res.message);
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
             }
         })
-        .catch(err => alert("Ошибка сети: " + err));
+        .catch(err => {
+            alert("Ошибка сети: " + err);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
     }
 
     function addDynamicField(btn, type, name) {

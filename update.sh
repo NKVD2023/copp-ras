@@ -138,6 +138,11 @@ if [ -f "$APP_DIR/migrate_viewer_to_manager.py" ]; then
     "$APP_DIR/venv/bin/python" "$APP_DIR/migrate_viewer_to_manager.py" || warn "Ошибка при выполнении migrate_viewer_to_manager.py"
 fi
 
+if [ -f "$APP_DIR/add_background_tasks_table.py" ]; then
+    info "Создание таблицы background_tasks (если нет)..."
+    "$APP_DIR/venv/bin/python" "$APP_DIR/add_background_tasks_table.py" || warn "Ошибка при выполнении add_background_tasks_table.py"
+fi
+
 # ─── 4. ПРАВА ДОСТУПА ─────────────────────────────────────────────────────────
 section "4/5  Права доступа"
 

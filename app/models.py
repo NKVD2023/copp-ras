@@ -111,3 +111,17 @@ class ActionLog(db.Model):
 def load_user(id: str) -> User:
     """Загрузчик пользователя для Flask-Login на основе ID сессии."""
     return User.query.get(int(id))
+
+class BackgroundTask(db.Model):
+    """
+    Модель для отслеживания фоновых задач (например, генерация больших Excel файлов).
+    Используется для поллинга статуса из браузера, заменяя Celery.
+    """
+    __tablename__ = 'background_tasks'
+    id = db.Column(db.String(36), primary_key=True)
+    name = db.Column(db.String(128))
+    status = db.Column(db.String(20), default='PENDING') # PENDING, SUCCESS, FAILED
+    result_path = db.Column(db.String(256), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)

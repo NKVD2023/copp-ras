@@ -188,14 +188,14 @@
                 </div>
 
                 <!-- Кнопки действий -->
-                <a href="{{ url_for('reports.export_excel', template_id=template.id) }}"
-                    class="btn btn-sm btn-success px-4 rounded-pill shadow-sm text-white btn-modern d-flex align-items-center gap-1">
+                <button type="button" onclick="exportExcel(this, '{{ template.id }}')"
+                    class="btn btn-sm btn-success px-4 rounded-pill shadow-sm text-white btn-modern d-flex align-items-center gap-1" id="exportExcelBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel mb-1" viewBox="0 0 16 16">
                         <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z" />
                         <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z" />
                     </svg>
                     В Excel
-                </a>
+                </button>
 
                 <button type="button" class="btn btn-sm btn-primary px-4 rounded-pill shadow-sm text-white btn-modern d-flex align-items-center gap-1" onclick="saveAllChanges()" id="saveChangesBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save mb-1" viewBox="0 0 16 16">
@@ -635,6 +635,53 @@
                 });
             }
         });
+
+        function exportExcel(btn, templateId) {
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Формируется...';
+            
+            fetch(`/export_excel/${templateId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const taskId = data.task_id;
+                        pollTaskStatus(taskId, btn, originalHtml);
+                    } else {
+                        alert("Ошибка запуска формирования файла");
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                })
+                .catch(err => {
+                    alert("Произошла ошибка при обращении к серверу");
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                });
+        }
+        
+        function pollTaskStatus(taskId, btn, originalHtml) {
+            fetch(`/task_status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'SUCCESS') {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                        window.location.href = `/task_download/${taskId}`;
+                    } else if (data.status === 'FAILED') {
+                        alert("Ошибка формирования файла: " + data.message);
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    } else {
+                        // PENDING, poll again
+                        setTimeout(() => pollTaskStatus(taskId, btn, originalHtml), 1000);
+                    }
+                })
+                .catch(err => {
+                    // Ignore transient network errors during polling
+                    setTimeout(() => pollTaskStatus(taskId, btn, originalHtml), 1000);
+                });
+        }
     </script>
 </body>
 
