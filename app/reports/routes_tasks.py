@@ -31,5 +31,11 @@ def download_task_result(task_id):
         
     # Get the original filename without the unique id prefix if possible, or just send it
     filename = os.path.basename(task.result_path)
+    
+    # Remove the UUID prefix that was added for uniqueness
+    prefix = f"{task.id}_"
+    if filename.startswith(prefix):
+        filename = filename[len(prefix):]
+        
     # The actual downloading
     return send_file(task.result_path, as_attachment=True, download_name=filename)
