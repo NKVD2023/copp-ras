@@ -6,7 +6,7 @@
 {% extends "base.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -18,7 +18,7 @@
     <!-- <a href="{{ url_for('admin.constructor') }}" class="btn btn-copp px-4">Создать новый отчет</a> -->
 </div>
 
-<ul class="nav nav-tabs mb-4" id="viewerTabs" role="tablist">
+<ul class="nav nav-tabs mb-4" id="managerTabs" role="tablist">
     <li class="nav-item">
         <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#monitoringTab" type="button">Мониторинг отчетов</button>
     </li>

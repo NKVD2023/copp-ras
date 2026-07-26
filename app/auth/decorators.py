@@ -6,7 +6,7 @@ def roles_required(*roles):
     """
     Декоратор для проверки ролей пользователя.
     Если роль пользователя не входит в список разрешенных, возвращает 403 Forbidden.
-    Пример использования: @roles_required('admin', 'viewer')
+    Пример использования: @roles_required('admin', 'manager')
     """
     def decorator(f):
         @wraps(f)

@@ -22,10 +22,10 @@ from app.services.template_service import TemplateService
 def require_admin():
     """
     Middleware: Перехватывает каждый запрос к админ-панели (с префиксом /admin).
-    - Разрешает доступ только пользователям с ролями 'admin' и 'viewer'.
+    - Разрешает доступ только пользователям с ролями 'admin' и 'manager'.
     - Обычных пользователей перенаправляет на их личный дашборд.
     """
-    if current_user.role not in ['admin', 'viewer']:
+    if current_user.role not in ['admin', 'manager']:
         return redirect(url_for('reports.dashboard'))
 
 # ==========================================

@@ -29,7 +29,7 @@ def export_blank(template_id):
     но содержит только одну пустую строку для ввода данных.
     Это необходимо, чтобы парсер `import_excel` мог легко разобрать этот файл.
     """
-    if current_user.role not in ['admin', 'viewer']:
+    if current_user.role not in ['admin', 'manager']:
         return "Доступ ограничен", 403
 
     template = ReportTemplate.query.get_or_404(template_id)
@@ -132,7 +132,7 @@ def import_excel(template_id):
     - file: .xlsx файл
     - user_id: ID пользователя (организации), за которую загружаются данные.
     """
-    if current_user.role not in ['admin', 'viewer']:
+    if current_user.role not in ['admin', 'manager']:
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
 
     template = ReportTemplate.query.get_or_404(template_id)

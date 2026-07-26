@@ -41,7 +41,7 @@ def login():
         
         # Разделение прав доступа при первом входе:
         # Админы и наблюдатели попадают в админ-панель
-        if user.role in ['admin', 'viewer']:
+        if user.role in ['admin', 'manager']:
             return redirect(url_for('admin.dashboard'))
             
         # Обычные учреждения попадают на свою панель отчетов

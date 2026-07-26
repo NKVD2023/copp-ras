@@ -29,7 +29,7 @@ def view_data(template_id):
     Каждый лист шаблона отображается отдельной вкладкой, столбцы - это поля, 
     строки - это ответившие учреждения.
     """
-    if current_user.role not in ['admin', 'viewer']:
+    if current_user.role not in ['admin', 'manager']:
         return "Доступ ограничен", 403
         
     template = ReportTemplate.query.get_or_404(template_id)
@@ -49,7 +49,7 @@ def inline_update(template_id):
     Сохранение изменений напрямую из сводной таблицы (inline editing).
     Принимает JSON с изменениями (список словарей или один словарь) и обновляет поле `data`.
     """
-    if current_user.role not in ['admin', 'viewer']:
+    if current_user.role not in ['admin', 'manager']:
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         
     template = ReportTemplate.query.get_or_404(template_id)
@@ -118,7 +118,7 @@ def export_excel(template_id):
     - Применяет визуальное форматирование: стили шапки, границы, автоширину колонок.
     - Автоматически подсчитывает строку "Итого" для всех числовых полей.
     """
-    if current_user.role not in ['admin', 'viewer']:
+    if current_user.role not in ['admin', 'manager']:
         return "Доступ ограничен", 403
         
     template = ReportTemplate.query.get_or_404(template_id)

@@ -133,6 +133,11 @@ if [ -f "$APP_DIR/add_users.py" ]; then
     "$APP_DIR/venv/bin/python" "$APP_DIR/add_users.py" || warn "Ошибка при выполнении add_users.py"
 fi
 
+if [ -f "$APP_DIR/migrate_viewer_to_manager.py" ]; then
+    info "Запуск миграции ролей (viewer -> manager)..."
+    "$APP_DIR/venv/bin/python" "$APP_DIR/migrate_viewer_to_manager.py" || warn "Ошибка при выполнении migrate_viewer_to_manager.py"
+fi
+
 # ─── 4. ПРАВА ДОСТУПА ─────────────────────────────────────────────────────────
 section "4/5  Права доступа"
 

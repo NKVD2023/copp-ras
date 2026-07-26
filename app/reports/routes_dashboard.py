@@ -22,7 +22,7 @@ def dashboard():
     - Обычному пользователю (учреждению) показывает карточки с отчетами,
       разделенные на две категории: "К заполнению" и "Завершенные".
     """
-    if current_user.role in ['admin', 'viewer']:
+    if current_user.role in ['admin', 'manager']:
         return redirect(url_for('admin.dashboard'))
         
     # === ЛОГИКА ДЛЯ УЧРЕЖДЕНИЯ (USER) ===

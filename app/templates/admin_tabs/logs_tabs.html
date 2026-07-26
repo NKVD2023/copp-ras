@@ -58,8 +58,8 @@
                     {% if log.user %}
                         {% if log.user.role == 'admin' %}
                             <span class="badge bg-danger fw-normal">Админ</span>
-                        {% elif log.user.role == 'viewer' %}
-                            <span class="badge bg-primary fw-normal">Наблюдатель</span>
+                        {% elif log.user.role == 'manager' %}
+                            <span class="badge bg-primary fw-normal">Руководитель отдела</span>
                         {% else %}
                             <span class="badge bg-secondary fw-normal">Пользователь</span>
                         {% endif %}

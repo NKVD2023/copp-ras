@@ -16,7 +16,7 @@ reports_bp = Blueprint('reports', __name__)
 @reports_bp.route('/')
 @login_required
 def dashboard():
-    if current_user.role in ['admin', 'viewer']:
+    if current_user.role in ['admin', 'manager']:
         return redirect(url_for('admin.dashboard'))
         
     sort_param = request.args.get('sort', 'deadline_asc')
@@ -69,7 +69,7 @@ def fill_report(template_id):
 
 @reports_bp.route('/view_data/<int:template_id>')
 @login_required
-@roles_required('admin', 'viewer')
+@roles_required('admin', 'manager')
 def view_data(template_id):
     template = ReportTemplate.query.get_or_404(template_id)
     submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
@@ -78,7 +78,7 @@ def view_data(template_id):
 
 @reports_bp.route('/export_excel/<int:template_id>')
 @login_required
-@roles_required('admin', 'viewer')
+@roles_required('admin', 'manager')
 def export_excel(template_id):
     template = ReportTemplate.query.get_or_404(template_id)
     submissions = ReportSubmission.query.filter_by(template_id=template_id).all()

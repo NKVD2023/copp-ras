@@ -20,7 +20,7 @@
             </li>
             {% endif %}
             <li class="admin-nav-item">
-                <button class="admin-nav-link {% if current_user.role == 'viewer' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#reportsTab" type="button">
+                <button class="admin-nav-link {% if current_user.role == 'manager' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#reportsTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/></svg>
                     Отчеты
                 </button>
@@ -66,7 +66,7 @@
     </div>
     {% endif %}
 
-    <div class="tab-pane fade {% if current_user.role == 'viewer' %}show active{% endif %}" id="reportsTab" role="tabpanel">
+    <div class="tab-pane fade {% if current_user.role == 'manager' %}show active{% endif %}" id="reportsTab" role="tabpanel">
         <div class="card p-4">
             {% include 'admin_tabs/reports_tabs.html' %}
         </div>

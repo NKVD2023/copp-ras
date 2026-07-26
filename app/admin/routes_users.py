@@ -22,13 +22,13 @@ def create_user():
     """
     Создание нового аккаунта. 
     Роль по умолчанию: 'user' (учреждение, сдающее отчет).
-    Также может создавать роль 'viewer' (ответственный - полный контроль отчетов).
+    Также может создавать роль 'manager' (ответственный - полный контроль отчетов).
     """
     username = request.form.get('username').strip()
     password = request.form.get('password')
 
     # Защита: роль только из белого списка, чтобы нельзя передать role=admin через POST
-    ALLOWED_ROLES = ['user', 'viewer']
+    ALLOWED_ROLES = ['user', 'manager']
     role = request.form.get('role', 'user')
     if role not in ALLOWED_ROLES:
         role = 'user'
@@ -86,7 +86,7 @@ def edit_user(user_id):
     
     # Роль и группа
     role = request.form.get('role')
-    if role in ['user', 'viewer']:
+    if role in ['user', 'manager']:
         user.role = role
         
     group = request.form.get('group', None)

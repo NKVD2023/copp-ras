@@ -30,8 +30,8 @@
                         <div class="text-muted small text-wrap">{{ user.description or '' }}</div>
                     </td>
                     <td class="py-3">
-                        {% if user.role == 'viewer' %}
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal d-inline-block mb-1">Наблюдатель</span>
+                        {% if user.role == 'manager' %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal d-inline-block mb-1">Руководитель отдела</span>
                         {% else %}
                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fw-normal d-inline-block mb-1">Пользователь</span>
                         {% endif %}
@@ -89,7 +89,7 @@
                                                 <label class="form-label small text-muted">Роль</label>
                                                 <select name="role" class="form-select">
                                                     <option value="user" {% if user.role == 'user' %}selected{% endif %}>Пользователь (Заполнение данных)</option>
-                                                    <option value="viewer" {% if user.role == 'viewer' %}selected{% endif %}>Наблюдатель (Только просмотр)</option>
+                                                    <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>Руководитель отдела (Только просмотр)</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-6">

@@ -13,7 +13,7 @@ def download_file(file_id):
     file_obj = UploadedFile.query.get_or_404(file_id)
     
     # Check permissions
-    if current_user.role not in ['admin', 'viewer']:
+    if current_user.role not in ['admin', 'manager']:
         # Regular user: check if file is attached to any report assigned to them
         has_access = False
         for report in file_obj.reports:

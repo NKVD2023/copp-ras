@@ -38,7 +38,7 @@ class User(UserMixin, db.Model):
     """
     Модель пользователя системы.
     Поддерживает авторизацию (UserMixin).
-    Роли (role): 'admin' (администратор), 'user' (обычный пользователь), 'viewer' (наблюдатель).
+    Роли (role): 'admin' (администратор), 'user' (обычный пользователь), 'manager' (наблюдатель).
     """
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
