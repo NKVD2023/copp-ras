@@ -4,7 +4,7 @@ from app.models import User
 def upgrade_viewer_to_manager():
     app = create_app()
     with app.app_context():
-        viewers = User.query.filter_by(role='manager').all()
+        viewers = User.query.filter_by(role='viewer').all()
         count = 0
         for viewer in viewers:
             viewer.role = 'manager'
