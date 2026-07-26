@@ -58,3 +58,19 @@ def logout():
     log_action('Выход из системы')
     logout_user()
     return redirect(url_for('auth.login'))
+from flask_login import login_required
+from app import db
+
+@auth_bp.route('/change_my_password', methods=['POST'])
+@login_required
+@limiter.limit("5 per minute")
+def change_my_password():
+    """Смена собственного пароля."""
+    new_password = request.form.get('new_password')
+    if new_password:
+        current_user.set_password(new_password)
+        db.session.commit()
+        log_action('Смена пароля', f'Пользователь {current_user.username} сменил свой пароль')
+    if current_user.role in ['admin', 'manager']:
+        return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('reports.dashboard'))

@@ -16,12 +16,12 @@
 
 /* Логотип и брендинг */
 .brand-logo {
-    min-width: 68px;
+    min-width: 54px;
     object-fit: contain;
 }
 
 .brand-title {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
     white-space: nowrap;
     color: var(--primary-color);
     font-weight: 900;
@@ -29,7 +29,7 @@
 }
 
 .brand-subtitle {
-    font-size: 1rem;
+    font-size: 0.8rem;
     white-space: nowrap;
 }
 

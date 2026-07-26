@@ -1,0 +1,58 @@
+/* Smooth Search Animations */
+
+.admin-top-nav {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    opacity: 1;
+    transform-origin: top;
+}
+
+body.search-active .admin-top-nav {
+    /* Menu no longer hides during search as per user request */
+}
+
+.search-section-title {
+    color: #64748b;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.search-section-title.show-title {
+    opacity: 1;
+}
+
+/* Row fading logic for smooth filtering */
+.filter-row {
+    transition: opacity 0.3s ease;
+    opacity: 1;
+}
+
+.filter-row.is-filtering {
+    opacity: 0;
+}
+
+/* User report items */
+.user-report-item {
+    transition: opacity 0.3s ease;
+}
+
+.user-report-item.search-hidden {
+    display: none !important;
+}
+
+/* Tab panes shouldn't have weird positioning */
+.tab-pane {
+    /* Ensure panes are relative and clear floats */
+    position: relative;
+    clear: both;
+}
+
+body.search-active .tab-pane.d-block {
+    display: block !important;
+    opacity: 1 !important;
+}

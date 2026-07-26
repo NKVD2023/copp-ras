@@ -1,0 +1,52 @@
+with open('/home/copp-admin/copp-ras/app/templates/user_tabs/reports_tabs.html', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+files_tab = """
+            <div class="tab-pane fade" id="filesTab" role="tabpanel">
+                <div class="row g-4" id="filesContainer">
+                    {% for item in attached_files %}
+                    <div class="col-md-6 col-lg-4 col-xl-3 user-report-item" data-title="{{ item.file.filename|lower }}">
+                        <div class="card hoverable h-100 p-2 border-secondary border-opacity-25 bg-light">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 d-flex align-items-center gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/></svg>
+                                            Файл
+                                        </span>
+                                    </div>
+                                    <h6 class="card-title fw-bold text-dark mb-1 text-break">{{ item.file.filename }}</h6>
+                                    <p class="text-muted small mb-2 line-clamp-2" title="{{ item.template_name }}">К отчету: {{ item.template_name }}</p>
+                                    <p class="text-muted small mb-3">Загружен: {{ item.file.upload_date.strftime('%d.%m.%Y') }}</p>
+                                </div>
+                                <div class="mt-auto pt-3 border-top border-secondary border-opacity-25 d-flex flex-column gap-2">
+                                    <a href="{{ url_for('reports.download_file', file_id=item.file.id) }}" class="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                                        Скачать файл
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12">
+                        <div class="text-center py-4 text-muted bg-white rounded border small">Нет прикрепленных файлов.</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+"""
+
+content = content.replace('        </div>\n\n        <script>', files_tab + '        </div>\n\n        <script>')
+content = content.replace('<div class="row mb-4 align-items-center g-2">', '<div class="row mb-4 align-items-center g-2 mx-0">')
+
+# Let's also check if the search function processes filesTab. It processes 'unfilledContainer', 'overdueContainer', 'filledContainer'.
+# We can add filesContainer.
+js_injection = """
+                    // Process files items
+                    processContainer('filesContainer', query, sortVal);
+"""
+content = content.replace("// Process filled items", js_injection + "                    // Process filled items")
+
+with open('/home/copp-admin/copp-ras/app/templates/user_tabs/reports_tabs.html', 'w', encoding='utf-8') as f:
+    f.write(content)

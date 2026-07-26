@@ -3,30 +3,8 @@
         {% set total_filled = filled_templates|length %}
         {% set total_assigned = total_unfilled + total_overdue + total_filled %}
 
-        <div class="row mb-4 align-items-center">
-            <div class="col-md-6">
-                <h3 class="fw-bold text-dark m-0">Мои отчеты</h3>
-                <p class="text-muted small m-0">Сводка по назначенным вам отчетам</p>
-            </div>
-            <div class="col-md-6">
-                <div class="d-flex gap-3 justify-content-md-end mt-3 mt-md-0">
-                    <div class="text-center px-3 border-end">
-                        <div class="fs-4 fw-bold text-dark">{{ total_assigned }}</div>
-                        <div class="small text-muted">Всего</div>
-                    </div>
-                    <div class="text-center px-3 border-end">
-                        <div class="fs-4 fw-bold text-success">{{ total_filled }}</div>
-                        <div class="small text-muted">Сдано</div>
-                    </div>
-                    <div class="text-center px-3">
-                        <div class="fs-4 fw-bold text-danger">{{ total_unfilled }}</div>
-                        <div class="small text-muted">Ожидают</div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="row mb-4 align-items-center g-2">
+        <div class="row mb-4 align-items-center g-2 mx-0">
             <div class="col-md-8">
                 <div class="input-group shadow-sm">
                     <span class="input-group-text bg-white border-end-0 text-muted">
@@ -48,36 +26,27 @@
             </div>
         </div>
 
-        <ul class="nav nav-tabs mb-4" id="userTabs" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#unfilledTab" type="button">
-                    Требуют заполнения 
-                    {% if total_unfilled > 0 %}<span class="badge bg-primary rounded-pill">{{ total_unfilled }}</span>{% endif %}
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link d-flex align-items-center gap-2 text-danger" data-bs-toggle="tab" data-bs-target="#overdueTab" type="button">
-                    Просроченные
-                    {% if total_overdue > 0 %}<span class="badge bg-danger rounded-pill">{{ total_overdue }}</span>{% endif %}
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#filledTab" type="button">
-                    Сданные (Архив)
-                    {% if total_filled > 0 %}<span class="badge bg-success bg-opacity-75 rounded-pill">{{ total_filled }}</span>{% endif %}
-                </button>
-            </li>
-        </ul>
+        
 
-        <div class="tab-content">
+        
+        <div id="unifiedSearchContainer" class="row g-4 d-none mb-4"></div>
+        <div id="unifiedEmptyState" class="col-12 d-none mb-4">
+            <div class="text-center py-5 text-muted bg-white rounded border d-flex flex-column align-items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#e2e8f0" class="mb-3" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/></svg>
+                <span class="small">По вашему запросу ничего не найдено.</span>
+            </div>
+        </div>
+        <div class="tab-content" id="mainTabContent">
+
             <div class="tab-pane fade show active" id="unfilledTab" role="tabpanel">
-                <div class="row g-4" id="unfilledContainer">
+                <h4 class="fw-bold mb-3 search-section-title d-none">Активные отчеты</h4>
+                <div class="row g-4 filter-row" id="unfilledContainer">
                     {% for template in unfilled_templates %}
                     {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
                     {% set is_overdue = days_left is not none and days_left < 0 %}
                     {% set is_urgent = days_left is not none and days_left >= 0 and days_left <= 3 %}
                     
-                    <div class="col-md-4 user-report-item" data-title="{{ template.name|lower }} {{ template.short_name|lower }}" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '2099-12-31' }}" data-id="{{ template.id }}">
+                    <div class="col-md-6 col-lg-4 col-xl-3 user-report-item" data-title="{{ template.name|lower }} {{ template.short_name|lower }}" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '2099-12-31' }}" data-id="{{ template.id }}">
                         {% set card_style = "" %}
                         {% if is_overdue or days_left == 0 %}
                             {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe3e3 50%, #ffcaca 100%);" %}
@@ -90,16 +59,8 @@
                             <!-- Верхняя часть с бейджами -->
                             <div class="d-flex align-items-center gap-2 mb-3">
                                 <span class="badge bg-white text-dark border"><i class="bi bi-calendar"></i> Период: {{ template.period or 'не указан' }}</span>
-                                {% if is_overdue %}
-                                <span class="badge bg-danger text-white border border-danger">Просрочено</span>
-                                {% elif days_left != None %}
-                                    {% if days_left == 0 %}
-                                    <span class="badge bg-danger text-white border border-danger">Осталось 0 дн.</span>
-                                    {% elif days_left <= 3 %}
-                                    <span class="badge bg-warning text-dark border border-warning">Осталось {{ days_left }} дн.</span>
-                                    {% else %}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Осталось {{ days_left }} дн.</span>
-                                    {% endif %}
+                                {% if template.attachments|length > 0 %}
+                                <span class="badge bg-secondary border"><i class="bi bi-paperclip"></i> Файлов: {{ template.attachments|length }}</span>
                                 {% endif %}
                             </div>
                             
@@ -111,26 +72,45 @@
                             
                             <!-- Нижняя часть (Сроки и Кнопка) -->
                             <div class="mt-auto pt-2">
-                                <div class="d-flex justify-content-between align-items-center mb-3 small">
+                                <div class="d-flex justify-content-start align-items-center mb-3 small gap-2">
                                     <span class="fw-medium text-dark">Срок сдачи до:</span>
                                     {% if template.deadline %}
-                                    <span class="{% if is_overdue or days_left == 0 %}text-danger fw-bold{% elif days_left != None and days_left <= 3 %}text-warning fw-bold{% else %}text-muted{% endif %} d-flex align-items-center gap-1">
+                                    <span class="{% if is_overdue or days_left == 0 %}text-danger fw-bold{% elif days_left != None and days_left <= 3 %}text-warning fw-bold{% else %}text-secondary fw-medium{% endif %} d-flex align-items-center gap-1">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
                                         {{ template.deadline.strftime('%d.%m.%Y') }}
                                     </span>
+                                    {% if is_overdue %}
+                                    <span class="badge bg-danger text-white border border-danger ms-1">Просрочено</span>
+                                    {% elif days_left != None %}
+                                        {% if days_left == 0 %}
+                                        <span class="badge bg-danger text-white border border-danger ms-1">Осталось 0 дн.</span>
+                                        {% elif days_left <= 3 %}
+                                        <span class="badge bg-warning text-dark border border-warning ms-1">Осталось {{ days_left }} дн.</span>
+                                        {% else %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-1">Осталось {{ days_left }} дн.</span>
+                                        {% endif %}
+                                    {% endif %}
                                     {% else %}
-                                    <span class="text-muted">Без срока</span>
+                                    <span class="text-secondary fw-medium">Без срока</span>
                                     {% endif %}
                                 </div>
-                                <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
-                                    Заполнить форму
-                                </a>
+                                <div class="action-buttons-container" data-template-id="{{ template.id }}">
+                                    <!-- Обычная кнопка -->
+                                    <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2 btn-default-fill">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
+                                        Заполнить форму
+                                    </a>
+                                    <!-- Две кнопки при наличии черновика -->
+                                    <div class="d-none gap-2 btn-draft-split">
+                                        <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-50 d-flex align-items-center justify-content-center">Черновик</a>
+                                        <a href="#" onclick="clearDraftAndStart('{{ template.id }}', '{{ url_for('reports.fill_report', template_id=template.id) }}'); return false;" class="btn btn-copp w-50 d-flex align-items-center justify-content-center">Заново</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     {% else %}
-                    <div class="col-12">
+                    <div class="col-12 empty-state">
                         <div class="text-center py-5 text-muted bg-white rounded border d-flex flex-column align-items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#e2e8f0" class="mb-3" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/></svg>
                             <!-- <h5 class="fw-bold text-dark">Отличная работа!</h5> -->
@@ -143,13 +123,14 @@
 
 
             <div class="tab-pane fade" id="overdueTab" role="tabpanel">
-                <div class="row g-4" id="overdueContainer">
+                <h4 class="fw-bold mb-3 search-section-title d-none text-danger">Просроченные</h4>
+                <div class="row g-4 filter-row" id="overdueContainer">
                     {% for template in overdue_templates %}
                     {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
                     {% set is_overdue = days_left is not none and days_left < 0 %}
                     {% set is_urgent = days_left is not none and days_left >= 0 and days_left <= 3 %}
                     
-                    <div class="col-md-4 user-report-item" data-title="{{ template.name|lower }} {{ template.short_name|lower }}" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '2099-12-31' }}" data-id="{{ template.id }}">
+                    <div class="col-md-6 col-lg-4 col-xl-3 user-report-item" data-title="{{ template.name|lower }} {{ template.short_name|lower }}" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '2099-12-31' }}" data-id="{{ template.id }}">
                         {% set card_style = "" %}
                         {% if is_overdue or days_left == 0 %}
                             {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe3e3 50%, #ffcaca 100%);" %}
@@ -162,16 +143,8 @@
                             <!-- Верхняя часть с бейджами -->
                             <div class="d-flex align-items-center gap-2 mb-3">
                                 <span class="badge bg-white text-dark border"><i class="bi bi-calendar"></i> Период: {{ template.period or 'не указан' }}</span>
-                                {% if is_overdue %}
-                                <span class="badge bg-danger text-white border border-danger">Просрочено</span>
-                                {% elif days_left != None %}
-                                    {% if days_left == 0 %}
-                                    <span class="badge bg-danger text-white border border-danger">Осталось 0 дн.</span>
-                                    {% elif days_left <= 3 %}
-                                    <span class="badge bg-warning text-dark border border-warning">Осталось {{ days_left }} дн.</span>
-                                    {% else %}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Осталось {{ days_left }} дн.</span>
-                                    {% endif %}
+                                {% if template.attachments|length > 0 %}
+                                <span class="badge bg-secondary border"><i class="bi bi-paperclip"></i> Файлов: {{ template.attachments|length }}</span>
                                 {% endif %}
                             </div>
                             
@@ -183,26 +156,43 @@
                             
                             <!-- Нижняя часть (Сроки и Кнопка) -->
                             <div class="mt-auto pt-2">
-                                <div class="d-flex justify-content-between align-items-center mb-3 small">
+                                <div class="d-flex justify-content-start align-items-center mb-3 small gap-2">
                                     <span class="fw-medium text-dark">Срок сдачи до:</span>
                                     {% if template.deadline %}
-                                    <span class="{% if is_overdue or days_left == 0 %}text-danger fw-bold{% elif days_left != None and days_left <= 3 %}text-warning fw-bold{% else %}text-muted{% endif %} d-flex align-items-center gap-1">
+                                    <span class="{% if is_overdue or days_left == 0 %}text-danger fw-bold{% elif days_left != None and days_left <= 3 %}text-warning fw-bold{% else %}text-secondary fw-medium{% endif %} d-flex align-items-center gap-1">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
                                         {{ template.deadline.strftime('%d.%m.%Y') }}
                                     </span>
+                                    {% if is_overdue %}
+                                    <span class="badge bg-danger text-white border border-danger ms-1">Просрочено</span>
+                                    {% elif days_left != None %}
+                                        {% if days_left == 0 %}
+                                        <span class="badge bg-danger text-white border border-danger ms-1">Осталось 0 дн.</span>
+                                        {% elif days_left <= 3 %}
+                                        <span class="badge bg-warning text-dark border border-warning ms-1">Осталось {{ days_left }} дн.</span>
+                                        {% else %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-1">Осталось {{ days_left }} дн.</span>
+                                        {% endif %}
+                                    {% endif %}
                                     {% else %}
-                                    <span class="text-muted">Без срока</span>
+                                    <span class="text-secondary fw-medium">Без срока</span>
                                     {% endif %}
                                 </div>
-                                <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
-                                    Заполнить форму
-                                </a>
+                                <div class="action-buttons-container" data-template-id="{{ template.id }}">
+                                    <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2 btn-default-fill">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
+                                        Заполнить форму
+                                    </a>
+                                    <div class="d-none gap-2 btn-draft-split">
+                                        <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-50 d-flex align-items-center justify-content-center">Черновик</a>
+                                        <a href="#" onclick="clearDraftAndStart('{{ template.id }}', '{{ url_for('reports.fill_report', template_id=template.id) }}'); return false;" class="btn btn-copp w-50 d-flex align-items-center justify-content-center">Заново</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     {% else %}
-                    <div class="col-12">
+                    <div class="col-12 empty-state">
                         <div class="text-center py-5 text-muted bg-white rounded border d-flex flex-column align-items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#e2e8f0" class="mb-3" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/></svg>
                             <!-- <h5 class="fw-bold text-dark">Отличная работа!</h5> -->
@@ -214,9 +204,10 @@
             </div>
 
             <div class="tab-pane fade" id="filledTab" role="tabpanel">
-                <div class="row g-4" id="filledContainer">
+                <h4 class="fw-bold mb-3 search-section-title d-none">Сданные отчеты</h4>
+                <div class="row g-4 filter-row" id="filledContainer">
                     {% for template in filled_templates %}
-                    <div class="col-md-4 user-report-item" data-title="{{ template.name|lower }} {{ template.short_name|lower }}" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '2099-12-31' }}" data-id="{{ template.id }}">
+                    <div class="col-md-6 col-lg-4 col-xl-3 user-report-item" data-title="{{ template.name|lower }} {{ template.short_name|lower }}" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '2099-12-31' }}" data-id="{{ template.id }}">
                         <div class="card h-100 p-2 border-success border-opacity-25 bg-light">
                             <div class="card-body d-flex flex-column justify-content-between">
                                 <div>
@@ -247,8 +238,43 @@
                         </div>
                     </div>
                     {% else %}
-                    <div class="col-12">
+                    <div class="col-12 empty-state">
                         <div class="text-center py-4 text-muted bg-white rounded border small">Архив сданных отчетов пуст.</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="filesTab" role="tabpanel">
+                <h4 class="fw-bold mb-3 search-section-title d-none">Прикрепленные файлы</h4>
+                <div class="row g-4 filter-row" id="filesContainer">
+                    {% for item in attached_files %}
+                    <div class="col-md-6 col-lg-4 col-xl-3 user-report-item" data-title="{{ item.file.filename|lower }} {{ item.template_name|lower }}">
+                        <div class="card hoverable h-100 p-2 border-secondary border-opacity-25 bg-light">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 d-flex align-items-center gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/></svg>
+                                            Файл
+                                        </span>
+                                    </div>
+                                    <h6 class="card-title fw-bold text-dark mb-1 text-break">{{ item.file.filename }}</h6>
+                                    <p class="text-muted small mb-2 line-clamp-2" title="{{ item.template_name }}">К отчету: {{ item.template_name }}</p>
+                                    <p class="text-muted small mb-3">Загружен: {{ item.file.upload_date.strftime('%d.%m.%Y') }}</p>
+                                </div>
+                                <div class="mt-auto pt-3 border-top border-secondary border-opacity-25 d-flex flex-column gap-2">
+                                    <a href="{{ url_for('reports.download_file', file_id=item.file.id) }}" class="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                                        Скачать файл
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 empty-state">
+                        <div class="text-center py-4 text-muted bg-white rounded border small">Нет прикрепленных файлов.</div>
                     </div>
                     {% endfor %}
                 </div>
@@ -259,33 +285,154 @@
             document.addEventListener("DOMContentLoaded", function () {
                 const searchInput = document.getElementById('userReportSearch');
                 const sortSelect = document.getElementById('userReportSort');
+                const navTabs = document.getElementById('userTabs'); // from user_dashboard.html
+                
+                // Показываем измененные кнопки при наличии черновика
+                const currentUserId = "{{ current_user.id }}";
+                document.querySelectorAll('.action-buttons-container').forEach(container => {
+                    const templateId = container.dataset.templateId;
+                    const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
+                    if (localStorage.getItem(draftKey)) {
+                        // Меняем кнопки
+                        const defaultBtn = container.querySelector('.btn-default-fill');
+                        const splitBtns = container.querySelector('.btn-draft-split');
+                        if (defaultBtn && splitBtns) {
+                            defaultBtn.classList.add('d-none');
+                            splitBtns.classList.remove('d-none');
+                            splitBtns.classList.add('d-flex');
+                        }
+                    }
+                });
+                
+                // Функция для сброса черновика и начала заново
+                window.clearDraftAndStart = function(templateId, url) {
+                    if (confirm('Вы уверены, что хотите начать заполнение заново? Сохраненный черновик будет удален.')) {
+                        const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
+                        localStorage.removeItem(draftKey);
+                        window.location.href = url;
+                    }
+                };
+                
+                let searchTimeout;
+                
+                // Initialize original containers
+                document.querySelectorAll('.user-report-item').forEach(item => {
+                    if (item.closest('.filter-row')) {
+                        item.setAttribute('data-original-container', item.closest('.filter-row').id);
+                    }
+                });
                 
                 function applyFilterAndSort() {
-                    const query = searchInput.value.toLowerCase();
-                    const sortVal = sortSelect.value;
+                    if (!searchInput) return;
+                    clearTimeout(searchTimeout);
                     
-                    // Process unfilled items
-                    processContainer('unfilledContainer', query, sortVal);
-                    // Process overdue items
-                    processContainer('overdueContainer', query, sortVal);
-                    // Process filled items
-                    processContainer('filledContainer', query, sortVal);
+                    const query = searchInput.value.toLowerCase().trim();
+                    const sortVal = sortSelect ? sortSelect.value : '';
+                    
+                    const sections = ['unfilledContainer', 'overdueContainer', 'filledContainer', 'filesContainer'];
+                    const unifiedContainer = document.getElementById('unifiedSearchContainer');
+                    const unifiedEmpty = document.getElementById('unifiedEmptyState');
+                    const mainTabs = document.getElementById('mainTabContent');
+                    
+                    searchTimeout = setTimeout(() => {
+                        if (query.length > 0) {
+                            document.body.classList.add('search-active');
+                            
+                            // Скрыть табы, показать единый контейнер
+                            if (mainTabs) mainTabs.classList.add('d-none');
+                            unifiedContainer.classList.remove('d-none');
+                            unifiedEmpty.classList.add('d-none');
+                            
+                            let allItems = Array.from(document.querySelectorAll('.user-report-item'));
+                            let visibleItems = [];
+                            
+                            allItems.forEach(item => {
+                                const title = item.getAttribute('data-title') || '';
+                                if (title.includes(query)) {
+                                    item.style.display = '';
+                                    item.classList.remove('search-hidden');
+                                    visibleItems.push(item);
+                                    unifiedContainer.appendChild(item); // Move to unified container
+                                } else {
+                                    item.style.display = 'none';
+                                    item.classList.add('search-hidden');
+                                    unifiedContainer.appendChild(item);
+                                }
+                            });
+                            
+                            if (visibleItems.length === 0) {
+                                unifiedEmpty.classList.remove('d-none');
+                            }
+                            
+                            // Sort in unified container
+                            if (sortVal && visibleItems.length > 0) {
+                                visibleItems.sort((a, b) => {
+                                    if (sortVal === 'name_asc') return a.getAttribute('data-title').localeCompare(b.getAttribute('data-title'));
+                                    if (sortVal === 'name_desc') return b.getAttribute('data-title').localeCompare(a.getAttribute('data-title'));
+                                    const d1 = a.getAttribute('data-deadline') || '2099-12-31';
+                                    const d2 = b.getAttribute('data-deadline') || '2099-12-31';
+                                    if (sortVal === 'deadline_asc') return d1.localeCompare(d2);
+                                    if (sortVal === 'deadline_desc') return d2.localeCompare(d1);
+                                    const id1 = parseInt(a.getAttribute('data-id')) || 0;
+                                    const id2 = parseInt(b.getAttribute('data-id')) || 0;
+                                    if (sortVal === 'id_desc') return id2 - id1;
+                                    return 0;
+                                });
+                                visibleItems.forEach(item => unifiedContainer.appendChild(item));
+                            }
+                            
+                        } else {
+                            // Очистка поиска: вернуть элементы в их оригинальные контейнеры
+                            document.body.classList.remove('search-active');
+                            
+                            if (mainTabs) mainTabs.classList.remove('d-none');
+                            unifiedContainer.classList.add('d-none');
+                            unifiedEmpty.classList.add('d-none');
+                            
+                            let allItems = Array.from(document.querySelectorAll('.user-report-item'));
+                            allItems.forEach(item => {
+                                item.style.display = '';
+                                item.classList.remove('search-hidden');
+                                const origId = item.getAttribute('data-original-container');
+                                const origContainer = document.getElementById(origId);
+                                if (origContainer) {
+                                    origContainer.appendChild(item);
+                                }
+                            });
+                            
+                            // Сортировка внутри оригинальных контейнеров
+                            sections.forEach(secId => {
+                                const container = document.getElementById(secId);
+                                if (!container) return;
+                                
+                                let items = Array.from(container.querySelectorAll('.user-report-item'));
+                                
+                                const emptyState = container.querySelector('.empty-state');
+                                if (emptyState) {
+                                    emptyState.style.display = (items.length === 0) ? '' : 'none';
+                                }
+                                
+                                if (sortVal && items.length > 0) {
+                                    items.sort((a, b) => {
+                                        if (sortVal === 'name_asc') return a.getAttribute('data-title').localeCompare(b.getAttribute('data-title'));
+                                        if (sortVal === 'name_desc') return b.getAttribute('data-title').localeCompare(a.getAttribute('data-title'));
+                                        const d1 = a.getAttribute('data-deadline') || '2099-12-31';
+                                        const d2 = b.getAttribute('data-deadline') || '2099-12-31';
+                                        if (sortVal === 'deadline_asc') return d1.localeCompare(d2);
+                                        if (sortVal === 'deadline_desc') return d2.localeCompare(d1);
+                                        const id1 = parseInt(a.getAttribute('data-id')) || 0;
+                                        const id2 = parseInt(b.getAttribute('data-id')) || 0;
+                                        if (sortVal === 'id_desc') return id2 - id1;
+                                        return 0;
+                                    });
+                                    items.forEach(item => container.appendChild(item));
+                                }
+                            });
+                        }
+                    }, 100);
                 }
                 
-                function processContainer(containerId, query, sortVal) {
-                    const container = document.getElementById(containerId);
-                    if (!container) return;
-                    let items = Array.from(container.querySelectorAll('.user-report-item'));
-                    
-                    items.forEach(item => {
-                        const title = item.getAttribute('data-title');
-                        if (title.includes(query)) {
-                            item.style.display = '';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-                    
                 if (searchInput) searchInput.addEventListener('input', applyFilterAndSort);
+                if (sortSelect) sortSelect.addEventListener('change', applyFilterAndSort);
             });
         </script>

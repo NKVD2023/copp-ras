@@ -10,7 +10,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ЦОПП РАС</title>
+    <title>{% block title %}ЦОПП РАС{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logoblue2.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -23,7 +23,7 @@
     <header class="bg-white py-4 header-border">
         <div class="container d-flex justify-content-between align-items-center">
             <a class="brand-container text-decoration-none d-flex flex-row align-items-center gap-3" href="/">
-                <img src="{{ url_for('static', filename='img/logoblue2.png') }}" alt="Логотип" height="68" class="brand-logo">
+                <img src="{{ url_for('static', filename='img/logoblue2.png') }}" alt="Логотип" height="54" class="brand-logo">
                 <div class="d-flex flex-column justify-content-center">
                     <span class="brand-title lh-1 mb-1">Республики Крым</span>
                     <span class="brand-subtitle lh-1 text-muted">Региональная Аналитическая Система</span>

@@ -49,8 +49,24 @@ def dashboard():
         else:
             active.append(t)
     
+    # Собираем все прикрепленные файлы из назначенных отчетов
+    files_list = []
+    seen_file_ids = set()
+    for t in assigned:
+        for file in t.attachments:
+            if file.id not in seen_file_ids:
+                files_list.append({
+                    'file': file,
+                    'template_name': t.name
+                })
+                seen_file_ids.add(file.id)
+
+    # Сортируем файлы по дате загрузки (сначала новые)
+    files_list.sort(key=lambda x: x['file'].upload_date, reverse=True)
+    
     return render_template('user_dashboard.html', 
                            unfilled_templates=active,
                            overdue_templates=overdue,
                            filled_templates=filled, 
+                           attached_files=files_list,
                            current_date=date.today())

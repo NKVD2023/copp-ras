@@ -4,6 +4,7 @@
   Позволяет только просматривать и выгружать отчеты (Read-Only).
 -->
 {% extends "base.html" %}
+{% block title %}ЦОПП | Кабинет менеджера{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">

@@ -122,8 +122,49 @@ def get_previous_data(template_id):
     if not prev_submission or not prev_submission.data:
         return jsonify({'status': 'error', 'message': 'Вы не заполняли (или не сохраняли данные) в предыдущем периоде этого отчета.'}), 404
         
+    import re
+    def normalize_label(label):
+        if not label: return ''
+        return re.sub(r'\W+', '', str(label)).lower()
+
+    def get_schema(t):
+        if type(t.schema) is str:
+            import json
+            try:
+                return json.loads(t.schema)
+            except:
+                return []
+        return t.schema or []
+        
+    old_schema = get_schema(previous_template)
+    new_schema = get_schema(template)
+    
+    # 1. Map old field name to normalized label
+    old_name_to_norm = {}
+    for sheet in old_schema:
+        for field in sheet.get('fields', []):
+            old_name_to_norm[field['name']] = normalize_label(field.get('label', ''))
+            
+    # 2. Map normalized label to new field name
+    norm_to_new_name = {}
+    for sheet in new_schema:
+        for field in sheet.get('fields', []):
+            norm_to_new_name[normalize_label(field.get('label', ''))] = field['name']
+            
+    # 3. Translate old data to new data
+    mapped_data = {}
+    for old_name, value in prev_submission.data.items():
+        if old_name in old_name_to_norm:
+            norm_label = old_name_to_norm[old_name]
+            if norm_label in norm_to_new_name:
+                new_name = norm_to_new_name[norm_label]
+                mapped_data[new_name] = value
+        else:
+            # If field wasn't in schema (e.g. meta field), just pass it along just in case
+            mapped_data[old_name] = value
+            
     return jsonify({
         'status': 'success',
-        'data': prev_submission.data,
+        'data': mapped_data,
         'message': f'Данные из отчета "{previous_template.period or previous_template.name}" успешно загружены.'
     })
