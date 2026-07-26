@@ -128,3 +128,4 @@ cython_debug/
 
 # Excel / office backups
 ~$*.xlsx
+future_plans_hierarchy.md
