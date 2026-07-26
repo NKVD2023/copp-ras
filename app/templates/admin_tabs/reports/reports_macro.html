@@ -182,10 +182,13 @@
                     {% endif %}
                 </div>
 
-                <div class="mt-auto pt-2">
-                    <a href="{{ url_for('reports.view_data', template_id=t.id) }}" class="btn btn-sm btn-copp w-100 py-2">
-                        <i class="bi bi-bar-chart-fill me-1"></i>Открыть сводные данные
+                <div class="mt-auto pt-2 d-flex gap-2">
+                    <a href="{{ url_for('reports.view_data', template_id=t.id) }}" class="btn btn-sm btn-copp w-50 py-2">
+                        <i class="bi bi-bar-chart-fill me-1"></i>Сводные данные
                     </a>
+                    <button type="button" class="btn btn-sm btn-success text-white w-50 py-2" onclick="exportExcel(this, {{ t.id }})">
+                        <i class="bi bi-file-earmark-excel me-1"></i>В Excel
+                    </button>
                 </div>
 
             </div>

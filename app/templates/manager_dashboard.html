@@ -61,3 +61,52 @@
 </script>
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 {% endblock %}
+{% block extra_js %}
+    <script>
+        function exportExcel(btn, templateId) {
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Запуск...';
+            
+            fetch(`/export_excel/${templateId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const taskId = data.task_id;
+                        pollTaskStatus(taskId, btn, originalHtml);
+                    } else {
+                        alert("Ошибка запуска формирования файла");
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                })
+                .catch(err => {
+                    alert("Произошла ошибка при обращении к серверу");
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                });
+        }
+        
+        function pollTaskStatus(taskId, btn, originalHtml) {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Формируется...';
+            fetch(`/task_status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'SUCCESS') {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                        window.location.href = `/task_download/${taskId}`;
+                    } else if (data.status === 'FAILED') {
+                        alert("Ошибка формирования файла: " + data.message);
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    } else {
+                        setTimeout(() => pollTaskStatus(taskId, btn, originalHtml), 1000);
+                    }
+                })
+                .catch(err => {
+                    setTimeout(() => pollTaskStatus(taskId, btn, originalHtml), 1000);
+                });
+        }
+    </script>
+{% endblock %}
