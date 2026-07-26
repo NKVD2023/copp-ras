@@ -40,4 +40,17 @@ def dashboard():
     # Сортируем невыполненные по дедлайну (сначала те, что нужно сдать раньше)
     unfilled.sort(key=lambda x: x.deadline or date.max)
     
-    return render_template('user_dashboard.html', unfilled_templates=unfilled, filled_templates=filled, current_date=date.today())
+    overdue = []
+    active = []
+    
+    for t in unfilled:
+        if t.deadline and t.deadline < date.today():
+            overdue.append(t)
+        else:
+            active.append(t)
+    
+    return render_template('user_dashboard.html', 
+                           unfilled_templates=active,
+                           overdue_templates=overdue,
+                           filled_templates=filled, 
+                           current_date=date.today())
