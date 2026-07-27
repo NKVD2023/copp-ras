@@ -26,16 +26,16 @@ def dashboard():
         return redirect(url_for('admin.dashboard'))
         
     # === ЛОГИКА ДЛЯ УЧРЕЖДЕНИЯ (USER) ===
-    # Получаем все отчеты, которые пользователь уже сдал
+    # Получаем все сданные отчеты напрямую из таблицы отправленных данных
     submissions = ReportSubmission.query.filter_by(user_id=current_user.id).all()
     filled_ids = [s.template_id for s in submissions]
     
-    # Получаем все шаблоны, которые назначены этому пользователю и уже опубликованы
-    assigned = [t for t in current_user.assigned_templates if t.is_published]
+    # Архив пользователя: собираем сами шаблоны из отправленных данных
+    filled = [s.template for s in submissions if s.template is not None]
     
-    # Разделяем на те, что еще не заполнены, и те, что заполнены
+    # Активные отчеты: назначенные, опубликованные и еще не сданные
+    assigned = [t for t in current_user.assigned_templates if t.is_published]
     unfilled = [t for t in assigned if t.id not in filled_ids]
-    filled = [t for t in assigned if t.id in filled_ids]
     
     # Сортируем невыполненные по дедлайну (сначала те, что нужно сдать раньше)
     unfilled.sort(key=lambda x: x.deadline or date.max)
@@ -49,10 +49,10 @@ def dashboard():
         else:
             active.append(t)
     
-    # Собираем все прикрепленные файлы из назначенных отчетов
+    # Собираем все прикрепленные файлы из назначенных и сданных отчетов
     files_list = []
     seen_file_ids = set()
-    for t in assigned:
+    for t in (unfilled + filled):
         for file in t.attachments:
             if file.id not in seen_file_ids:
                 files_list.append({
