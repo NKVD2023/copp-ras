@@ -16,10 +16,11 @@ class ExcelService:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Должники"
-        ws.append(["Организация", "Описание"])
+        ws.append(["Организация"])
         
         for d in debtors:
-            ws.append([d.username, d.description or ""])
+            org_name = d.description if d.description else d.username
+            ws.append([org_name])
             
         output = BytesIO()
         wb.save(output)
@@ -99,7 +100,8 @@ class ExcelService:
             # 3. ДАННЫЕ
             current_row = 3
             for sub in submissions:
-                row_data = [sub.user.username]
+                org_name = sub.user.description if sub.user.description else sub.user.username
+                row_data = [org_name]
                 for f in sheet_data['fields']:
                     val = sub.data.get(f['name'], '-')
                     if f['type'] == 'number' and val not in ['-', '', None]:
