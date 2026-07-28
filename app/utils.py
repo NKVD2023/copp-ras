@@ -3,6 +3,7 @@
 Содержит функции, которые могут использоваться во всех модулях системы.
 """
 from flask_login import current_user
+from flask import request
 from app import db
 from app.models import ActionLog
 
@@ -18,10 +19,21 @@ def log_action(action: str, details: str = ""):
     # Получаем ID пользователя, только если контекст авторизации существует
     user_id = current_user.id if current_user and current_user.is_authenticated else None
     
+    ip = None
+    try:
+        # Пытаемся получить IP-адрес (с учетом того, что сервер может быть за прокси)
+        if request:
+            ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if ip and ',' in ip:
+                ip = ip.split(',')[0].strip()
+    except Exception:
+        pass # Игнорируем ошибку, если функция вызвана вне контекста запроса (например, в фоне)
+
     log_entry = ActionLog(
         user_id=user_id,
         action=action,
-        details=details
+        details=details,
+        ip_address=ip
     )
     
     try:

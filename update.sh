@@ -143,6 +143,9 @@ if [ -f "$APP_DIR/add_background_tasks_table.py" ]; then
     "$APP_DIR/venv/bin/python" "$APP_DIR/add_background_tasks_table.py" || warn "Ошибка при выполнении add_background_tasks_table.py"
 fi
 
+info "Проверка структуры таблицы action_logs (добавление ip_address)..."
+sqlite3 "$APP_DIR/reports.db" "ALTER TABLE action_logs ADD COLUMN ip_address VARCHAR(45);" 2>/dev/null || true
+
 # ─── 4. ПРАВА ДОСТУПА ─────────────────────────────────────────────────────────
 section "4/5  Права доступа"
 

@@ -104,6 +104,7 @@ class ActionLog(db.Model):
     action = db.Column(db.String(128))        # Тип действия (например, 'Вход', 'Удаление пользователя')
     details = db.Column(db.Text)              # Дополнительная информация
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45))     # IP-адрес клиента
     
     user = db.relationship('User', backref='action_logs')
 
