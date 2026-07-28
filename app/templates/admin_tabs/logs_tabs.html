@@ -106,19 +106,19 @@
             <table class="table modern-table" id="logsTable">
                 <thead>
                     <tr>
-                        <th class="sortable" data-col="0" style="cursor: pointer; user-select: none;">
+                        <th class="sortable" data-col="0" style="cursor: pointer; user-select: none; width: 12%;">
                             Дата и время <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="1" style="cursor: pointer; user-select: none;">
+                        <th class="sortable" data-col="1" style="cursor: pointer; user-select: none; width: 20%;">
                             Пользователь <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="2" style="cursor: pointer; user-select: none;">
+                        <th class="sortable" data-col="2" style="cursor: pointer; user-select: none; width: 15%;">
                             Действие <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="3" style="cursor: pointer; user-select: none;">
+                        <th class="sortable" data-col="3" style="cursor: pointer; user-select: none; width: 40%;">
                             Подробности <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="4" style="cursor: pointer; user-select: none;">
+                        <th class="sortable" data-col="4" style="cursor: pointer; user-select: none; width: 13%;">
                             IP-адрес <span class="sort-icon text-copp ms-1"></span>
                         </th>
                     </tr>
@@ -127,14 +127,14 @@
                     {% for log in logs_list %}
                     <tr class="log-row">
                         <!-- Дата -->
-                        <td style="color: #6b7280; font-size: 0.875rem; white-space: nowrap;" data-sort-value="{{ (log.timestamp|msk_time).strftime('%Y-%m-%d %H:%M:%S') }}">
+                        <td style="color: #6b7280; font-size: 0.875rem; white-space: normal;" data-sort-value="{{ (log.timestamp|msk_time).strftime('%Y-%m-%d %H:%M:%S') }}">
                             {{ (log.timestamp|msk_time).strftime('%d.%m.%Y %H:%M') }}
                         </td>
                         
                         <!-- Пользователь -->
                         <td>
                             {% if log.user %}
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex flex-column align-items-start gap-1">
                                     {% if log.user.role == 'admin' %}
                                         <span class="badge rounded-pill fw-bold" style="background-color: #ffe5e5; color: #dc3545; font-size: 0.65rem; padding: 0.35rem 0.6rem;">АДМИН</span>
                                     {% elif log.user.role == 'manager' %}
@@ -142,34 +142,32 @@
                                     {% else %}
                                         <span class="badge rounded-pill fw-bold" style="background-color: #f8f9fa; color: #6c757d; font-size: 0.65rem; padding: 0.35rem 0.6rem;">ПОЛЬЗОВАТЕЛЬ</span>
                                     {% endif %}
-                                    <div class="ms-2">
-                                        <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">{{ log.user.username }}</div>
-                                        <div style="font-size: 0.75rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">{{ log.user.description }}</div>
+                                    <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">{{ log.user.username }}</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; white-space: normal; word-break: break-word;">
+                                        {% if log.user.description and log.user.description != 'None' %}{{ log.user.description }}{% endif %}
                                     </div>
                                 </div>
                             {% else %}
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex flex-column align-items-start gap-1">
                                     <span class="badge rounded-pill fw-bold" style="background-color: #ffe5e5; color: #dc3545; font-size: 0.65rem; padding: 0.35rem 0.6rem;">АДМИН</span>
-                                    <div class="ms-2">
-                                        <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">Система</div>
-                                        <div style="font-size: 0.75rem; color: #6b7280;">Фоновые задачи</div>
-                                    </div>
+                                    <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">Система</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280;">Фоновые задачи</div>
                                 </div>
                             {% endif %}
                         </td>
                         
                         <!-- Действие -->
-                        <td style="color: #6b7280; font-size: 0.875rem; white-space: nowrap;">
+                        <td style="color: #6b7280; font-size: 0.875rem; white-space: normal;">
                             <span style="color:#d1d5db; font-size:0.6rem;" class="me-2">●</span>{{ log.action }}
                         </td>
                         
                         <!-- Подробности -->
-                        <td style="color: #4b5563; font-size: 0.875rem;">
+                        <td style="color: #4b5563; font-size: 0.875rem; white-space: normal; word-break: break-word;">
                             {{ log.details }}
                         </td>
 
                         <!-- IP-адрес -->
-                        <td style="color: #6b7280; font-size: 0.875rem; font-family: monospace;">
+                        <td style="color: #6b7280; font-size: 0.875rem; font-family: monospace; white-space: normal; word-break: break-all;">
                             {{ log.ip_address or '' }}
                         </td>
                     </tr>
