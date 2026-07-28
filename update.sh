@@ -144,7 +144,7 @@ if [ -f "$APP_DIR/add_background_tasks_table.py" ]; then
 fi
 
 info "Проверка структуры таблицы action_logs (добавление ip_address)..."
-sqlite3 "$APP_DIR/reports.db" "ALTER TABLE action_logs ADD COLUMN ip_address VARCHAR(45);" 2>/dev/null || true
+"$APP_DIR/venv/bin/python" -c "import sqlite3; conn = sqlite3.connect('$APP_DIR/reports.db'); conn.execute('ALTER TABLE action_logs ADD COLUMN ip_address VARCHAR(45);'); conn.commit(); conn.close()" 2>/dev/null || true
 
 # ─── 4. ПРАВА ДОСТУПА ─────────────────────────────────────────────────────────
 section "4/5  Права доступа"
