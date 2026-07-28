@@ -35,7 +35,8 @@
 <style>
 /* Основной контейнер таблицы (для прокрутки и скруглений) */
 .table-container {
-    max-height: 600px; 
+    max-height: calc(100vh - 220px); 
+    min-height: 500px;
     overflow-y: auto;
 }
 
@@ -140,7 +141,7 @@
                                     {% elif log.user.role == 'manager' %}
                                         <span class="badge rounded-pill fw-bold" style="background-color: #e5f0ff; color: #0d6efd; font-size: 0.65rem; padding: 0.35rem 0.6rem;">РЕДАКТОР</span>
                                     {% else %}
-                                        <span class="badge rounded-pill fw-bold" style="background-color: #f8f9fa; color: #6c757d; font-size: 0.65rem; padding: 0.35rem 0.6rem;">ПОЛЬЗОВАТЕЛЬ</span>
+                                        <span class="badge rounded-pill fw-bold" style="background-color: #e6f4ea; color: #1e8e3e; font-size: 0.65rem; padding: 0.35rem 0.6rem;">ПОЛЬЗОВАТЕЛЬ</span>
                                     {% endif %}
                                     <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">{{ log.user.username }}</div>
                                     <div style="font-size: 0.75rem; color: #6b7280; white-space: normal; word-break: break-word;">
