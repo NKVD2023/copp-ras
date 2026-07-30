@@ -64,6 +64,16 @@ def parse_period(period_str):
 app = create_app()
 
 with app.app_context():
+    print("Проверка наличия колонки period_data в таблице report_templates...")
+    try:
+        db.session.execute(db.text("ALTER TABLE report_templates ADD COLUMN period_data JSON;"))
+        db.session.commit()
+        print("Колонка period_data успешно добавлена в базу данных!")
+    except Exception as e:
+        db.session.rollback()
+        # Скорее всего колонка уже существует, это нормально
+        print("Колонка уже существует или произошла другая ошибка (игнорируем).")
+
     print("Начало миграции старых периодов...")
     templates = ReportTemplate.query.all()
     migrated_count = 0
