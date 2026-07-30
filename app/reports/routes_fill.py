@@ -26,15 +26,23 @@ def fill_report(template_id):
     """
     template = ReportTemplate.query.get_or_404(template_id)
     
-    # Защита от посторонних (только user), от неопубликованных форм и от отсутствия прав (assigned)
-    if current_user.role != 'user' or template not in current_user.assigned_templates or not template.is_published:
-        return "Доступ ограничен или форма не опубликована", 403
+    if current_user.role != 'user':
+        return "Доступ ограничен", 403
         
+    # Пробуем найти уже существующий ответ (черновик или сданный отчет)
+    submission = ReportSubmission.query.filter_by(template_id=template.id, user_id=current_user.id).first()
+    
     # Блокировка редактирования, если прошел срок сдачи
     is_locked = template.deadline and date.today() > template.deadline
     
-    # Пробуем найти уже существующий ответ (черновик), чтобы предзаполнить форму
-    submission = ReportSubmission.query.filter_by(template_id=template.id, user_id=current_user.id).first()
+    if not submission:
+        # Если нет ответа, то проверяем строго: форма должна быть назначена и опубликована
+        if template not in current_user.assigned_templates or not template.is_published:
+            return "Доступ ограничен или форма не опубликована", 403
+    else:
+        # Если ответ есть (архивная запись), но форма больше не актуальна, просто блокируем редактирование
+        if template not in current_user.assigned_templates or not template.is_published:
+            is_locked = True
     
     # Сохранение данных (AJAX запрос из JS)
     if request.method == 'POST':
