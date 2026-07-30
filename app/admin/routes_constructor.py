@@ -31,10 +31,14 @@ def constructor():
         
         schema = json.loads(data.get('schema', '[]'))
         
+        period_data_str = data.get('period_data')
+        period_data = json.loads(period_data_str) if period_data_str else None
+        
         template = ReportTemplate(
             name=data.get('name'), 
             short_name=data.get('short_name'), 
             period=data.get('period'),
+            period_data=period_data,
             deadline=deadline_date,
             is_published=False,
             is_template=False,
@@ -47,6 +51,7 @@ def constructor():
             name=data['name'], 
             short_name=data['short_name'], 
             period=None,
+            period_data=None,
             deadline=None,
             is_published=False,
             is_template=True,
@@ -144,6 +149,8 @@ def edit_constructor(template_id):
         template.name = data.get('name')
         template.short_name = data.get('short_name')
         template.period = data.get('period')
+        period_data_str = data.get('period_data')
+        template.period_data = json.loads(period_data_str) if period_data_str else None
         template.deadline = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
         template.schema = json.loads(data.get('schema', '[]'))
         

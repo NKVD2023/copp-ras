@@ -5,9 +5,11 @@
   Содержит сложную JS-логику для динамического добавления листов и полей в JSON схему (schema).
 -->
 {% extends "base.html" %}
+{% from "macros/period_selector.html" import render_period_selector %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/constructor.css') }}">
+<script src="{{ url_for('static', filename='js/period_selector.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -20,33 +22,31 @@
             <a href="{{ url_for('admin.dashboard') }}#reportsTab" class="btn btn-outline-secondary btn-sm px-3">Отмена</a>
         </div>
 
-        <div class="row g-3 form-group-bottom-margin">
-            <div class="col-md-7">
-                <label class="form-label small text-muted">Полное имя отчета</label>
-                <textarea id="templateName" class="form-control long-name-field"
-                    placeholder="Введите полное наименование..." rows="2">{{ template.name if template else '' }}</textarea>
-            </div>
-
-            <div class="col-md-5">
-                <label class="form-label small text-muted">Короткое имя отчета</label>
-                <input type="text" id="templateShortName" class="form-control" placeholder="" value="{{ template.short_name if template else '' }}">
-            </div>
-        </div>
-
         <div class="row g-4 mb-5 pb-4 border-bottom">
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-dark">Период отчета</label>
-                <input type="text" id="templatePeriod" class="form-control bg-light" autocomplete="off" value="{{ template.period if template else '' }}">
+            <div class="col-12">
+                <label class="form-label small fw-bold text-dark">Короткое имя отчета</label>
+                <input type="text" id="templateShortName" class="form-control bg-light" placeholder="Например: Мониторинг ПК" value="{{ template.short_name if template else '' }}">
             </div>
-            <div class="col-md-6">
+            
+            <div class="col-12">
+                <label class="form-label small fw-bold text-dark">Полное имя отчета</label>
+                <textarea id="templateName" class="form-control bg-light long-name-field" placeholder="Полное наименование для заголовка..." rows="3">{{ template.name if template else '' }}</textarea>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small fw-bold text-dark">Период отчета</label>
+                {{ render_period_selector('templatePeriod', template.period if template else '', (template.period_data|tojson if template and template.period_data else 'null') ) }}
+            </div>
+            
+            <div class="col-12">
                 <label class="form-label small fw-bold text-dark">Срок сдачи</label>
-                <input type="date" id="templateDeadline" class="form-control bg-light" value="{{ template.deadline.strftime('%Y-%m-%d') if template and template.deadline else '' }}">
+                <input type="date" id="templateDeadline" class="form-control bg-light w-auto" value="{{ template.deadline.strftime('%Y-%m-%d') if template and template.deadline else '' }}">
             </div>
         </div>
 
         <div class="bg-light p-4 rounded mb-5 border">
             <label class="form-label small fw-bold text-dark mb-3">Предварительное назначение прав доступа:</label>
-            <div class="mb-3 pb-3 border-bottom border-2 border-light-subtle">
+            <div class="mb-3">
                 <label class="fw-bold text-dark mb-2" style="font-size: 0.9rem;">Назначить целой группе:</label>
                 <div class="d-flex flex-wrap gap-3">
                     {% for g in all_groups %}
@@ -57,7 +57,7 @@
                     {% endfor %}
                 </div>
             </div>
-            <div class="form-check mb-3 pb-3 border-bottom border-2 border-light-subtle">
+            <div class="form-check mb-4">
                 <input class="form-check-input shadow-sm border-secondary" type="checkbox" id="selectAllConstructor"
                     onchange="toggleSelectAllConstructor(this)">
                 <label class="form-check-label fw-bold text-primary-copp w-100 ms-1 cursor-pointer"
@@ -75,9 +75,7 @@
                 {% endfor %}
             </div>
             
-            <hr class="my-4">
-            
-            <label class="form-label small fw-bold text-dark mb-3 mt-3">Прикрепленные файлы (инструкции, бланки, письма):</label>
+            <label class="form-label small fw-bold text-dark mb-3">Прикрепленные файлы (инструкции, бланки, письма):</label>
             
             <div class="d-flex gap-3 mb-3">
                 <button type="button" class="btn btn-sm btn-outline-copp" data-bs-toggle="modal" data-bs-target="#existingFilesModal">
@@ -337,7 +335,8 @@
         let name = document.getElementById('templateName').value.trim();
         name = name.replace(/\r?\n|\r/g, ' '); // Удаляем переносы строк из полного имени
         const shortName = document.getElementById('templateShortName').value.trim();
-        const period = document.getElementById('templatePeriod').value.trim();
+        const period = document.getElementById('templatePeriodText').value.trim();
+        const periodData = document.getElementById('templatePeriodData').value.trim();
         const deadline = document.getElementById('templateDeadline').value;
         
         if (!name || !shortName) return alert('Требуется указать наименования отчета.');
@@ -354,6 +353,7 @@
         formData.append('name', name);
         formData.append('short_name', shortName);
         formData.append('period', period);
+        if (periodData && periodData !== 'null') formData.append('period_data', periodData);
         if (deadline) formData.append('deadline', deadline);
         formData.append('schema', JSON.stringify(reportStructure));
         formData.append('user_ids', JSON.stringify(userIds));

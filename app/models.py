@@ -69,6 +69,7 @@ class ReportTemplate(db.Model):
     name = db.Column(db.String(256))          # Полное название шаблона
     short_name = db.Column(db.String(64))     # Короткое имя для удобства
     period = db.Column(db.String(128))        # Период сдачи (например, "I квартал 2026")
+    period_data = db.Column(JSON, nullable=True) # Строгие структурированные данные о периоде
     deadline = db.Column(db.Date)             # Дедлайн сдачи
     is_published = db.Column(db.Boolean, default=False)  # Виден ли пользователям
     is_archived = db.Column(db.Boolean, default=False)   # Перенесен ли в архив

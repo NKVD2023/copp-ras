@@ -42,6 +42,12 @@
                     
                 </button>
             </li>
+            <li class="admin-nav-item">
+                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#analyticsTab" type="button" onclick="loadMyAnalytics()">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5v12h-2V2h2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3z"/></svg>
+                    Моя статистика
+                </button>
+            </li>
             <li class="admin-nav-item ms-auto">
                 <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#profileTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/></svg>
@@ -78,5 +84,127 @@
             </div>
         </div>
     </div>
+    
+    <!-- Вкладка аналитики -->
+    <div class="tab-pane fade" id="analyticsTab" role="tabpanel">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <h5 class="m-0 fw-bold">Аналитика по вашим отчетам</h5>
+            <select id="analyticsReportSelect" class="form-select form-select-sm w-auto" onchange="fetchAnalyticsData(this.value)" style="min-width: 250px;">
+                <option value="">Загрузка отчетов...</option>
+            </select>
+        </div>
+        <div id="analyticsChartsContainer" class="row g-4">
+            <div class="col-12 text-muted text-center py-5" id="analyticsEmptyState">
+                Выберите отчет для отображения графиков
+            </div>
+        </div>
+    </div>
 </div>
+
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
+<script>
+let myCharts = [];
+
+function loadMyAnalytics() {
+    const select = document.getElementById('analyticsReportSelect');
+    if (select.options.length > 1) return; // Уже загружали
+    
+    fetch('/api/my_analytics/reports')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                select.innerHTML = '<option value="">-- Выберите отчет --</option>';
+                data.reports.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    select.appendChild(opt);
+                });
+            }
+        });
+}
+
+function fetchAnalyticsData(shortName) {
+    const container = document.getElementById('analyticsChartsContainer');
+    const emptyState = document.getElementById('analyticsEmptyState');
+    
+    // Очистка старых графиков
+    myCharts.forEach(c => c.destroy());
+    myCharts = [];
+    container.innerHTML = '';
+    
+    if (!shortName) {
+        if(emptyState) emptyState.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = '<div class="col-12 text-center py-4"><div class="spinner-border text-secondary" role="status"></div></div>';
+    
+    fetch('/api/my_analytics/data/' + encodeURIComponent(shortName))
+        .then(res => res.json())
+        .then(data => {
+            container.innerHTML = ''; // Убираем лоадер
+            
+            if (data.status === 'success' && data.periods.length > 0 && Object.keys(data.datasets).length > 0) {
+                let chartIdx = 0;
+                for (const [label, values] of Object.entries(data.datasets)) {
+                    // Создаем карточку
+                    const col = document.createElement('div');
+                    col.className = 'col-12 col-md-6 col-lg-4';
+                    col.innerHTML = `
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <h6 class="card-title fw-bold text-dark text-truncate" title="${label}">${label}</h6>
+                                <canvas id="myChart-${chartIdx}" style="max-height: 250px;"></canvas>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(col);
+                    
+                    // Строим график
+                    const ctx = document.getElementById(`myChart-${chartIdx}`).getContext('2d');
+                    const isBar = chartIdx % 2 !== 0; // Чередуем линии и столбцы для разнообразия
+                    const colorIndex = chartIdx % 5;
+                    const colors = [
+                        'rgba(0, 51, 78, 0.7)',
+                        'rgba(40, 167, 69, 0.7)',
+                        'rgba(23, 162, 184, 0.7)',
+                        'rgba(255, 193, 7, 0.7)',
+                        'rgba(108, 117, 125, 0.7)'
+                    ];
+                    
+                    const chart = new Chart(ctx, {
+                        type: isBar ? 'bar' : 'line',
+                        data: {
+                            labels: data.periods,
+                            datasets: [{
+                                label: label,
+                                data: values,
+                                backgroundColor: colors[colorIndex],
+                                borderColor: colors[colorIndex].replace('0.7', '1'),
+                                borderWidth: 2,
+                                fill: !isBar ? true : false,
+                                tension: 0.3
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                    myCharts.push(chart);
+                    chartIdx++;
+                }
+            } else {
+                container.innerHTML = '<div class="col-12 text-muted text-center py-5">Нет числовых данных для построения графиков.</div>';
+            }
+        });
+}
+</script>
 {% endblock %}

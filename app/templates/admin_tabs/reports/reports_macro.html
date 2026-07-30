@@ -1,3 +1,4 @@
+{% from "macros/period_selector.html" import render_period_selector %}
 {% macro render_reports_list(templates_list, is_template_tab=False) %}
 <div class="row g-4">
     {% for t in templates_list %}
@@ -208,7 +209,9 @@
                         <div class="mb-3"><label class="form-label small text-muted fw-bold">Краткое наименование</label><input type="text" name="short_name" class="form-control" value="{{ t.short_name }}" required autocomplete="off"></div>
                         <div class="mb-3"><label class="form-label small text-muted fw-bold">Полное наименование</label><input type="text" name="name" class="form-control" value="{{ t.name }}" required autocomplete="off"></div>
                         <div class="row g-3">
-                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Период</label><input type="text" name="period" class="form-control bg-light" value="{{ t.period or '' }}" autocomplete="off"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Период</label>
+                            {{ render_period_selector('editPeriod' ~ t.id, t.period, (t.period_data|tojson if t.period_data else 'null')) }}
+                            </div>
                             <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Дедлайн</label><input type="date" name="deadline" class="form-control bg-light" value="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '' }}"></div>
                         </div>
                         <div class="mb-3">
@@ -242,7 +245,9 @@
                         <div class="mb-3"><label class="form-label small text-muted fw-bold">Краткое наименование</label><input type="text" name="new_short_name" class="form-control" value="{{ t.short_name }}" required autocomplete="off"></div>
                         <div class="mb-3"><label class="form-label small text-muted fw-bold">Полное наименование</label><input type="text" name="new_name" class="form-control" value="{{ t.name }}" required autocomplete="off"></div>
                         <div class="row g-3">
-                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый период</label><input type="text" name="new_period" class="form-control bg-light" required autocomplete="off"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый период</label>
+                            {{ render_period_selector('clonePeriod' ~ t.id, t.period, (t.period_data|tojson if t.period_data else 'null'), 'new_period', 'new_period_data') }}
+                            </div>
                             <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый дедлайн</label><input type="date" name="new_deadline" class="form-control bg-light" required></div>
                         </div>
                         <div class="mb-3">

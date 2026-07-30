@@ -204,6 +204,25 @@
             </a>
         </form>
     </div>
+    </div>
+</div>
+
+<!-- Analytics Section -->
+<div id="section-analytics" class="content-section" style="display: none;">
+    <h5 class="fw-bold mb-3 text-dark">Моя статистика</h5>
+    <div class="card shadow-sm p-3 mb-4" style="border-radius: 12px; border-color: #edf2f7;">
+        <label class="form-label small text-muted">Выберите отчет для анализа</label>
+        <select id="mobileAnalyticsReportSelect" class="form-select" onchange="fetchMobileAnalyticsData(this.value)">
+            <option value="">Загрузка отчетов...</option>
+        </select>
+    </div>
+    
+    <div id="mobileAnalyticsChartsContainer" class="d-flex flex-column gap-3">
+        <div class="text-muted text-center py-5" id="mobileAnalyticsEmptyState">
+            <i class="bi bi-bar-chart fs-1 mb-2 d-block text-secondary opacity-50"></i>
+            <p>Выберите отчет, чтобы увидеть графики</p>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -216,11 +235,15 @@
         document.getElementById('section-active').style.display = 'none';
         document.getElementById('section-filled').style.display = 'none';
         document.getElementById('section-profile').style.display = 'none';
+        document.getElementById('section-analytics').style.display = 'none';
         
         if (hash.includes('filled')) {
             document.getElementById('section-filled').style.display = 'block';
         } else if (hash.includes('profile')) {
             document.getElementById('section-profile').style.display = 'block';
+        } else if (hash.includes('analytics')) {
+            document.getElementById('section-analytics').style.display = 'block';
+            loadMobileAnalytics();
         } else {
             document.getElementById('section-active').style.display = 'block';
         }
@@ -254,5 +277,103 @@
             }
         };
     });
+    
+    // Analytics Logic for Mobile
+    let mobileCharts = [];
+
+    function loadMobileAnalytics() {
+        const select = document.getElementById('mobileAnalyticsReportSelect');
+        if (select.options.length > 1) return; // Уже загружали
+        
+        fetch('/api/my_analytics/reports')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    select.innerHTML = '<option value="">-- Выберите отчет --</option>';
+                    data.reports.forEach(name => {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        select.appendChild(opt);
+                    });
+                }
+            });
+    }
+
+    function fetchMobileAnalyticsData(shortName) {
+        const container = document.getElementById('mobileAnalyticsChartsContainer');
+        const emptyState = document.getElementById('mobileAnalyticsEmptyState');
+        
+        mobileCharts.forEach(c => c.destroy());
+        mobileCharts = [];
+        container.innerHTML = '';
+        
+        if (!shortName) {
+            if(emptyState) emptyState.style.display = 'block';
+            return;
+        }
+        
+        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-secondary" role="status"></div></div>';
+        
+        fetch('/api/my_analytics/data/' + encodeURIComponent(shortName))
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = ''; // Убираем лоадер
+                
+                if (data.status === 'success' && data.periods.length > 0 && Object.keys(data.datasets).length > 0) {
+                    let chartIdx = 0;
+                    for (const [label, values] of Object.entries(data.datasets)) {
+                        const card = document.createElement('div');
+                        card.className = 'card shadow-sm';
+                        card.style.borderRadius = '12px';
+                        card.innerHTML = `
+                            <div class="card-body">
+                                <h6 class="card-title fw-bold text-dark text-truncate" title="${label}">${label}</h6>
+                                <canvas id="mobileChart-${chartIdx}" style="max-height: 200px;"></canvas>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                        
+                        const ctx = document.getElementById(`mobileChart-${chartIdx}`).getContext('2d');
+                        const isBar = chartIdx % 2 !== 0; 
+                        const colorIndex = chartIdx % 5;
+                        const colors = [
+                            'rgba(0, 51, 78, 0.7)',
+                            'rgba(40, 167, 69, 0.7)',
+                            'rgba(23, 162, 184, 0.7)',
+                            'rgba(255, 193, 7, 0.7)',
+                            'rgba(108, 117, 125, 0.7)'
+                        ];
+                        
+                        const chart = new Chart(ctx, {
+                            type: isBar ? 'bar' : 'line',
+                            data: {
+                                labels: data.periods,
+                                datasets: [{
+                                    label: label,
+                                    data: values,
+                                    backgroundColor: colors[colorIndex],
+                                    borderColor: colors[colorIndex].replace('0.7', '1'),
+                                    borderWidth: 2,
+                                    fill: !isBar ? true : false,
+                                    tension: 0.3
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: { y: { beginAtZero: true } }
+                            }
+                        });
+                        mobileCharts.push(chart);
+                        chartIdx++;
+                    }
+                } else {
+                    container.innerHTML = '<div class="text-muted text-center py-5">Нет числовых данных для построения графиков.</div>';
+                }
+            });
+    }
 </script>
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
 {% endblock %}

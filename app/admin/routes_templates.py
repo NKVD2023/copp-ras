@@ -8,6 +8,7 @@ from flask import request, redirect, url_for, send_file
 from flask_login import login_required, current_user
 import openpyxl
 from io import BytesIO
+import json
 from datetime import datetime
 from app import db
 from app.admin import admin_bp
@@ -55,6 +56,7 @@ def reset_to_pure(template_id):
     """
     template = ReportTemplate.query.get_or_404(template_id)
     template.period = None
+    template.period_data = None
     template.deadline = None
     template.assigned_users = []
     template.is_published = False
@@ -84,6 +86,7 @@ def toggle_publish(template_id):
                 name=template.name,
                 short_name=template.short_name,
                 period=None,
+                period_data=None,
                 deadline=None,
                 is_published=False,
                 is_template=True,
@@ -142,6 +145,7 @@ def clone_template(template_id):
         name=request.form.get('new_name'),
         short_name=request.form.get('new_short_name'),
         period=request.form.get('new_period'),
+        period_data=json.loads(request.form.get('new_period_data')) if request.form.get('new_period_data') else None,
         deadline=deadline_date,
         is_published=is_published,
         is_template=False,   # Это рабочий отчет (черновик или опубликованный), а не чистый шаблон
@@ -196,6 +200,9 @@ def edit_template_meta(template_id):
     template.short_name = request.form.get('short_name')
     template.name = request.form.get('name')
     template.period = request.form.get('period')
+    
+    period_data_str = request.form.get('period_data')
+    template.period_data = json.loads(period_data_str) if period_data_str else None
     
     deadline_str = request.form.get('deadline')
     template.deadline = datetime.strptime(deadline_str, '%Y-%m-%d').date() if deadline_str else None
