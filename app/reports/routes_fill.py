@@ -9,7 +9,7 @@ from datetime import date
 from app import db
 from app.reports import reports_bp
 from app.models import ReportTemplate, ReportSubmission
-from app.utils import log_action
+from app.utils import log_action, is_mobile
 
 # ==========================================
 # ЗАПОЛНЕНИЕ ОТЧЕТОВ ПОЛЬЗОВАТЕЛЯМИ
@@ -91,7 +91,8 @@ def fill_report(template_id):
         return jsonify({'status': 'success'})
         
     # Отрисовка формы для пользователя (GET запрос)
-    return render_template('fill_report.html', template=template, submission=submission, is_locked=is_locked)
+    template_name = 'mobile/fill_report.html' if is_mobile(request) else 'fill_report.html'
+    return render_template(template_name, template=template, submission=submission, is_locked=is_locked)
 
 @reports_bp.route('/fill/<int:template_id>/previous_data', methods=['GET'])
 @login_required

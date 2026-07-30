@@ -42,3 +42,13 @@ def log_action(action: str, details: str = ""):
     except Exception as e:
         db.session.rollback()
         print(f"Ошибка логирования: {e}")
+
+def is_mobile(req) -> bool:
+    """
+    Проверяет, является ли устройство мобильным на основе заголовка User-Agent.
+    """
+    user_agent = req.headers.get('User-Agent', '').lower()
+    mobile_patterns = [
+        'android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone', 'mobile'
+    ]
+    return any(pattern in user_agent for pattern in mobile_patterns)

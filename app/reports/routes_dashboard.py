@@ -3,11 +3,12 @@
 Отвечает за отображение главной панели для обычного пользователя (учреждения),
 на которой показаны назначенные ему отчеты: сданные и ожидающие сдачи.
 """
-from flask import render_template, redirect, url_for
+from flask import render_template, redirect, url_for, request
 from flask_login import login_required, current_user
 from datetime import date
 from app.reports import reports_bp
 from app.models import ReportTemplate, ReportSubmission, User
+from app.utils import is_mobile
 
 # ==========================================
 # ГЛАВНАЯ СТРАНИЦА (ДАШБОРДЫ)
@@ -64,7 +65,8 @@ def dashboard():
     # Сортируем файлы по дате загрузки (сначала новые)
     files_list.sort(key=lambda x: x['file'].upload_date, reverse=True)
     
-    return render_template('user_dashboard.html', 
+    template_name = 'mobile/user_dashboard.html' if is_mobile(request) else 'user_dashboard.html'
+    return render_template(template_name, 
                            unfilled_templates=active,
                            overdue_templates=overdue,
                            filled_templates=filled, 

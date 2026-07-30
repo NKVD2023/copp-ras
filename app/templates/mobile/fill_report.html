@@ -1,0 +1,409 @@
+{% extends "mobile/base.html" %}
+{% block title %}Заполнение{% endblock %}
+
+{% block bottom_nav %}
+<!-- Скрываем нижнюю навигацию при заполнении отчета -->
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-start mb-4">
+    <a href="{{ url_for('reports.dashboard') }}" class="btn btn-light rounded-circle me-3 mt-1 flex-shrink-0">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="fw-bold m-0 text-dark lh-base">{{ template.name }}</h5>
+</div>
+
+{% if is_locked %}
+<div class="alert bg-danger bg-opacity-10 border-danger border-opacity-25 text-danger small shadow-sm mb-4 p-3 rounded">
+    <strong>Режим чтения.</strong> Срок сдачи отчета истек.
+</div>
+{% endif %}
+
+<form id="reportForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    
+    {% if not is_locked %}
+    <div class="d-flex justify-content-between mb-3 gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center" onclick="loadPreviousData()">
+            <i class="bi bi-clock-history"></i> Без изменений
+        </button>
+        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center" onclick="saveDraftManual(this)" style="color: #00334e; border-color: #00334e;">
+            <i class="bi bi-save"></i> Сохранить черновик
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-end mb-1">
+        <div class="fw-bold small text-muted" id="wizard-progress-text">Шаг 1 из {{ template.schema|length }}</div>
+        <div id="autosave-indicator" class="small text-success" style="opacity: 0; transition: opacity 0.3s;"><i class="bi bi-check-circle"></i> Сохранено</div>
+    </div>
+    <div class="progress mb-4" style="height: 6px; border-radius: 3px;">
+        <div class="progress-bar" id="wizard-progress-bar" role="progressbar" style="background-color: #00334e; width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+
+    {% for sheet in template.schema %}
+    <div class="wizard-step {% if loop.first %}active{% endif %}" id="step-{{ loop.index }}">
+        <div class="mobile-card">
+            <h6 class="fw-bold text-primary mb-3">{{ sheet.sheet_title }}</h6>
+            
+            {% for field in sheet.fields %}
+            <div class="mb-4">
+                <label class="form-label small d-flex align-items-center gap-1">
+                    {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                
+                {% if field.is_multiple %}
+                    {% set raw_val = submission.data.get(field.name) if submission else None %}
+                    {% set field_values = raw_val if raw_val and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val else ['']) %}
+                    
+                    <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
+                        {% for v in field_values %}
+                        <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
+                            {% if field.type == 'text' %}
+                                <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ v }}</textarea>
+                            {% else %}
+                                <input type="{{ field.type }}" class="form-control" data-multiple="true" name="{{ field.name }}"
+                                    value="{{ v }}" min="0" step="any" {% if field.type == 'number' %}inputmode="decimal"{% endif %} {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                            {% endif %}
+                            {% if not is_locked %}
+                            <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% if not is_locked %}
+                        <button type="button" class="btn-add-dynamic-mobile" onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
+                            + Добавить еще
+                        </button>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    {% if field.type == 'text' %}
+                        <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                    {% else %}
+                        <input type="{{ field.type }}" class="form-control" name="{{ field.name }}"
+                            value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.type == 'number' %}inputmode="decimal"{% endif %} {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                    {% endif %}
+                {% endif %}
+                
+                {% if field.hint and not is_locked %}
+                <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle"></i> {{ field.hint }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    
+    {% if not is_locked %}
+    <div class="mb-3 d-flex justify-content-center">
+        <button type="button" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2" onclick="saveDraftManual(this)" style="color: #00334e; border-color: #00334e;">
+            <i class="bi bi-save"></i> Сохранить черновик
+        </button>
+    </div>
+    {% endif %}
+    
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-light border px-4" id="btn-prev" onclick="prevStep()" style="display: none;">Назад</button>
+        <div class="ms-auto">
+            <button type="button" class="btn btn-dark px-4" id="btn-next" onclick="nextStep()">Далее</button>
+            {% if not is_locked %}
+            <button type="button" class="btn btn-success px-4" id="btn-submit" onclick="submitFullForm(this)" style="display: none; background-color: #00334e; border-color: #00334e; color: white;">Сдать отчет</button>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentStep = 1;
+    const totalSteps = {{ template.schema|length }};
+    const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
+    const form = document.getElementById('reportForm');
+    
+    function updateWizardUI() {
+        // Update progress text and bar
+        document.getElementById('wizard-progress-text').innerText = `Шаг ${currentStep} из ${totalSteps}`;
+        const progressPercent = (currentStep / totalSteps) * 100;
+        document.getElementById('wizard-progress-bar').style.width = `${progressPercent}%`;
+        
+        // Show/hide steps
+        document.querySelectorAll('.wizard-step').forEach((el, index) => {
+            if (index + 1 === currentStep) {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+        
+        // Show/hide buttons
+        document.getElementById('btn-prev').style.display = currentStep > 1 ? 'block' : 'none';
+        
+        if (currentStep === totalSteps) {
+            document.getElementById('btn-next').style.display = 'none';
+            {% if not is_locked %}
+            document.getElementById('btn-submit').style.display = 'block';
+            {% endif %}
+        } else {
+            document.getElementById('btn-next').style.display = 'block';
+            {% if not is_locked %}
+            document.getElementById('btn-submit').style.display = 'none';
+            {% endif %}
+        }
+        
+        window.scrollTo(0, 0);
+    }
+    
+    function nextStep() {
+        if (currentStep < totalSteps) {
+            currentStep++;
+            updateWizardUI();
+        }
+    }
+    
+    function prevStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            updateWizardUI();
+        }
+    }
+
+    // Восстановление данных
+    document.addEventListener("DOMContentLoaded", () => {
+        updateWizardUI();
+        
+        {% if not is_locked %}
+        const savedDraft = localStorage.getItem(DRAFT_KEY);
+        if (savedDraft) {
+            try {
+                const data = JSON.parse(savedDraft);
+                populateForm(data);
+                showNotification('Восстановлен несохраненный черновик', 'success');
+            } catch (e) {
+                console.error("Ошибка парсинга черновика", e);
+            }
+        }
+
+        // Автосохранение
+        let autosaveTimeout;
+        form.addEventListener('input', () => {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(getFormData()));
+            
+            // Показ индикатора
+            const indicator = document.getElementById('autosave-indicator');
+            if (indicator) {
+                indicator.style.opacity = '1';
+                const now = new Date();
+                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                indicator.innerHTML = `<i class="bi bi-check-circle"></i> Сохранено ${timeStr}`;
+                
+                clearTimeout(autosaveTimeout);
+                autosaveTimeout = setTimeout(() => {
+                    indicator.style.opacity = '0';
+                }, 3000);
+            }
+        });
+        {% endif %}
+        
+        // Логика свайпов
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let touchStartY = 0;
+        let touchEndY = 0;
+        
+        form.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+        
+        form.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, {passive: true});
+        
+        function handleSwipe() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = Math.abs(touchEndY - touchStartY);
+            
+            // Если жест больше похож на скролл, игнорируем
+            if (deltaY > Math.abs(deltaX)) return;
+            
+            if (deltaX < -50) {
+                // Свайп влево -> Далее
+                nextStep();
+            }
+            if (deltaX > 50) {
+                // Свайп вправо -> Назад
+                prevStep();
+            }
+        }
+    });
+
+    function getFormData() {
+        const formData = new FormData(form);
+        const data = {};
+        
+        document.querySelectorAll('.dynamic-field-wrapper').forEach(wrapper => {
+            const fieldName = wrapper.getAttribute('data-name');
+            const inputs = wrapper.querySelectorAll('[data-multiple="true"]');
+            const values = Array.from(inputs).map(input => input.value);
+            data[fieldName] = values;
+        });
+
+        for (const [key, value] of formData.entries()) {
+            if (key !== 'csrf_token' && !document.querySelector(`.dynamic-field-wrapper[data-name="${key}"]`)) {
+                data[key] = value;
+            }
+        }
+        return data;
+    }
+
+    function populateForm(data) {
+        for (const [key, value] of Object.entries(data)) {
+            const wrapper = document.querySelector(`.dynamic-field-wrapper[data-name="${key}"]`);
+            
+            if (wrapper && Array.isArray(value)) {
+                const inputs = wrapper.querySelectorAll('[data-multiple="true"]');
+                // Remove extra fields if existing inputs > value.length
+                while (inputs.length > value.length && inputs.length > 1) {
+                    inputs[inputs.length - 1].closest('.dynamic-field-item').remove();
+                }
+                
+                for (let i = 0; i < value.length; i++) {
+                    const currentInputs = wrapper.querySelectorAll('[data-multiple="true"]');
+                    if (i < currentInputs.length) {
+                        currentInputs[i].value = value[i];
+                    } else {
+                        const type = currentInputs[0].tagName.toLowerCase() === 'textarea' ? 'text' : currentInputs[0].type;
+                        addDynamicField(wrapper.querySelector('.btn-add-dynamic-mobile'), type, key, value[i]);
+                    }
+                }
+            } else {
+                const field = form.elements[key];
+                if (field && !field.hasAttribute('data-multiple')) {
+                    field.value = value;
+                }
+            }
+        }
+    }
+
+    // Сохранение черновика
+    async function saveDraftManual(btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+        
+        try {
+            const data = getFormData();
+            const response = await fetch('{{ url_for("reports.fill_report", template_id=template.id) }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                localStorage.removeItem(DRAFT_KEY);
+                showNotification('Черновик сохранен на сервере');
+            } else {
+                showNotification(result.message || 'Ошибка сохранения', 'error');
+            }
+        } catch (error) {
+            showNotification('Ошибка сети', 'error');
+        } finally {
+            btn.innerHTML = '<i class="bi bi-save"></i>';
+            btn.disabled = false;
+        }
+    }
+
+    // Полная отправка отчета
+    async function submitFullForm(btn) {
+        // Простая валидация HTML5
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Отправка...';
+        btn.disabled = true;
+        
+        try {
+            const data = getFormData();
+            const response = await fetch('{{ url_for("reports.fill_report", template_id=template.id) }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                localStorage.removeItem(DRAFT_KEY);
+                window.location.href = "{{ url_for('reports.dashboard') }}";
+            } else {
+                showNotification(result.message || 'Ошибка отправки', 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            showNotification('Ошибка сети', 'error');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // Динамические поля
+    function addDynamicField(btn, type, name, value = '') {
+        const wrapper = btn.closest('.dynamic-field-wrapper');
+        const newItem = document.createElement('div');
+        newItem.className = 'dynamic-field-item d-flex gap-2 mb-2 align-items-start';
+        
+        let inputHtml = '';
+        if (type === 'text') {
+            inputHtml = `<textarea class="form-control" data-multiple="true" name="${name}" rows="2">${value}</textarea>`;
+        } else {
+            inputHtml = `<input type="${type}" class="form-control" data-multiple="true" name="${name}" value="${value}" min="0" step="any">`;
+        }
+        
+        newItem.innerHTML = `
+            ${inputHtml}
+            <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
+        `;
+        wrapper.insertBefore(newItem, btn);
+    }
+
+    function removeDynamicField(btn) {
+        btn.closest('.dynamic-field-item').remove();
+    }
+    
+    // Загрузка предыдущих данных
+    async function loadPreviousData() {
+        if (!confirm("Загрузить данные из вашего предыдущего отчета? Текущие введенные данные будут заменены.")) {
+            return;
+        }
+        
+        const btn = document.querySelector('.fab-secondary');
+        const iconHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        
+        try {
+            const response = await fetch('{{ url_for("reports.get_previous_data", template_id=template.id) }}');
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                populateForm(result.data);
+                showNotification(result.message, 'success');
+            } else {
+                showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            showNotification('Ошибка при загрузке данных', 'error');
+        } finally {
+            btn.innerHTML = iconHtml;
+        }
+    }
+</script>
+{% endblock %}

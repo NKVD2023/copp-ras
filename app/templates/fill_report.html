@@ -54,16 +54,12 @@
                         {% for field in sheet.fields %}
                         
                         <div class="col-12">
-                            <label class="form-label text-dark small fw-bold d-flex align-items-center gap-1">
+                            <label class="form-label text-dark small fw-bold d-flex align-items-center gap-1 mb-1">
                                 {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
-                                {% if field.hint and not is_locked %}
-                                <span class="hint-icon"
-                                      data-bs-toggle="tooltip"
-                                      data-bs-placement="right"
-                                      title="{{ field.hint }}"
-                                      aria-label="Подсказка">?</span>
-                                {% endif %}
                             </label>
+                            {% if field.hint and not is_locked %}
+                            <div class="form-text mt-0 mb-2 small text-muted">{{ field.hint }}</div>
+                            {% endif %}
                             
                             {% if field.is_multiple %}
                                 {% set raw_val = submission.data.get(field.name) if submission else None %}
@@ -106,22 +102,38 @@
             </div>
             <hr class="border-secondary opacity-10 my-5">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <span class="text-muted small">{% if is_locked %}Просмотр исторической записи.{% else %}Данные
-                    сохраняются в единый документ.{% endif %}</span>
+                <div class="d-flex flex-column">
+                    <span class="text-muted small">{% if is_locked %}Просмотр исторической записи.{% else %}Данные сохраняются в единый документ.{% endif %}</span>
+                    {% if not is_locked %}
+                    <span id="autosave-indicator" class="text-success small fw-medium mt-1" style="opacity: 0; transition: opacity 0.3s;">
+                        <i class="bi bi-check-circle"></i> <span id="autosave-time"></span>
+                    </span>
+                    {% endif %}
+                </div>
                 {% if not is_locked %}
-                <div class="d-flex gap-2 flex-wrap justify-content-end w-100 mt-2">
-                    <a href="{{ url_for('reports.dashboard') }}" class="btn btn-light border px-4 py-2 d-flex align-items-center gap-2 me-auto">
-                        <i class="bi bi-arrow-left"></i> Назад
-                    </a>
-                    <button type="button" onclick="loadPreviousData()" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2" id="btn-no-changes">
-                        <i class="bi bi-clock-history text-secondary"></i> Без изменений
-                    </button>
-                    <button type="button" onclick="saveDraftManual(this)" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2">
-                        <i class="bi bi-save"></i> Сохранить черновик
-                    </button>
-                    <button type="button" onclick="submitFullForm(this)" class="btn btn-copp px-5 py-2 d-flex align-items-center gap-2">
-                        <i class="bi bi-check2"></i> Сдать отчет
-                    </button>
+                <div class="d-flex gap-2 flex-wrap justify-content-between w-100 mt-2 align-items-center">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('reports.dashboard') }}" class="btn btn-light border px-4 py-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-arrow-left"></i> На главную
+                        </a>
+                        <button type="button" onclick="loadPreviousData()" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2" id="btn-no-changes">
+                            <i class="bi bi-clock-history text-secondary"></i> Без изменений
+                        </button>
+                        <button type="button" onclick="saveDraftManual(this)" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-save"></i> Сохранить черновик
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-light border px-4 py-2 d-none align-items-center gap-2" id="btn-prev-step" onclick="prevTab()">
+                            <i class="bi bi-arrow-left"></i> Шаг назад
+                        </button>
+                        <button type="button" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2" id="btn-next-step" onclick="nextTab()">
+                            Далее <i class="bi bi-arrow-right"></i>
+                        </button>
+                        <button type="button" id="btn-submit-report" onclick="submitFullForm(this)" class="btn btn-copp px-5 py-2 d-none align-items-center gap-2">
+                            <i class="bi bi-check2"></i> Сдать отчет
+                        </button>
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -141,8 +153,88 @@
     const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
     const form = document.getElementById('reportForm');
     
-    // Восстановление данных
+    // Логика мастера (wizard)
+    const totalTabs = {{ template.schema|length }};
+    let currentTabIndex = 0; // 0-indexed
+
+    function updateWizardButtons(index) {
+        currentTabIndex = index;
+        const btnPrev = document.getElementById('btn-prev-step');
+        const btnNext = document.getElementById('btn-next-step');
+        const btnSubmit = document.getElementById('btn-submit-report');
+        
+        if (!btnPrev || !btnNext || !btnSubmit) return;
+        
+        if (currentTabIndex > 0) {
+            btnPrev.classList.remove('d-none');
+            btnPrev.classList.add('d-flex');
+        } else {
+            btnPrev.classList.add('d-none');
+            btnPrev.classList.remove('d-flex');
+        }
+        
+        if (currentTabIndex === totalTabs - 1) {
+            btnNext.classList.add('d-none');
+            btnNext.classList.remove('d-flex');
+            
+            btnSubmit.classList.remove('d-none');
+            btnSubmit.classList.add('d-flex');
+        } else {
+            btnNext.classList.remove('d-none');
+            btnNext.classList.add('d-flex');
+            
+            btnSubmit.classList.add('d-none');
+            btnSubmit.classList.remove('d-flex');
+        }
+    }
+
+    function nextTab() {
+        // Валидация текущей вкладки перед переходом
+        const currentTabPane = document.querySelector(`#sheet-${currentTabIndex + 1}`);
+        if (currentTabPane) {
+            const inputs = currentTabPane.querySelectorAll('input[required], textarea[required], select[required]');
+            let isValid = true;
+            for (const input of inputs) {
+                if (!input.checkValidity()) {
+                    input.reportValidity();
+                    isValid = false;
+                    break;
+                }
+            }
+            if (!isValid) {
+                return; // Прерываем переход, если есть ошибки
+            }
+        }
+
+        if (currentTabIndex < totalTabs - 1) {
+            const nextTabEl = document.querySelector(`button[data-bs-target="#sheet-${currentTabIndex + 2}"]`);
+            if (nextTabEl) {
+                bootstrap.Tab.getOrCreateInstance(nextTabEl).show();
+            }
+        }
+    }
+
+    function prevTab() {
+        if (currentTabIndex > 0) {
+            const prevTabEl = document.querySelector(`button[data-bs-target="#sheet-${currentTabIndex}"]`);
+            if (prevTabEl) {
+                bootstrap.Tab.getOrCreateInstance(prevTabEl).show();
+            }
+        }
+    }
+
+    // Восстановление данных и инициализация
     document.addEventListener("DOMContentLoaded", () => {
+        // Подключение отслеживания ручного переключения вкладок
+        const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabElements.forEach((tab, index) => {
+            tab.addEventListener('shown.bs.tab', (event) => {
+                updateWizardButtons(index);
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            });
+        });
+        updateWizardButtons(0);
+
         {% if not is_locked %}
         const savedDraft = localStorage.getItem(DRAFT_KEY);
         if (savedDraft) {
@@ -177,26 +269,36 @@
         
         // Настройка сохранения при изменении
         let autosaveTimeout;
+        let fadeOutTimeout;
         form.addEventListener('input', () => {
             clearTimeout(autosaveTimeout);
+            clearTimeout(fadeOutTimeout);
             
+            const indicatorWrap = document.getElementById('autosave-indicator');
             const indicator = document.getElementById('autosave-time');
             const icon = document.querySelector('#autosave-indicator i');
             
-            if (indicator && icon) {
+            if (indicatorWrap && indicator && icon) {
+                indicatorWrap.style.opacity = '1';
+                indicator.className = "text-primary";
                 indicator.textContent = "Сохранение...";
-                icon.className = "spinner-border spinner-border-sm me-2 text-primary";
+                icon.className = "spinner-border spinner-border-sm me-1 text-primary";
             }
             
             autosaveTimeout = setTimeout(() => {
                 const data = getFormDataObj(form);
                 localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
                 
-                if (indicator && icon) {
+                if (indicatorWrap && indicator && icon) {
                     const now = new Date();
-                    const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ':' + now.getSeconds().toString().padStart(2, '0');
-                    indicator.textContent = `Автосохранено локально в ${timeString}`;
-                    icon.className = "bi bi-cloud-check-fill me-2 text-success";
+                    const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                    indicator.className = "text-success";
+                    indicator.textContent = `Черновик сохранен в ${timeString}`;
+                    icon.className = "bi bi-check-circle me-1 text-success";
+                    
+                    fadeOutTimeout = setTimeout(() => {
+                        indicatorWrap.style.opacity = '0';
+                    }, 3000);
                 }
             }, 1000); // Сохраняем с задержкой в 1 секунду после окончания ввода
         });

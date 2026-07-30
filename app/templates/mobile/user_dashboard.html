@@ -1,0 +1,255 @@
+{% extends "mobile/base.html" %}
+{% block title %}Дашборд{% endblock %}
+
+{% block content %}
+<!-- Active Reports Section -->
+<div id="section-active" class="content-section">
+    <h5 class="fw-bold mb-3 text-dark">К заполнению</h5>
+    
+    {% if overdue_templates %}
+        <div class="mb-4">
+            <h6 class="text-danger fw-bold small text-uppercase mb-2">Просроченные</h6>
+            <div class="d-flex flex-column gap-3">
+            {% for template in overdue_templates %}
+                {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
+                {% set is_overdue = True %}
+                {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe3e3 50%, #ffcaca 100%); border-color: #ffcaca;" %}
+                
+                <div class="card shadow-sm p-3 position-relative d-flex flex-column" style="{{ card_style }} border-radius: 12px;">
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                        <span class="badge bg-white text-dark border"><i class="bi bi-calendar"></i> Период: {{ template.period or 'не указан' }}</span>
+                        {% if template.attachments|length > 0 %}
+                        <span class="badge bg-secondary border"><i class="bi bi-paperclip"></i> Файлов: {{ template.attachments|length }}</span>
+                        {% endif %}
+                    </div>
+                    <h6 class="card-title fw-bold text-dark mb-2">{{ template.short_name or template.name }}</h6>
+                    {% if template.name and template.name != template.short_name %}
+                    <p class="text-muted small mb-3" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="{{ template.name }}">{{ template.name }}</p>
+                    {% endif %}
+                    
+                    <div class="mt-auto pt-2">
+                        <div class="d-flex justify-content-start align-items-center mb-3 small flex-wrap gap-2">
+                            <span class="fw-medium text-dark">До:</span>
+                            <span class="text-danger fw-bold d-flex align-items-center gap-1">
+                                <i class="bi bi-clock"></i>
+                                {{ template.deadline.strftime('%d.%m.%Y') }}
+                            </span>
+                            <span class="badge bg-danger text-white border border-danger ms-1">Просрочено</span>
+                        </div>
+                        <div class="action-buttons-container" data-template-id="{{ template.id }}">
+                            <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2 btn-default-fill" style="background-color: #00334e; color: white; border-radius: 8px;">
+                                <i class="bi bi-pencil-square"></i> Заполнить форму
+                            </a>
+                            <div class="d-none gap-2 btn-draft-split">
+                                <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-50 d-flex align-items-center justify-content-center" style="background-color: #00334e; color: white; border-radius: 8px;">Черновик</a>
+                                <a href="#" onclick="clearDraftAndStart('{{ template.id }}', '{{ url_for('reports.fill_report', template_id=template.id) }}'); return false;" class="btn btn-outline-secondary w-50 d-flex align-items-center justify-content-center" style="border-radius: 8px;">Заново</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if unfilled_templates %}
+        <div class="d-flex flex-column gap-3">
+            {% for template in unfilled_templates %}
+                {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
+                {% set card_style = "background: #ffffff; border-color: #edf2f7;" %}
+                {% if days_left != None %}
+                    {% if days_left == 0 %}
+                        {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe3e3 50%, #ffcaca 100%); border-color: #ffcaca;" %}
+                    {% elif days_left == 1 %}
+                        {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe8d4 50%, #ffd0a6 100%); border-color: #ffd0a6;" %}
+                    {% elif days_left == 2 or days_left == 3 %}
+                        {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #fff8cc 50%, #ffef99 100%); border-color: #ffef99;" %}
+                    {% endif %}
+                {% endif %}
+                
+                <div class="card shadow-sm p-3 position-relative d-flex flex-column" style="{{ card_style }} border-radius: 12px;">
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                        <span class="badge bg-white text-dark border"><i class="bi bi-calendar"></i> Период: {{ template.period or 'не указан' }}</span>
+                        {% if template.attachments|length > 0 %}
+                        <span class="badge bg-secondary border"><i class="bi bi-paperclip"></i> Файлов: {{ template.attachments|length }}</span>
+                        {% endif %}
+                    </div>
+                    <h6 class="card-title fw-bold text-dark mb-2">{{ template.short_name or template.name }}</h6>
+                    {% if template.name and template.name != template.short_name %}
+                    <p class="text-muted small mb-3" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="{{ template.name }}">{{ template.name }}</p>
+                    {% endif %}
+                    
+                    <div class="mt-auto pt-2">
+                        <div class="d-flex justify-content-start align-items-center mb-3 small flex-wrap gap-2">
+                            <span class="fw-medium text-dark">До:</span>
+                            {% if template.deadline %}
+                            <span class="{% if days_left != None and days_left <= 3 %}text-warning fw-bold{% else %}text-secondary fw-medium{% endif %} d-flex align-items-center gap-1">
+                                <i class="bi bi-clock"></i>
+                                {{ template.deadline.strftime('%d.%m.%Y') }}
+                            </span>
+                            {% if days_left != None %}
+                                {% if days_left == 0 %}
+                                <span class="badge bg-danger text-white border border-danger ms-1">Осталось 0 дн.</span>
+                                {% elif days_left <= 3 %}
+                                <span class="badge bg-warning text-dark border border-warning ms-1">Осталось {{ days_left }} дн.</span>
+                                {% else %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-1">Осталось {{ days_left }} дн.</span>
+                                {% endif %}
+                            {% endif %}
+                            {% else %}
+                            <span class="text-secondary fw-medium">Без срока</span>
+                            {% endif %}
+                        </div>
+                        <div class="action-buttons-container" data-template-id="{{ template.id }}">
+                            <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2 btn-default-fill" style="background-color: #00334e; color: white; border-radius: 8px;">
+                                <i class="bi bi-pencil-square"></i> Заполнить форму
+                            </a>
+                            <div class="d-none gap-2 btn-draft-split">
+                                <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-50 d-flex align-items-center justify-content-center" style="background-color: #00334e; color: white; border-radius: 8px;">Черновик</a>
+                                <a href="#" onclick="clearDraftAndStart('{{ template.id }}', '{{ url_for('reports.fill_report', template_id=template.id) }}'); return false;" class="btn btn-outline-secondary w-50 d-flex align-items-center justify-content-center" style="border-radius: 8px;">Заново</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        {% if not overdue_templates %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-check-circle fs-1 mb-2 d-block"></i>
+            <p>У вас нет активных отчетов для сдачи.</p>
+        </div>
+        {% endif %}
+    {% endif %}
+    
+    {% if attached_files %}
+    <h5 class="fw-bold mb-3 mt-4 text-dark">Файлы</h5>
+    <div class="d-flex flex-column gap-2">
+    {% for item in attached_files %}
+    <div class="card shadow-sm p-2 d-flex flex-row align-items-center gap-3 border-secondary border-opacity-25 bg-light" style="border-radius: 12px;">
+        <div class="bg-white p-2 rounded text-secondary shadow-sm">
+            <i class="bi bi-file-earmark-text fs-4"></i>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+            <div class="fw-bold text-truncate text-dark" style="font-size: 0.9rem;">{{ item.file.filename }}</div>
+            <div class="small text-muted text-truncate">{{ item.template_name }}</div>
+        </div>
+        <a href="{{ url_for('reports.download_file', file_id=item.file.id) }}" class="btn btn-light rounded-circle" download>
+            <i class="bi bi-download text-secondary"></i>
+        </a>
+    </div>
+    {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Filled Reports Section (Archive) -->
+<div id="section-filled" class="content-section" style="display: none;">
+    <h5 class="fw-bold mb-3 text-dark">Сданные отчеты</h5>
+    {% if filled_templates %}
+        <div class="d-flex flex-column gap-3">
+        {% for template in filled_templates %}
+        <div class="card shadow-sm p-3 border-success border-opacity-25 bg-light" style="border-radius: 12px;">
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center gap-1">
+                    <i class="bi bi-check-circle-fill"></i> Успешно сдано
+                </span>
+                <span class="badge bg-white text-muted border">Период: {{ template.period or '-' }}</span>
+            </div>
+            <h6 class="card-title fw-bold text-dark mb-1">{{ template.short_name or template.name }}</h6>
+            <p class="text-muted small mb-3" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ template.name }}</p>
+            
+            <div class="mt-auto pt-3 border-top border-success border-opacity-25 d-flex flex-column gap-2">
+                <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-sm btn-outline-success w-100 d-flex align-items-center justify-content-center gap-2" style="border-radius: 8px;">
+                    <i class="bi bi-eye"></i> Просмотреть ответы
+                </a>
+                <a href="{{ url_for('reports.export_my_excel', template_id=template.id) }}" class="btn btn-sm btn-success text-white w-100 d-flex align-items-center justify-content-center gap-2" style="border-radius: 8px;">
+                    <i class="bi bi-file-earmark-excel"></i> Скачать в Excel
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-archive fs-1 mb-2 d-block"></i>
+            <p>Архив пуст.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Profile Section -->
+<div id="section-profile" class="content-section" style="display: none;">
+    <h5 class="fw-bold mb-3 text-dark">Личный кабинет</h5>
+    <div class="card shadow-sm p-4" style="border-radius: 12px; border-color: #edf2f7;">
+        <div class="text-center mb-4">
+            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 64px; height: 64px;">
+                <i class="bi bi-person fs-1 text-secondary"></i>
+            </div>
+            <h6 class="fw-bold m-0">{{ current_user.username }}</h6>
+            <div class="small text-muted">{{ current_user.description }}</div>
+        </div>
+        
+        <hr class="border-secondary opacity-10">
+        
+        <form action="{{ url_for('auth.change_my_password') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+                <label class="form-label small text-muted">Сменить пароль</label>
+                <input type="text" name="new_password" class="form-control" required autocomplete="off" placeholder="Новый пароль">
+            </div>
+            <button type="submit" class="btn btn-dark w-100 rounded-pill" style="background-color: #00334e; border-color: #00334e;">Обновить пароль</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab switching logic for mobile dashboard
+    function updateSections() {
+        let hash = window.location.hash || '#active';
+        
+        document.getElementById('section-active').style.display = 'none';
+        document.getElementById('section-filled').style.display = 'none';
+        document.getElementById('section-profile').style.display = 'none';
+        
+        if (hash.includes('filled')) {
+            document.getElementById('section-filled').style.display = 'block';
+        } else if (hash.includes('profile')) {
+            document.getElementById('section-profile').style.display = 'block';
+        } else {
+            document.getElementById('section-active').style.display = 'block';
+        }
+    }
+    
+    window.addEventListener('hashchange', updateSections);
+    window.addEventListener('load', updateSections);
+
+    // Show draft split buttons if draft exists
+    document.addEventListener("DOMContentLoaded", function () {
+        const currentUserId = "{{ current_user.id }}";
+        document.querySelectorAll('.action-buttons-container').forEach(container => {
+            const templateId = container.dataset.templateId;
+            const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
+            if (localStorage.getItem(draftKey)) {
+                const defaultBtn = container.querySelector('.btn-default-fill');
+                const splitBtns = container.querySelector('.btn-draft-split');
+                if (defaultBtn && splitBtns) {
+                    defaultBtn.classList.add('d-none');
+                    splitBtns.classList.remove('d-none');
+                    splitBtns.classList.add('d-flex');
+                }
+            }
+        });
+        
+        window.clearDraftAndStart = function(templateId, url) {
+            if (confirm('Вы уверены, что хотите начать заполнение заново? Сохраненный черновик будет удален.')) {
+                const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
+                localStorage.removeItem(draftKey);
+                window.location.href = url;
+            }
+        };
+    });
+</script>
+{% endblock %}
