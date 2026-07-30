@@ -47,14 +47,14 @@
             Активные
         </a>
         <a href="{{ url_for('reports.dashboard') }}#filled" class="bottom-nav-item" id="nav-filled">
-            <i class="bi bi-archive"></i>
-            Сданные
+            <i class="bi bi-check-all"></i>
+            Завершенные
         </a>
         <a href="{{ url_for('reports.dashboard') }}#profile" class="bottom-nav-item" id="nav-profile">
             <i class="bi bi-person"></i>
             Профиль
         </a>
-        <a href="{{ url_for('reports.dashboard') }}#analytics" class="bottom-nav-item" id="nav-analytics">
+        <a href="{{ url_for('reports.dashboard') }}#analytics" class="bottom-nav-item d-none" id="nav-analytics">
             <i class="bi bi-bar-chart"></i>
             Статистика
         </a>

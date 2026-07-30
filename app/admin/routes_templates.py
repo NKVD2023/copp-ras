@@ -99,6 +99,21 @@ def toggle_publish(template_id):
     log_action('Публикация отчета', f'Отчет {template.short_name} {status_str}')
     return redirect(url_for('admin.dashboard') + '#reportsTab')
 
+@admin_bp.route('/toggle_complete/<int:template_id>', methods=['POST'])
+@login_required
+def toggle_complete(template_id):
+    """
+    Переключение статуса 'Завершен' для отчета.
+    Завершенные отчеты переносятся во вкладку 'Завершенные отчеты' и больше не считаются активными.
+    """
+    template = ReportTemplate.query.get_or_404(template_id)
+    template.is_completed = not template.is_completed
+    
+    db.session.commit()
+    status_str = "завершен" if template.is_completed else "возобновлен"
+    log_action('Изменение статуса отчета', f'Сбор данных для отчета {template.short_name} {status_str}')
+    return redirect(request.referrer or (url_for('admin.dashboard') + '#reportsTab'))
+
 @admin_bp.route('/toggle_archive/<int:template_id>', methods=['POST'])
 @login_required
 def toggle_archive(template_id):

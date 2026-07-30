@@ -57,7 +57,7 @@ class TemplateService:
             elif not t.is_published:
                 draft_templates.append(t)
             else:
-                if len(assigned_users) > 0 and len(debtors) == 0:
+                if t.is_completed or (len(assigned_users) > 0 and len(debtors) == 0):
                     completed_templates.append(t)
                 else:
                     published_templates.append(t)

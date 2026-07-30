@@ -31,12 +31,15 @@ def dashboard():
     submissions = ReportSubmission.query.filter_by(user_id=current_user.id).all()
     filled_ids = [s.template_id for s in submissions]
     
-    # Архив пользователя: собираем сами шаблоны из отправленных данных
-    filled = [s.template for s in submissions if s.template is not None]
-    
     # Активные отчеты: назначенные, опубликованные и еще не сданные
     assigned = [t for t in current_user.assigned_templates if t.is_published]
-    unfilled = [t for t in assigned if t.id not in filled_ids]
+    
+    # Архив пользователя (теперь "Завершенные отчеты"):
+    # Сюда попадают отчеты, которые пользователь уже сдал ИЛИ которые глобально закрыты руководителем
+    filled = [t for t in assigned if t.id in filled_ids or t.is_completed]
+    
+    # К заполнению: назначены, еще не сданные и не завершенные глобально
+    unfilled = [t for t in assigned if t.id not in filled_ids and not t.is_completed]
     
     # Сортируем невыполненные по дедлайну (сначала те, что нужно сдать раньше)
     unfilled.sort(key=lambda x: x.deadline or date.max)

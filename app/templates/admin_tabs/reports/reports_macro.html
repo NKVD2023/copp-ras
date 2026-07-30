@@ -9,7 +9,8 @@
     {% set progress = (submitted / total_assigned * 100)|int if total_assigned > 0 else 0 %}
     {% set progress_color = "success" if progress == 100 else ("warning" if progress > 0 else "danger") %}
     {% set days_left = (t.deadline - current_date).days if t.deadline and current_date else none %}
-    {% set is_overdue = days_left is not none and days_left < 0 %}
+    {% set is_fully_completed = t.is_completed or (total_assigned > 0 and debtors_count == 0) %}
+    {% set is_overdue = days_left is not none and days_left < 0 and not is_fully_completed and not t.is_archived %}
     
     <div class="col-md-6 report-item" 
          data-status="{% if t.is_published %}published{% else %}draft{% endif %}" 
@@ -18,7 +19,7 @@
          data-progress="{{ progress }}"
          data-id="{{ t.id }}">
         
-        <div class="border rounded h-100 p-3 position-relative {% if not t.is_published %}bg-light opacity-75{% endif %} {% if is_overdue %}border-danger shadow-sm{% endif %}">
+        <div class="border rounded h-100 p-3 position-relative {% if not t.is_published and not t.is_template %}bg-light opacity-75{% endif %} {% if is_overdue %}border-danger shadow-sm{% endif %}">
             
             <!-- Three dots menu (Действия) -->
             <div class="dropdown position-absolute dropdown-options">
@@ -27,12 +28,12 @@
                       <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
                     </svg>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                <ul class="dropdown-menu dropdown-menu-end shadow border" style="border-radius: 12px; padding: 8px 0; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 12px 35px rgba(0,0,0,0.2) !important;">
                     {% if not is_template_tab %}
                     <li>
                         <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST" {% if not t.is_published %}onsubmit="return confirm('После публикации отчета вы больше не сможете изменять его структуру (добавлять или удалять поля). Продолжить?');"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
+                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
                                 <i class="bi {% if t.is_published %}bi-eye-slash{% else %}bi-eye{% endif %}"></i>
                                 {% if t.is_published %}Снять с публикации{% else %}Опубликовать{% endif %}
                             </button>
@@ -41,24 +42,24 @@
                     {% endif %}
                     {% if not t.is_published or is_template_tab %}
                     <li>
-                        <a href="{{ url_for('admin.edit_constructor', template_id=t.id) }}" class="dropdown-item py-2 small d-flex align-items-center gap-2">
+                        <a href="{{ url_for('admin.edit_constructor', template_id=t.id) }}" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2">
                             <i class="bi bi-pencil-square"></i>Изменить структуру (Конструктор)
                         </a>
                     </li>
                     {% endif %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#edit-meta-{{ t.id }}">
+                        <button type="button" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#edit-meta-{{ t.id }}">
                             <i class="bi bi-pencil"></i>Изменить настройки
                         </button>
                     </li>
                     <li>
-                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#access-template-{{ t.id }}">
+                        <button type="button" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#access-template-{{ t.id }}">
                             <i class="bi bi-people"></i>Назначить исполнителей
                         </button>
                     </li>
                     <li>
-                        <button type="button" class="dropdown-item py-2 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#clone-{{ t.id }}">
+                        <button type="button" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#clone-{{ t.id }}">
                             <i class="bi bi-copy"></i>Запустить новый период
                         </button>
                     </li>
@@ -66,8 +67,19 @@
                     <li>
                         <form action="{{ url_for('admin.reset_to_pure', template_id=t.id) }}" method="POST" onsubmit="return confirm('Отчет будет перенесен во вкладку Шаблоны. Период, дедлайн и исполнители будут очищены. Продолжить?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 text-primary">
+                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 text-primary">
                                 <i class="bi bi-arrow-counterclockwise"></i>В чистые шаблоны
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% if t.is_published and not is_template_tab %}
+                    <li>
+                        <form action="{{ url_for('admin.toggle_complete', template_id=t.id) }}" method="POST" {% if not t.is_completed %}onsubmit="return confirm('Отчет будет помечен как завершенный и пропадет из просроченных у должников. Продолжить?');"{% endif %}>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_completed %}text-primary{% else %}text-success{% endif %}">
+                                <i class="bi {% if t.is_completed %}bi-play-circle-fill{% else %}bi-check-circle-fill{% endif %}"></i>
+                                {% if t.is_completed %}Возобновить сбор{% else %}Завершить сбор{% endif %}
                             </button>
                         </form>
                     </li>
@@ -75,7 +87,7 @@
                     <li>
                         <form action="{{ url_for('admin.toggle_archive', template_id=t.id) }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 text-warning">
+                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 text-warning">
                                 <i class="bi {% if t.is_archived %}bi-box-arrow-up{% else %}bi-archive{% endif %}"></i>
                                 {% if t.is_archived %}Разархивировать{% else %}В архив{% endif %}
                             </button>
@@ -86,7 +98,7 @@
                     <li>
                         <form action="{{ url_for('admin.delete_template', template_id=t.id) }}" method="POST" onsubmit="return confirm('ВНИМАНИЕ!\n\nВы точно хотите удалить этот отчет?\nВсе данные, которые уже заполнили учреждения, будут навсегда удалены!');">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="dropdown-item py-2 small d-flex align-items-center gap-2 text-danger">
+                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 text-danger">
                                 <i class="bi bi-trash3-fill"></i>Удалить отчет
                             </button>
                         </form>
@@ -99,15 +111,19 @@
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                         <span class="badge bg-light border text-dark"><i class="bi bi-calendar"></i> Период: {{ t.period or 'не указан' }}</span>
-                        {% if t.is_published %}
+                        {% if is_fully_completed %}
+                        <span class="badge bg-primary text-white border border-primary"><i class="bi bi-check2-all"></i> Сбор завершен</span>
+                        {% elif t.is_published %}
                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Опубликовано</span>
+                        {% elif t.is_template %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"><i class="bi bi-layout-text-window-reverse"></i> Шаблон</span>
                         {% else %}
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Черновик</span>
                         {% endif %}
                         
                         {% if is_overdue %}
                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="bi bi-exclamation-triangle-fill me-1"></i>Просрочено</span>
-                        {% elif days_left != None %}
+                        {% elif days_left != None and not is_fully_completed %}
                             {% if days_left == 0 %}
                             <span class="badge bg-danger text-white border border-danger">Осталось 0 дн.</span>
                             {% elif days_left <= 3 %}

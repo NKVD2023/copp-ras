@@ -87,3 +87,32 @@
 .cursor-pointer {
     cursor: pointer;
 }
+
+/* Улучшенные стили для выпадающего меню в админке */
+.dropdown-options .dropdown-menu {
+    border-radius: 12px !important;
+    padding: 8px 0 !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.2) !important;
+}
+
+.dropdown-options .dropdown-item {
+    transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+/* Стандартный ховер */
+.dropdown-options .dropdown-item:hover {
+    background-color: #f0f4f8 !important;
+}
+
+/* Ховер для опасных действий (Удалить, Снять с публикации) */
+.dropdown-options .dropdown-item.text-danger:hover {
+    background-color: #fff0f0 !important;
+    color: #dc3545 !important;
+}
+
+/* Ховер для архива (В архив) */
+.dropdown-options .dropdown-item.text-warning:hover {
+    background-color: #fff9e6 !important;
+    color: #ffc107 !important;
+}

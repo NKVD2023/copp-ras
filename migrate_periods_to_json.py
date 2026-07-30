@@ -71,8 +71,10 @@ with app.app_context():
         print("Колонка period_data успешно добавлена в базу данных!")
     except Exception as e:
         db.session.rollback()
-        # Скорее всего колонка уже существует, это нормально
-        print("Колонка уже существует или произошла другая ошибка (игнорируем).")
+        if "duplicate column name" in str(e).lower():
+            print("Колонка period_data уже существует.")
+        else:
+            print("ВНИМАНИЕ! Не удалось создать колонку. Ошибка:", str(e))
 
     print("Начало миграции старых периодов...")
     templates = ReportTemplate.query.all()
