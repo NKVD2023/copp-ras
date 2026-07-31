@@ -75,8 +75,12 @@ def toggle_publish(template_id):
     Пока отчет не опубликован, пользователи его не увидят на своем дашборде.
     """
     template = ReportTemplate.query.get_or_404(template_id)
-    template.is_published = not template.is_published
     
+    if not template.is_published and not template.period:
+        flash('Невозможно опубликовать отчет: не задан период.', 'danger')
+        return redirect(url_for('admin.dashboard') + '#reportsTab')
+        
+    template.is_published = not template.is_published
     if template.is_published:
         # Check if a pure template with this name already exists
         existing_pure = ReportTemplate.query.filter_by(name=template.name, is_template=True).first()
