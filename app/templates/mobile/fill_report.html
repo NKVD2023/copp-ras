@@ -300,7 +300,10 @@
             const data = getFormData();
             const response = await fetch('{{ url_for("reports.fill_report", template_id=template.id) }}', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body: JSON.stringify(data)
             });
             const result = await response.json();
@@ -335,7 +338,10 @@
             const data = getFormData();
             const response = await fetch('{{ url_for("reports.fill_report", template_id=template.id) }}', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body: JSON.stringify(data)
             });
             const result = await response.json();
