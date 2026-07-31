@@ -131,7 +131,7 @@
                                 </div>
 
                                 <div class="modal-footer px-4 py-3 border-top bg-light d-flex justify-content-between align-items-center">
-                                    <button type="button" class="btn btn-outline-danger btn-sm px-3 shadow-sm rounded-pill" onclick="if(confirm('Вы уверены, что хотите полностью удалить этого пользователя? Эта операция необратима.')) { document.getElementById('deleteUserForm-{{ user.id }}').submit(); }">Удалить учетную запись</button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm px-3 shadow-sm rounded-pill" onclick="coppConfirm('Вы уверены, что хотите полностью удалить этого пользователя? Эта операция необратима.', () => { document.getElementById('deleteUserForm-{{ user.id }}').submit(); })">Удалить учетную запись</button>
                                     <div>
                                         <button type="button" class="btn btn-light btn-sm px-3 me-2 border shadow-sm rounded-pill" data-bs-dismiss="modal">Отмена</button>
                                         <button type="submit" class="btn btn-copp btn-sm px-4 shadow-sm rounded-pill">Сохранить изменения</button>

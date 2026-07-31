@@ -37,7 +37,7 @@
                     <li>
                         <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="button" onclick="{% if not t.is_published %}{% if not t.period or t.period == 'None' %}alert('Невозможно опубликовать отчет: сначала задайте период (в меню Изменить настройки).');{% else %}if(confirm('После публикации отчета вы больше не сможете изменять его структуру. Продолжить?')) { this.closest('form').submit(); }{% endif %}{% else %}this.closest('form').submit();{% endif %}" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
+                            <button type="button" onclick="event.preventDefault(); {% if not t.is_published %}{% if not t.period or t.period == 'None' %}coppAlert('Невозможно опубликовать отчет: сначала задайте период (в меню Изменить настройки).', 'warning');{% else %}coppConfirm('После публикации отчета вы больше не сможете изменять его структуру. Продолжить?', () => { this.closest('form').submit(); });{% endif %}{% else %}this.closest('form').submit();{% endif %}" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
                                 <i class="bi {% if t.is_published %}bi-eye-slash{% else %}bi-eye{% endif %}"></i>
                                 {% if t.is_published %}Снять с публикации{% else %}Опубликовать{% endif %}
                             </button>
@@ -69,7 +69,7 @@
                     </li>
                     {% if not t.is_published and not t.is_template %}
                     <li>
-                        <form action="{{ url_for('admin.reset_to_pure', template_id=t.id) }}" method="POST" onsubmit="return confirm('Отчет будет перенесен во вкладку Шаблоны. Период, дедлайн и исполнители будут очищены. Продолжить?');">
+                        <form action="{{ url_for('admin.reset_to_pure', template_id=t.id) }}" method="POST" onsubmit="event.preventDefault(); coppConfirm('Отчет будет перенесен во вкладку Шаблоны. Период, дедлайн и исполнители будут очищены. Продолжить?', () => { this.submit(); });">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 text-primary">
                                 <i class="bi bi-arrow-counterclockwise"></i>В чистые шаблоны
@@ -79,7 +79,7 @@
                     {% endif %}
                     {% if t.is_published and not is_template_tab %}
                     <li>
-                        <form action="{{ url_for('admin.toggle_complete', template_id=t.id) }}" method="POST" {% if not t.is_completed %}onsubmit="return confirm('Отчет будет помечен как завершенный и пропадет из просроченных у должников. Продолжить?');"{% endif %}>
+                        <form action="{{ url_for('admin.toggle_complete', template_id=t.id) }}" method="POST" {% if not t.is_completed %}onsubmit="event.preventDefault(); coppConfirm('Отчет будет помечен как завершенный и пропадет из просроченных у должников. Продолжить?', () => { this.submit(); });"{% endif %}>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_completed %}text-primary{% else %}text-success{% endif %}">
                                 <i class="bi {% if t.is_completed %}bi-play-circle-fill{% else %}bi-check-circle-fill{% endif %}"></i>
@@ -100,7 +100,7 @@
                     {% if current_user.role == 'admin' %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <form action="{{ url_for('admin.delete_template', template_id=t.id) }}" method="POST" onsubmit="return confirm('ВНИМАНИЕ!\n\nВы точно хотите удалить этот отчет?\nВсе данные, которые уже заполнили учреждения, будут навсегда удалены!');">
+                        <form action="{{ url_for('admin.delete_template', template_id=t.id) }}" method="POST" onsubmit="event.preventDefault(); coppConfirm('ВНИМАНИЕ!<br><br>Вы точно хотите удалить этот отчет?<br>Все данные, которые уже заполнили учреждения, будут навсегда удалены!', () => { this.submit(); });">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 text-danger">
                                 <i class="bi bi-trash3-fill"></i>Удалить отчет
@@ -226,35 +226,62 @@
     </div>
 
     <div class="modal fade" id="edit-meta-{{ t.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content border-0 shadow">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
                 <form action="{{ url_for('admin.edit_template_meta', template_id=t.id) }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <div class="modal-header border-bottom-0 pt-4 px-4">
-                        <h6 class="modal-title fw-bold text-dark m-0">Редактирование формы</h6>
+                    <div class="modal-header border-bottom pt-4 px-4 pb-3">
+                        <h4 class="modal-title fw-bold text-dark m-0">Редактирование формы</h4>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body px-4 py-0">
-                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Краткое наименование</label><input type="text" name="short_name" class="form-control" value="{{ t.short_name }}" required autocomplete="off"></div>
-                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Полное наименование</label><input type="text" name="name" class="form-control" value="{{ t.name }}" required autocomplete="off"></div>
-                        <div class="row g-3">
-                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Период</label>
-                            {{ render_period_selector('editPeriod' ~ t.id, t.period, (t.period_data|tojson if t.period_data else 'null')) }}
-                            </div>
-                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Дедлайн</label><input type="date" name="deadline" class="form-control bg-light" value="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '' }}"></div>
+                    <div class="modal-body px-4 py-4">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Краткое наименование</label>
+                            <input type="text" name="short_name" class="form-control form-control-lg bg-light border-0" value="{{ t.short_name }}" required autocomplete="off">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small text-dark fw-bold">Прикрепленные файлы</label>
-                            <select name="attached_files" class="form-select bg-light" multiple size="3">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Полное наименование</label>
+                            <input type="text" name="name" class="form-control form-control-lg bg-light border-0" value="{{ t.name }}" required autocomplete="off">
+                        </div>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-dark fw-bold">Период</label>
+                                {{ render_period_selector('editPeriod' ~ t.id, t.period, (t.period_data|tojson if t.period_data else 'null')) }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-dark fw-bold">Дедлайн</label>
+                                <input type="date" name="deadline" class="form-control form-control-lg bg-light border-0" value="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '' }}">
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label text-dark fw-bold d-block mb-3">Прикрепленные файлы</label>
+                            <div class="d-flex flex-column gap-2 pe-2" style="max-height: 250px; overflow-y: auto;">
                                 {% for f in all_files %}
-                                <option value="{{ f.id }}" {% if f in t.attachments %}selected{% endif %}>{{ f.filename }} ({{ (f.file_size/1024/1024)|round(2) }} МБ)</option>
+                                {% set ext = f.filename.split('.')[-1]|lower %}
+                                {% set color = 'danger' if ext == 'pdf' else ('success' if ext in ['xls','xlsx'] else ('primary' if ext in ['doc','docx'] else 'secondary')) %}
+                                {% set icon = 'bi-file-earmark-pdf' if ext == 'pdf' else ('bi-file-earmark-excel' if ext in ['xls','xlsx'] else ('bi-file-earmark-word' if ext in ['doc','docx'] else 'bi-file-earmark-text')) %}
+                                <label class="d-flex align-items-center gap-3 p-2 border rounded bg-white shadow-sm" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.classList.add('bg-light')" onmouseout="this.classList.remove('bg-light')">
+                                    <input class="form-check-input ms-2" type="checkbox" name="attached_files" value="{{ f.id }}" style="transform: scale(1.2);" {% if f in t.attachments %}checked{% endif %}>
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1 ms-2">
+                                        <div class="bg-{{ color }} bg-opacity-10 text-{{ color }} rounded p-2 d-flex align-items-center justify-content-center">
+                                            <i class="{{ icon }} fs-5"></i>
+                                        </div>
+                                        <div class="text-truncate" style="max-width: 450px;">
+                                            <div class="fw-semibold text-dark">{{ f.filename }}</div>
+                                            <div class="small text-muted">{{ (f.file_size/1024/1024)|round(2) }} МБ</div>
+                                        </div>
+                                    </div>
+                                </label>
                                 {% endfor %}
-                            </select>
-                            <div class="form-text small">Удерживайте Ctrl (Win) / Cmd (Mac), чтобы выбрать несколько.</div>
+                                {% if not all_files %}
+                                <div class="text-muted small">Нет доступных файлов.</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text mt-2 small">Удерживайте Ctrl (Win) / Cmd (Mac), чтобы выбрать несколько.</div>
                         </div>
                     </div>
-                    <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Сохранить изменения</button>
+                    <div class="modal-footer border-top pt-3 pb-4 px-4 flex-row justify-content-end gap-2 bg-light rounded-bottom">
+                        <button type="submit" class="btn btn-primary py-2 px-4 fw-bold shadow-sm">Сохранить изменения</button>
                     </div>
                 </form>
             </div>

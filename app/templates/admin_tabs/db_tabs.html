@@ -210,8 +210,8 @@
             }
         });
         
-        if (updates.length === 0) {
-            alert('Нет изменений для сохранения в БД.');
+        if (Object.keys(window.pendingDbChanges).length === 0) {
+            coppAlert('Нет изменений для сохранения в БД.', 'info');
             return;
         }
         
@@ -241,13 +241,13 @@
                     setTimeout(() => { cell.style.backgroundColor = ''; }, 1000);
                 });
             } else {
-                alert('Ошибка при сохранении: ' + data.message);
+                coppAlert('Ошибка при сохранении: ' + data.message, 'error');
             }
         })
         .catch(err => {
             btn.disabled = false;
             btn.innerHTML = originalBtnHTML;
-            alert('Ошибка сети: ' + err);
+            coppAlert('Ошибка сети: ' + err, 'error');
         });
         });
     }
@@ -293,7 +293,7 @@
         newBtn.addEventListener('click', function() {
             const pwd = input.value;
             if (!pwd) {
-                alert('Введите пароль');
+                coppAlert('Введите пароль', 'warning');
                 return;
             }
             modal.hide();

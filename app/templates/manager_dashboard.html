@@ -76,13 +76,13 @@
                         const taskId = data.task_id;
                         pollTaskStatus(taskId, btn, originalHtml);
                     } else {
-                        alert("Ошибка запуска формирования файла");
+                        coppAlert("Ошибка запуска формирования файла", 'error');
                         btn.disabled = false;
                         btn.innerHTML = originalHtml;
                     }
                 })
                 .catch(err => {
-                    alert("Произошла ошибка при обращении к серверу");
+                    coppAlert("Произошла ошибка при обращении к серверу", 'error');
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;
                 });
@@ -98,7 +98,7 @@
                         btn.innerHTML = originalHtml;
                         window.location.href = `/task_download/${taskId}`;
                     } else if (data.status === 'FAILED') {
-                        alert("Ошибка формирования файла: " + data.message);
+                        coppAlert("Ошибка формирования файла: " + data.message, 'error');
                         btn.disabled = false;
                         btn.innerHTML = originalHtml;
                     } else {

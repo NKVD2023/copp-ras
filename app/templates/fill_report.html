@@ -397,13 +397,13 @@
                     window.location.href = "/"; 
                 }, 1000);
             } else {
-                alert("Ошибка: " + res.message);
+                coppAlert("Ошибка: " + res.message, 'error');
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
             }
         })
         .catch(err => {
-            alert("Ошибка сети: " + err);
+            coppAlert("Ошибка сети: " + err, 'error');
             btn.disabled = false;
             btn.innerHTML = originalHtml;
         });
@@ -431,9 +431,7 @@
 
     {% if not is_locked %}
     function loadPreviousData() {
-        if (!confirm("Внимание! Это действие перезапишет все текущие заполненные поля на экране значениями из прошлого отчета. Вы уверены, что хотите продолжить?")) {
-            return;
-        }
+        coppConfirm("Внимание! Это действие перезапишет все текущие заполненные поля на экране значениями из прошлого отчета. Вы уверены, что хотите продолжить?", () => {
 
         const btn = document.getElementById('btn-no-changes');
         const originalText = btn.innerHTML;
@@ -470,14 +468,15 @@
                     // Прокрутка наверх к уведомлению
                     window.scrollTo({top: form.offsetTop - 50, behavior: 'smooth'});
                 } else {
-                    alert("Не удалось загрузить прошлый отчет: " + data.message);
+                    coppAlert("Не удалось загрузить прошлый отчет: " + data.message, 'error');
                 }
             })
             .catch(err => {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
-                alert("Ошибка сети при загрузке прошлого отчета: " + err);
+                coppAlert("Ошибка сети при загрузке прошлого отчета: " + err, 'error');
             });
+        });
     }
     {% endif %}
 </script>

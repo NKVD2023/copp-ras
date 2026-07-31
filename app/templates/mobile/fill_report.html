@@ -387,9 +387,8 @@
     
     // Загрузка предыдущих данных
     async function loadPreviousData() {
-        if (!confirm("Загрузить данные из вашего предыдущего отчета? Текущие введенные данные будут заменены.")) {
-            return;
-        }
+        coppConfirm("Загрузить данные из вашего предыдущего отчета? Текущие введенные данные будут заменены.", async () => {
+
         
         const btn = document.querySelector('.fab-secondary');
         const iconHtml = btn.innerHTML;
@@ -410,6 +409,7 @@
         } finally {
             btn.innerHTML = iconHtml;
         }
+        });
     }
 </script>
 {% endblock %}

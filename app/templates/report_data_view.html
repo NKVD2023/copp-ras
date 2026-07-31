@@ -548,7 +548,7 @@
             });
             
             if (updates.length === 0) {
-                alert('Нет изменений для сохранения.');
+                coppAlert('Нет изменений для сохранения.', 'info');
                 return;
             }
             
@@ -575,13 +575,13 @@
                         setTimeout(() => { cell.style.backgroundColor = ''; }, 1000);
                     });
                 } else {
-                    alert('Ошибка: ' + data.message);
+                    coppAlert('Ошибка: ' + data.message, 'error');
                 }
             })
             .catch(err => {
                 btn.disabled = false;
                 btn.innerHTML = originalBtnHTML;
-                alert('Ошибка сети: ' + err);
+                coppAlert('Ошибка сети: ' + err, 'error');
             });
         }
         
@@ -648,13 +648,13 @@
                         const taskId = data.task_id;
                         pollTaskStatus(taskId, btn, originalHtml);
                     } else {
-                        alert("Ошибка запуска формирования файла");
+                        coppAlert("Ошибка запуска формирования файла", 'error');
                         btn.disabled = false;
                         btn.innerHTML = originalHtml;
                     }
                 })
                 .catch(err => {
-                    alert("Произошла ошибка при обращении к серверу");
+                    coppAlert("Произошла ошибка при обращении к серверу", 'error');
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;
                 });
@@ -669,7 +669,7 @@
                         btn.innerHTML = originalHtml;
                         window.location.href = `/task_download/${taskId}`;
                     } else if (data.status === 'FAILED') {
-                        alert("Ошибка формирования файла: " + data.message);
+                        coppAlert("Ошибка формирования файла: " + data.message, 'error');
                         btn.disabled = false;
                         btn.innerHTML = originalHtml;
                     } else {

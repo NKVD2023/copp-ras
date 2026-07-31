@@ -204,7 +204,7 @@
         const multInput = document.getElementById(`mult-${sIdx}`);
         const hintInput = document.getElementById(`hint-${sIdx}`);
         const label = labelInput.value.trim();
-        if (!label) return alert('Заполните заголовок показателя!');
+        if (!label) { coppAlert('Заполните заголовок показателя!', 'warning'); return; }
 
         const name = `s${sIdx}_c${Date.now().toString().slice(-6)}`;
         reportStructure[sIdx].fields.push({ name, label, type: typeInput.value, required: reqInput.checked, is_multiple: multInput.checked, hint: hintInput.value.trim() });
@@ -216,7 +216,7 @@
 
     function updateSheetTitle(sIdx, newTitle) {
         if (!newTitle.trim()) {
-            alert("Название листа не может быть пустым!");
+            coppAlert("Название листа не может быть пустым!", 'warning');
             renderStructure();
             return;
         }
@@ -225,7 +225,7 @@
 
     function updateFieldLabel(sIdx, fIdx, newLabel) {
         if (!newLabel.trim()) {
-            alert("Заголовок не может быть пустым!");
+            coppAlert("Заголовок не может быть пустым!", 'warning');
             renderStructure();
             return;
         }
@@ -339,8 +339,8 @@
         const periodData = document.getElementById('templatePeriodData').value.trim();
         const deadline = document.getElementById('templateDeadline').value;
         
-        if (!name || !shortName) return alert('Требуется указать наименования отчета.');
-        if (reportStructure.length === 0) return alert('Требуется создать хотя бы один лист!');
+        if (!name || !shortName) { coppAlert('Требуется указать наименования отчета.', 'warning'); return; }
+        if (reportStructure.length === 0) { coppAlert('Требуется создать хотя бы один лист!', 'warning'); return; }
         
         const userIds = Array.from(document.querySelectorAll('.user-cb:checked')).map(cb => parseInt(cb.value));
         const groupNames = Array.from(document.querySelectorAll('.group-cb:checked')).map(cb => cb.value);
@@ -381,7 +381,7 @@
         })
         .catch(err => {
             console.error("Ошибка при сохранении:", err);
-            alert("Произошла ошибка при сохранении. Проверьте консоль.");
+            coppAlert("Произошла ошибка при сохранении. Проверьте консоль.", 'error');
         });
     }
 

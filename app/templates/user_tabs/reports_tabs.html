@@ -81,11 +81,11 @@
                 
                 // Функция для сброса черновика и начала заново
                 window.clearDraftAndStart = function(templateId, url) {
-                    if (confirm('Вы уверены, что хотите начать заполнение заново? Сохраненный черновик будет удален.')) {
+                    coppConfirm('Вы уверены, что хотите начать заполнение заново? Сохраненный черновик будет удален.', () => {
                         const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
                         localStorage.removeItem(draftKey);
                         window.location.href = url;
-                    }
+                    });
                 };
                 
                 let searchTimeout;

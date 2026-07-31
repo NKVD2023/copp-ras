@@ -20,7 +20,7 @@
         </button>
 
         <!-- Очистить -->
-        <form action="{{ url_for('admin.clear_logs') }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить все логи? Это действие необратимо.');" class="m-0">
+        <form action="{{ url_for('admin.clear_logs') }}" method="POST" onsubmit="event.preventDefault(); coppConfirm('Вы уверены, что хотите удалить все логи? Это действие необратимо.', () => { this.submit(); });" class="m-0">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <button type="submit" class="btn btn-outline-danger btn-sm px-3 text-nowrap shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-trash3 mb-1 me-1" viewBox="0 0 16 16">
@@ -273,7 +273,7 @@
     // --- Экспорт в Excel (CSV UTF-8) ---
     function exportLogsToCSV() {
         if (logsRows.length === 0) {
-            alert('Нет данных для экспорта');
+            coppAlert('Нет данных для экспорта', 'warning');
             return;
         }
 
