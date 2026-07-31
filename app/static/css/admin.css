@@ -116,3 +116,29 @@
     background-color: #fff9e6 !important;
     color: #ffc107 !important;
 }
+
+/* ==========================================================================
+   Segmented Control (Sub-navigation Pills)
+   ========================================================================== */
+.segmented-control .nav-link {
+    color: #495057 !important;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+.segmented-control .nav-link:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+.segmented-control .nav-link.active {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(13, 71, 161, 0.2) !important;
+    font-weight: 600 !important;
+}
+
+/* Soft UI for search/filter inputs */
+.soft-ui-input {
+    background-color: #f1f3f5 !important;
+    border: none !important;
+    box-shadow: none !important;
+}

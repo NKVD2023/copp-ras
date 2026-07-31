@@ -45,13 +45,13 @@ class PeriodSelector {
             const selectedQ = defaultData ? defaultData.quarter : 1;
             const selectedY = defaultData ? defaultData.year : currentYear;
             html = `
-                <select class="form-select form-select-sm w-auto period-dynamic" data-key="quarter">
+                <select class="form-select w-auto period-dynamic" data-key="quarter">
                     <option value="I" ${selectedQ=='I'?'selected':''}>I</option>
                     <option value="II" ${selectedQ=='II'?'selected':''}>II</option>
                     <option value="III" ${selectedQ=='III'?'selected':''}>III</option>
                     <option value="IV" ${selectedQ=='IV'?'selected':''}>IV</option>
                 </select>
-                <select class="form-select form-select-sm w-auto period-dynamic" data-key="year">
+                <select class="form-select w-auto period-dynamic" data-key="year">
                     ${generateYearOptions(selectedY)}
                 </select>
             `;
@@ -61,52 +61,52 @@ class PeriodSelector {
             const selectedY = defaultData ? defaultData.year : currentYear;
             let mOpts = months.map(m => `<option value="${m}" ${selectedM==m?'selected':''}>${m}</option>`).join('');
             html = `
-                <select class="form-select form-select-sm w-auto period-dynamic" data-key="month">${mOpts}</select>
-                <select class="form-select form-select-sm w-auto period-dynamic" data-key="year">${generateYearOptions(selectedY)}</select>
+                <select class="form-select w-auto period-dynamic" data-key="month">${mOpts}</select>
+                <select class="form-select w-auto period-dynamic" data-key="year">${generateYearOptions(selectedY)}</select>
             `;
         } else if (type === 'halfyear') {
             const selectedH = defaultData ? defaultData.halfyear : 'I';
             const selectedY = defaultData ? defaultData.year : currentYear;
             html = `
-                <select class="form-select form-select-sm w-auto period-dynamic" data-key="halfyear">
+                <select class="form-select w-auto period-dynamic" data-key="halfyear">
                     <option value="I" ${selectedH=='I'?'selected':''}>I</option>
                     <option value="II" ${selectedH=='II'?'selected':''}>II</option>
                 </select>
-                <select class="form-select form-select-sm w-auto period-dynamic" data-key="year">${generateYearOptions(selectedY)}</select>
+                <select class="form-select w-auto period-dynamic" data-key="year">${generateYearOptions(selectedY)}</select>
             `;
         } else if (type === 'year') {
             const selectedY = defaultData ? defaultData.year : currentYear;
-            html = `<select class="form-select form-select-sm w-auto period-dynamic" data-key="year">${generateYearOptions(selectedY)}</select>`;
+            html = `<select class="form-select w-auto period-dynamic" data-key="year">${generateYearOptions(selectedY)}</select>`;
         } else if (type === 'academic') {
             const selectedY = defaultData ? defaultData.year : currentYear;
             let opts = '';
             for(let y = currentYear - 5; y <= 2100; y++) {
                 opts += `<option value="${y}" ${selectedY == y ? 'selected' : ''}>${y}/${y+1}</option>`;
             }
-            html = `<select class="form-select form-select-sm w-auto period-dynamic" data-key="year">${opts}</select>`;
+            html = `<select class="form-select w-auto period-dynamic" data-key="year">${opts}</select>`;
         } else if (type === 'week') {
             const selectedStart = defaultData ? defaultData.start : '';
             const selectedEnd = defaultData ? defaultData.end : '';
             html = `
-                <div class="d-flex align-items-center gap-1">
+                <div class="d-flex align-items-center gap-2">
                     <span class="small text-muted">С</span>
-                    <input type="date" class="form-control form-control-sm period-dynamic" data-key="start" value="${selectedStart}">
+                    <input type="date" class="form-control period-dynamic" data-key="start" value="${selectedStart}">
                     <span class="small text-muted">По</span>
-                    <input type="date" class="form-control form-control-sm period-dynamic" data-key="end" value="${selectedEnd}">
+                    <input type="date" class="form-control period-dynamic" data-key="end" value="${selectedEnd}">
                 </div>
             `;
         } else if (type === 'date') {
             const selectedDate = defaultData ? defaultData.date : '';
-            html = `<input type="date" class="form-control form-control-sm w-auto period-dynamic" data-key="date" value="${selectedDate}">`;
+            html = `<input type="date" class="form-control w-auto period-dynamic" data-key="date" value="${selectedDate}">`;
         } else if (type === 'range') {
             const selectedStart = defaultData ? defaultData.start : '';
             const selectedEnd = defaultData ? defaultData.end : '';
             html = `
-                <div class="d-flex align-items-center gap-1">
+                <div class="d-flex align-items-center gap-2">
                     <span class="small text-muted">От</span>
-                    <input type="date" class="form-control form-control-sm period-dynamic" data-key="start" value="${selectedStart}">
+                    <input type="date" class="form-control period-dynamic" data-key="start" value="${selectedStart}">
                     <span class="small text-muted">До</span>
-                    <input type="date" class="form-control form-control-sm period-dynamic" data-key="end" value="${selectedEnd}">
+                    <input type="date" class="form-control period-dynamic" data-key="end" value="${selectedEnd}">
                 </div>
             `;
         }

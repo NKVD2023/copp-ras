@@ -1,10 +1,10 @@
 {% macro render_period_selector(id_prefix, default_period='', default_period_data='null', period_name='period', period_data_name='period_data') %}
 <div class="period-selector-container">
     <input type="hidden" name="{{ period_name }}" id="{{ id_prefix }}Text" value="{{ default_period }}">
-    <input type="hidden" name="{{ period_data_name }}" id="{{ id_prefix }}Data" value="{{ default_period_data }}">
+    <input type="hidden" name="{{ period_data_name }}" id="{{ id_prefix }}Data" value='{{ default_period_data }}'>
 
     <div class="d-flex align-items-center gap-2 mb-2">
-        <select class="form-select form-select-sm" id="{{ id_prefix }}Type" style="max-width: 200px;">
+        <select class="form-select" id="{{ id_prefix }}Type" style="max-width: 200px;">
             <option value="" disabled selected>-- Выберите тип --</option>
             <option value="quarter">Квартал</option>
             <option value="month">Месяц</option>

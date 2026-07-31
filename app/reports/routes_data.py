@@ -37,8 +37,8 @@ def view_data(template_id):
     # Получаем все сданные ответы по данному шаблону
     submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
     
-    # Сортируем по имени организации для удобства поиска
-    submissions.sort(key=lambda x: x.user.username.lower())
+    # Сортируем по дате сдачи (сначала новые). Для этого используем id в обратном порядке.
+    submissions.sort(key=lambda x: x.id, reverse=True)
         
     return render_template('report_data_view.html', template=template, submissions=submissions)
 

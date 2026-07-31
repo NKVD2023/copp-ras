@@ -1,48 +1,61 @@
-<div class="row mb-4 align-items-center">
-    <div class="col-md-5">
-        <div class="input-group shadow-sm">
-            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-            <input type="text" id="reportSearch" class="form-control border-start-0 ps-0" placeholder="Поиск отчетов" autocomplete="off">
+<div class="reports-sub-tabs mb-4">
+    <div class="d-flex flex-wrap flex-xl-nowrap justify-content-between align-items-center gap-3">
+        
+        <!-- Tabs on the left -->
+        <ul class="nav nav-pills segmented-control bg-light p-1 rounded-pill flex-nowrap overflow-auto mb-0" id="reportsSubTabs" role="tablist" style="gap: 0.25rem; white-space: nowrap; flex-shrink: 0; align-items: center;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-pill px-3 py-2" id="published-tab" data-bs-toggle="tab" data-bs-target="#published-reports" type="button" role="tab" aria-controls="published-reports" aria-selected="true">
+                    <i class="bi bi-eye-fill me-1"></i> Опубликованные
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-3 py-2" id="submissions-tab" data-bs-toggle="tab" data-bs-target="#submissions-reports" type="button" role="tab" aria-controls="submissions-reports" aria-selected="false">
+                    <i class="bi bi-file-earmark-check-fill me-1"></i> Завершенные отчеты
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-3 py-2" id="drafts-tab" data-bs-toggle="tab" data-bs-target="#drafts-reports" type="button" role="tab" aria-controls="drafts-reports" aria-selected="false">
+                    <i class="bi bi-file-earmark-text me-1"></i> Черновики
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-3 py-2" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates-reports" type="button" role="tab" aria-controls="templates-reports" aria-selected="false">
+                    <i class="bi bi-collection-fill me-1"></i> Шаблоны
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-3 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-reports" type="button" role="tab" aria-controls="archive-reports" aria-selected="false">
+                    <i class="bi bi-archive-fill me-1"></i> Архив
+                </button>
+            </li>
+        </ul>
+
+        <!-- Search and sort in the middle -->
+        <div class="d-flex flex-grow-1 gap-2 align-items-center" style="max-width: 500px;">
+            <div class="input-group flex-grow-1 soft-ui-input" style="border-radius: 50rem; overflow: hidden;">
+                <span class="input-group-text border-0 text-secondary ps-3 py-2 bg-transparent"><i class="bi bi-search"></i></span>
+                <input type="text" id="reportSearch" class="form-control soft-ui-input border-0 ps-0 py-2" placeholder="Поиск отчетов по названию..." autocomplete="off">
+            </div>
+            <select class="form-select text-secondary py-2 soft-ui-input" style="border-radius: 50rem; width: auto; max-width: 250px;" onchange="window.location.href='?sort=' + this.value">
+                <option value="deadline_asc" {% if current_sort == 'deadline_asc' %}selected{% endif %}>Срок сдачи (сначала ближайшие)</option>
+                <option value="deadline_desc" {% if current_sort == 'deadline_desc' %}selected{% endif %}>Срок сдачи (сначала дальние)</option>
+                <option value="id_desc" {% if current_sort == 'id_desc' %}selected{% endif %}>Сначала новые</option>
+            </select>
         </div>
-    </div>
-    <div class="col-md-4 ms-auto">
-        <select class="form-select shadow-sm text-muted" onchange="window.location.href='?sort=' + this.value">
-            <option value="deadline_asc" {% if current_sort == 'deadline_asc' %}selected{% endif %}>Срок сдачи (сначала ближайшие)</option>
-            <option value="deadline_desc" {% if current_sort == 'deadline_desc' %}selected{% endif %}>Срок сдачи (сначала дальние)</option>
-            <option value="id_desc" {% if current_sort == 'id_desc' %}selected{% endif %}>Сначала новые</option>
-        </select>
+
+        <!-- Buttons on the right -->
+        <div class="d-flex gap-2 flex-shrink-0">
+            <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#importTemplateModal">
+                <i class="bi bi-file-earmark-excel me-1"></i> Создать из Excel
+            </button>
+            <a href="{{ url_for('admin.constructor') }}" class="btn btn-copp shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> Создать новый отчёт
+            </a>
+        </div>
     </div>
 </div>
 
 <div class="reports-sub-tabs">
-    <ul class="admin-nav-list nav mb-4" id="reportsSubTabs" role="tablist" style="gap: 1rem;">
-        <li class="admin-nav-item" role="presentation">
-            <button class="admin-nav-link active" id="published-tab" data-bs-toggle="tab" data-bs-target="#published-reports" type="button" role="tab" aria-controls="published-reports" aria-selected="true" style="font-size: 0.95rem; padding-bottom: 0.75rem;">
-                <i class="bi bi-eye-fill me-1"></i> Опубликованные
-            </button>
-        </li>
-        <li class="admin-nav-item" role="presentation">
-            <button class="admin-nav-link" id="submissions-tab" data-bs-toggle="tab" data-bs-target="#submissions-reports" type="button" role="tab" aria-controls="submissions-reports" aria-selected="false" style="font-size: 0.95rem; padding-bottom: 0.75rem;">
-                <i class="bi bi-file-earmark-check-fill me-1"></i> Завершенные отчеты
-            </button>
-        </li>
-        <li class="admin-nav-item" role="presentation">
-            <button class="admin-nav-link" id="drafts-tab" data-bs-toggle="tab" data-bs-target="#drafts-reports" type="button" role="tab" aria-controls="drafts-reports" aria-selected="false" style="font-size: 0.95rem; padding-bottom: 0.75rem;">
-                <i class="bi bi-file-earmark-text me-1"></i> Черновики
-            </button>
-        </li>
-        <li class="admin-nav-item" role="presentation">
-            <button class="admin-nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates-reports" type="button" role="tab" aria-controls="templates-reports" aria-selected="false" style="font-size: 0.95rem; padding-bottom: 0.75rem;">
-                <i class="bi bi-collection-fill me-1"></i> Шаблоны
-            </button>
-        </li>
-        <li class="admin-nav-item" role="presentation">
-            <button class="admin-nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-reports" type="button" role="tab" aria-controls="archive-reports" aria-selected="false" style="font-size: 0.95rem; padding-bottom: 0.75rem;">
-                <i class="bi bi-archive-fill me-1"></i> Архив
-            </button>
-        </li>
-    </ul>
-
     <div class="tab-content" id="reportsSubTabsContent">
         <div class="tab-pane fade show active" id="published-reports" role="tabpanel" aria-labelledby="published-tab">
             {% include 'admin_tabs/reports/published.html' %}
@@ -154,9 +167,12 @@
         let textToCopy = "";
         const listItems = listContainer.querySelectorAll('li');
         listItems.forEach(li => {
-            const username = li.querySelector('strong').innerText;
-            const desc = li.querySelector('.debtor-desc').innerText;
-            textToCopy += `${username} (${desc})\n`;
+            const descElem = li.querySelector('.debtor-desc');
+            if (descElem) {
+                textToCopy += `${descElem.innerText}\n`;
+            } else {
+                textToCopy += `${li.innerText}\n`;
+            }
         });
 
         navigator.clipboard.writeText(textToCopy).then(function() {

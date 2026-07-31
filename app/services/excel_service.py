@@ -16,11 +16,26 @@ class ExcelService:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Должники"
-        ws.append(["Организация"])
         
-        for d in debtors:
+        # Настройка заголовка
+        ws.append(["Организация"])
+        header_cell = ws.cell(row=1, column=1)
+        header_cell.font = Font(bold=True, color="FFFFFF")
+        header_cell.fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+        header_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        header_cell.border = thin_border
+        
+        # Ширина колонки
+        ws.column_dimensions['A'].width = 80
+        
+        # Заполнение данных
+        for row_idx, d in enumerate(debtors, start=2):
             org_name = d.description if d.description else d.username
-            ws.append([org_name])
+            cell = ws.cell(row=row_idx, column=1, value=org_name)
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical="center", wrap_text=True)
             
         output = BytesIO()
         wb.save(output)

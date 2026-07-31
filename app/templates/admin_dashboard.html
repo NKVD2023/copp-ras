@@ -8,7 +8,7 @@
 {% extends "admin_base.html" %}
 
 {% block admin_navbar %}
-<nav class="admin-top-nav bg-light border-bottom">
+<nav class="admin-top-nav sticky-top border-bottom" style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); z-index: 1020; transition: all 0.3s ease;">
     <div class="container-fluid px-4 overflow-x-auto">
         <ul class="admin-nav-list nav flex-nowrap mb-0 border-0" id="adminTabs" role="tablist" style="gap: 1.5rem; padding-top: 0.5rem; padding-bottom: 0.5rem;">
             {% if current_user.role == 'admin' %}
@@ -116,6 +116,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="{{ url_for('static', filename='js/period_selector.js') }}"></script>
     <script>
         function exportExcel(btn, templateId) {
             const originalHtml = btn.innerHTML;

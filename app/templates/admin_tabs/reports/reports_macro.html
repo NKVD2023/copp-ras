@@ -1,3 +1,7 @@
+<style>
+.hover-shadow { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.hover-shadow:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
+</style>
 {% from "macros/period_selector.html" import render_period_selector %}
 {% macro render_reports_list(templates_list, is_template_tab=False) %}
 <div class="row g-4">
@@ -12,14 +16,14 @@
     {% set is_fully_completed = t.is_completed or (total_assigned > 0 and debtors_count == 0) %}
     {% set is_overdue = days_left is not none and days_left < 0 and not is_fully_completed and not t.is_archived %}
     
-    <div class="col-md-6 report-item" 
+    <div class="col-md-6 col-lg-4 report-item" 
          data-status="{% if t.is_published %}published{% else %}draft{% endif %}" 
          data-archived="{{ 'true' if t.is_archived else 'false' }}"
          data-deadline="{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '2099-12-31' }}"
          data-progress="{{ progress }}"
          data-id="{{ t.id }}">
         
-        <div class="border rounded h-100 p-3 position-relative {% if not t.is_published and not t.is_template %}bg-light opacity-75{% endif %} {% if is_overdue %}border-danger shadow-sm{% endif %}">
+        <div class="border h-100 p-3 position-relative bg-white shadow-sm hover-shadow transition-all {% if is_overdue %}border-danger{% endif %}" style="border-radius: 10px;">
             
             <!-- Three dots menu (Действия) -->
             <div class="dropdown position-absolute dropdown-options">
@@ -109,102 +113,111 @@
 
             <div class="d-flex flex-column justify-content-between h-100 pe-4">
                 <div>
+                    {% set file_count = t.attachments|length if t.attachments else 0 %}
+                    
+                    <div class="mb-2">
+                        {% if t.period %}
+                        <span class="text-secondary fw-medium" style="font-size: 0.85rem;"><i class="bi bi-calendar3 me-1"></i>Период: {{ t.period }}</span>
+                        {% endif %}
+                    </div>
+
                     <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                        <span class="badge bg-light border text-dark"><i class="bi bi-calendar"></i> Период: {{ t.period or 'не указан' }}</span>
                         {% if is_fully_completed %}
-                        <span class="badge bg-primary text-white border border-primary"><i class="bi bi-check2-all"></i> Сбор завершен</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style="font-size: 0.75rem;">Сбор завершен</span>
                         {% elif t.is_published %}
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Опубликовано</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size: 0.75rem;">Опубликовано</span>
                         {% elif t.is_template %}
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"><i class="bi bi-layout-text-window-reverse"></i> Шаблон</span>
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1" style="font-size: 0.75rem;">Шаблон</span>
                         {% else %}
-                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Черновик</span>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1" style="font-size: 0.75rem;">Черновик</span>
+                        {% endif %}
+                    </div>
+
+                    <h5 class="card-title fw-bold text-dark mb-1 lh-sm">{{ t.short_name or t.name }}</h5>
+                    
+                    {% if t.name and t.name != t.short_name %}
+                    <p class="text-muted small mb-2 line-clamp-2" title="{{ t.name }}">{{ t.name }}</p>
+                    {% endif %}
+
+                    <!-- Meta text row -->
+                    <div class="d-flex align-items-center gap-3 text-muted mb-3 flex-wrap" style="font-size: 0.9rem;">
+                        <span title="Количество листов"><i class="bi bi-file-earmark-text me-1"></i>Листов: {{ t.schema|length }}</span>
+                        
+                        {% if file_count > 0 %}
+                        <span title="Прикрепленные файлы"><i class="bi bi-paperclip me-1"></i>Файлов: {{ file_count }}</span>
                         {% endif %}
                         
-                        {% if is_overdue %}
-                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="bi bi-exclamation-triangle-fill me-1"></i>Просрочено</span>
-                        {% elif days_left != None and not is_fully_completed %}
-                            {% if days_left == 0 %}
-                            <span class="badge bg-danger text-white border border-danger">Осталось 0 дн.</span>
-                            {% elif days_left <= 3 %}
-                            <span class="badge bg-warning text-dark border border-warning">Осталось {{ days_left }} дн.</span>
-                            {% else %}
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Осталось {{ days_left }} дн.</span>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-
-                    <h5 class="card-title fw-bold text-dark mb-1">{{ t.short_name or t.name }}</h5>
-                    <p class="text-muted small mb-3 line-clamp-2" title="{{ t.name }}">{{ t.name }}</p>
-                    
-                    <div class="d-flex justify-content-between align-items-center small text-muted mb-2">
-                        <span>Количество листов: {{ t.schema|length }}</span>
                         {% if t.deadline %}
-                        <span class="{% if is_overdue %}text-danger fw-bold{% endif %}">Срок: {{ t.deadline.strftime('%d.%m.%Y') }}</span>
+                        <span class="{% if is_overdue %}text-danger fw-bold{% endif %}">
+                            <i class="bi bi-calendar-event me-1"></i>Срок: {{ t.deadline.strftime('%d.%m.%Y') }}
+                            {% if not is_fully_completed %}
+                                {% if is_overdue %}
+                                (Просрочено)
+                                {% elif days_left != None %}
+                                <span class="{% if days_left <= 3 %}text-warning fw-bold{% endif %}">(осталось {{ days_left }} дн.)</span>
+                                {% endif %}
+                            {% endif %}
+                        </span>
                         {% endif %}
                     </div>
 
-                    <!-- Progress Bar -->
-                    <div class="mb-3 border rounded p-2 bg-light">
-                        <div class="d-flex justify-content-between align-items-end mb-1">
-                            <span class="small fw-bold text-dark">Прогресс сдачи: {{ progress }}%</span>
-                            <span class="small text-muted" style="font-size: 0.75rem;">Сдали: <b>{{ submitted }}</b> / Ожидается: <b>{{ debtors_count }}</b> (из {{ total_assigned }})</span>
-                        </div>
-                        <div class="progress progress-slim">
-                            <div class="progress-bar bg-{{ progress_color }}" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div>
-                    
+                    <!-- Inline Progress -->
                     {% if total_assigned > 0 %}
                     <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <span class="small fw-bold text-dark" style="font-size: 0.85rem;">Сдали: {{ submitted }} из {{ total_assigned }}</span>
+                            {% if debtors_count > 0 %}
+                            <a class="text-danger fw-bold text-decoration-none d-flex align-items-center" data-bs-toggle="collapse" href="#debtorsCollapse-{{ t.id }}" role="button" aria-expanded="false" aria-controls="debtorsCollapse-{{ t.id }}" style="font-size: 0.85rem;">
+                                Не сдали ({{ debtors_count }}) <i class="bi bi-chevron-down ms-1" style="font-size: 1rem; margin-top: 1px;"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-success fw-bold" style="font-size: 0.85rem;"><i class="bi bi-check-all me-1"></i>Все сдали</span>
+                            {% endif %}
+                        </div>
+                        <div class="progress rounded-pill bg-light border" style="height: 8px;">
+                            <div class="progress-bar rounded-pill bg-{{ progress_color }}" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        
                         {% if debtors_count > 0 %}
-                        <div class="accordion accordion-flush accordion-debtors border rounded shadow-sm" id="debtorsAccordion-{{ t.id }}">
-                            <div class="accordion-item rounded">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed py-2 px-3 text-danger fw-bold rounded" type="button" data-bs-toggle="collapse" data-bs-target="#debtorsCollapse-{{ t.id }}">
-                                        Не сдали отчет ({{ debtors_count }})
+                        <div class="collapse mt-2" id="debtorsCollapse-{{ t.id }}">
+                            <div class="card card-body p-2 border-0 bg-light rounded-3 shadow-sm">
+                                <div class="mb-2 px-1">
+                                    <span class="small fw-bold text-dark">Список несдавших:</span>
+                                </div>
+                                <div class="d-flex gap-2 border-bottom pb-2 mb-2 px-1">
+                                    <button class="btn btn-sm btn-outline-secondary py-1 px-2 d-flex align-items-center justify-content-center gap-1 w-50 fw-medium" onclick="copyDebtorsList('{{ t.id }}')" style="font-size: 0.8rem;">
+                                        <i class="bi bi-clipboard"></i> Скопировать
                                     </button>
-                                </h2>
-                                <div id="debtorsCollapse-{{ t.id }}" class="accordion-collapse collapse" data-bs-parent="#debtorsAccordion-{{ t.id }}">
-                                    <div class="accordion-body p-2 bg-light border-top">
-                                        <!-- Actions for debtors -->
-                                        <div class="d-flex gap-2 border-bottom pb-2 mb-2">
-                                            <button class="btn btn-sm btn-outline-secondary py-1 px-2 d-flex align-items-center justify-content-center gap-1 w-50" onclick="copyDebtorsList('{{ t.id }}')">
-                                                Скопировать
-                                            </button>
-                                            <a href="{{ url_for('admin.export_debtors', template_id=t.id) }}" class="btn btn-sm btn-outline-success py-1 px-2 d-flex align-items-center gap-1 w-50 justify-content-center">
-                                                В Excel
-                                            </a>
-                                        </div>
-                                        <div class="debtors-list-container" id="debtorsList-{{ t.id }}">
-                                            <ul class="mb-0 ps-3 text-muted">
-                                                {% for debtor in debtors %}
-                                                <li class="mb-1">
-                                                    <strong class="text-dark">{{ debtor.username }}</strong>
-                                                    {% if debtor.description %}<br><span style="font-size: 0.85em;" class="debtor-desc">{{ debtor.description }}</span>{% else %}<span class="debtor-desc d-none">{{ debtor.username }}</span>{% endif %}
-                                                </li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-                                    </div>
+                                    <a href="{{ url_for('admin.export_debtors', template_id=t.id) }}" class="btn btn-sm btn-outline-success py-1 px-2 d-flex align-items-center justify-content-center gap-1 w-50 fw-medium" style="font-size: 0.8rem;">
+                                        <i class="bi bi-file-earmark-excel"></i> В Excel
+                                    </a>
+                                </div>
+                                <div class="debtors-list-container small px-1" id="debtorsList-{{ t.id }}" style="max-height: 150px; overflow-y: auto;">
+                                    <ul class="mb-0 ps-3 text-muted">
+                                        {% for debtor in debtors %}
+                                        <li class="mb-1">
+                                            <span class="text-dark debtor-desc">{{ debtor.description or debtor.username }}</span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
                                 </div>
                             </div>
                         </div>
-                        {% else %}
-                        <div class="text-success small fw-bold mb-2 p-2 border border-success rounded bg-success bg-opacity-10"><i class="bi bi-check-circle-fill me-1"></i>Все {{ total_assigned }} учреждений сдали отчет!</div>
                         {% endif %}
                     </div>
                     {% else %}
-                    <div class="text-warning small fw-bold mb-3 p-2 border border-warning rounded bg-warning bg-opacity-10"><i class="bi bi-info-circle-fill me-1"></i>Нет назначенных исполнителей</div>
+                    <div class="mb-3">
+                        <span class="small text-warning fw-bold"><i class="bi bi-info-circle-fill me-1"></i>Нет назначенных исполнителей</span>
+                    </div>
                     {% endif %}
                 </div>
 
-                <div class="mt-auto pt-2 d-flex gap-2">
-                    <a href="{{ url_for('reports.view_data', template_id=t.id) }}" class="btn btn-sm btn-copp w-50 py-2">
-                        <i class="bi bi-bar-chart-fill me-1"></i>Сводные данные
+                <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center" style="border-top-color: #eaeaea !important;">
+                    <a href="{{ url_for('reports.view_data', template_id=t.id) }}" target="_blank" class="btn btn-sm btn-copp px-3 rounded-pill fw-bold">
+                        Сводные данные <i class="bi bi-arrow-right ms-1"></i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-success text-white w-50 py-2" onclick="exportExcel(this, {{ t.id }})">
-                        <i class="bi bi-file-earmark-excel me-1"></i>Скачать excel
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="exportExcel(this, {{ t.id }})" title="Скачать Excel">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Скачать Excel
                     </button>
                 </div>
 
@@ -249,36 +262,63 @@
     </div>
 
     <div class="modal fade" id="clone-{{ t.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content border-0 shadow">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
                 <form action="{{ url_for('admin.clone_template', template_id=t.id) }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <div class="modal-header border-bottom-0 pt-4 px-4">
-                        <h6 class="modal-title fw-bold text-dark m-0">Запуск нового периода</h6>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="modal-header border-bottom pt-4 px-4 pb-3">
+                        <h4 class="modal-title fw-bold text-dark m-0">Запуск нового периода</h4>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body px-4 py-0">
-                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Краткое наименование</label><input type="text" name="new_short_name" class="form-control" value="{{ t.short_name }}" required autocomplete="off"></div>
-                        <div class="mb-3"><label class="form-label small text-muted fw-bold">Полное наименование</label><input type="text" name="new_name" class="form-control" value="{{ t.name }}" required autocomplete="off"></div>
-                        <div class="row g-3">
-                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый период</label>
-                            {{ render_period_selector('clonePeriod' ~ t.id, t.period, (t.period_data|tojson if t.period_data else 'null'), 'new_period', 'new_period_data') }}
-                            </div>
-                            <div class="col-md-6 mb-3"><label class="form-label small text-dark fw-bold">Новый дедлайн</label><input type="date" name="new_deadline" class="form-control bg-light" required></div>
+                    <div class="modal-body px-4 py-4">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Краткое наименование</label>
+                            <input type="text" name="new_short_name" class="form-control form-control-lg bg-light border-0" value="{{ t.short_name }}" required autocomplete="off">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small text-dark fw-bold">Прикрепленные файлы</label>
-                            <select name="attached_files" class="form-select bg-light" multiple size="3">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Полное наименование</label>
+                            <input type="text" name="new_name" class="form-control form-control-lg bg-light border-0" value="{{ t.name }}" required autocomplete="off">
+                        </div>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-dark fw-bold">Новый период</label>
+                                {{ render_period_selector('clonePeriod' ~ t.id, t.period, (t.period_data|tojson if t.period_data else 'null'), 'new_period', 'new_period_data') }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-dark fw-bold">Новый дедлайн</label>
+                                <input type="date" name="new_deadline" class="form-control form-control-lg bg-light border-0" required>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label text-dark fw-bold d-block mb-3">Прикрепленные файлы</label>
+                            <div class="d-flex flex-column gap-2 pe-2" style="max-height: 250px; overflow-y: auto;">
                                 {% for f in all_files %}
-                                <option value="{{ f.id }}" {% if f in t.attachments %}selected{% endif %}>{{ f.filename }} ({{ (f.file_size/1024/1024)|round(2) }} МБ)</option>
+                                {% set ext = f.filename.split('.')[-1]|lower %}
+                                {% set color = 'danger' if ext == 'pdf' else ('success' if ext in ['xls','xlsx'] else ('primary' if ext in ['doc','docx'] else 'secondary')) %}
+                                {% set icon = 'bi-file-earmark-pdf' if ext == 'pdf' else ('bi-file-earmark-excel' if ext in ['xls','xlsx'] else ('bi-file-earmark-word' if ext in ['doc','docx'] else 'bi-file-earmark-text')) %}
+                                <label class="d-flex align-items-center gap-3 p-2 border rounded bg-white shadow-sm" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.classList.add('bg-light')" onmouseout="this.classList.remove('bg-light')">
+                                    <input class="form-check-input ms-2" type="checkbox" name="attached_files" value="{{ f.id }}" style="transform: scale(1.2);" {% if f in t.attachments %}checked{% endif %}>
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1 ms-2">
+                                        <div class="bg-{{ color }} bg-opacity-10 text-{{ color }} rounded p-2 d-flex align-items-center justify-content-center">
+                                            <i class="{{ icon }} fs-5"></i>
+                                        </div>
+                                        <div class="text-truncate" style="max-width: 450px;">
+                                            <div class="fw-semibold text-dark">{{ f.filename }}</div>
+                                            <div class="small text-muted">{{ (f.file_size/1024/1024)|round(2) }} МБ</div>
+                                        </div>
+                                    </div>
+                                </label>
                                 {% endfor %}
-                            </select>
-                            <div class="form-text small">Будут скопированы из текущего отчета, если не менять.</div>
+                                {% if not all_files %}
+                                <div class="text-muted small">Нет доступных файлов.</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text mt-2 text-muted">Выбранные файлы будут прикреплены к новому периоду.</div>
                         </div>
                     </div>
-                    <div class="modal-footer border-top-0 pb-4 px-4 mt-2 flex-column">
-                        <button type="submit" name="action" value="publish" class="btn btn-copp w-100 py-2 fw-bold mb-2">Опубликовать сразу</button>
-                        <button type="submit" name="action" value="draft" class="btn btn-copp w-100 py-2 fw-bold">Запустить как Черновик</button>
+                    <div class="modal-footer border-top pt-3 pb-4 px-4 flex-row justify-content-end gap-2 bg-light rounded-bottom">
+                        <button type="submit" name="action" value="draft" class="btn btn-outline-secondary py-2 px-4 fw-bold">Сохранить как Черновик</button>
+                        <button type="submit" name="action" value="publish" class="btn btn-copp py-2 px-4 fw-bold shadow-sm">Опубликовать сразу</button>
                     </div>
                 </form>
             </div>
