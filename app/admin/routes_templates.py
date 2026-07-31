@@ -76,7 +76,7 @@ def toggle_publish(template_id):
     """
     template = ReportTemplate.query.get_or_404(template_id)
     
-    if not template.is_published and not template.period:
+    if not template.is_published and (not template.period or template.period == 'None'):
         flash('Невозможно опубликовать отчет: не задан период.', 'danger')
         return redirect(url_for('admin.dashboard') + '#reportsTab')
         
