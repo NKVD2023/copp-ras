@@ -71,8 +71,9 @@
                         {% for field in sheet.fields %}
                         
                         <div class="col-12">
-                            <label class="form-label text-dark small fw-bold d-flex align-items-center gap-1 mb-1">
-                                {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                            <label class="form-label text-dark small fw-bold d-flex align-items-start gap-2 mb-1">
+                                <span class="text-muted">{{ loop.index }}.</span> 
+                                <span>{{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}</span>
                             </label>
                             {% if field.hint and not is_locked %}
                             <div class="form-text mt-0 mb-2 small text-muted">{{ field.hint }}</div>
