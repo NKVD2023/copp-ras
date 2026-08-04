@@ -150,7 +150,7 @@
                         {% if t.deadline %}
                         <span class="{% if is_overdue %}text-danger fw-bold{% endif %}">
                             <i class="bi bi-calendar-event me-1"></i>Срок: {{ t.deadline.strftime('%d.%m.%Y') }}
-                            {% if not is_fully_completed %}
+                            {% if not is_fully_completed and not t.is_archived %}
                                 {% if is_overdue %}
                                 (Просрочено)
                                 {% elif days_left != None %}

@@ -1,3 +1,6 @@
+"""
+Миграция: Перевод периодов из строкового формата None/Period в JSON.
+"""
 import re
 import json
 from app import create_app, db

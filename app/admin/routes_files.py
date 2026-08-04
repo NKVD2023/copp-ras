@@ -8,7 +8,7 @@ from app.admin import admin_bp
 from app.models import UploadedFile, ReportTemplate
 from config import basedir
 
-ALLOWED_EXTENSIONS = {'pdf', 'docx', 'xlsx'}
+ALLOWED_EXTENSIONS = {'pdf', 'docx', 'xlsx', 'doc', 'xls', 'dox'}
 MAX_FILE_SIZE = 50 * 1024 * 1024 # 50 MB
 UPLOAD_FOLDER = os.path.join(basedir, 'app', 'uploads', 'reports')
 

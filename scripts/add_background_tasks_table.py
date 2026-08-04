@@ -1,3 +1,7 @@
+"""
+Миграция: Добавление таблицы для фоновых задач.
+Можно безопасно запускать.
+"""
 from app import create_app, db
 from app.models import BackgroundTask
 

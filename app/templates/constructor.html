@@ -88,7 +88,7 @@
                 </button>
             </div>
             
-            <input type="file" id="newFiles" class="d-none" multiple accept=".pdf,.docx,.xlsx" onchange="updateNewFilesCount()">
+            <input type="file" id="newFiles" class="d-none" multiple accept=".pdf,.docx,.doc,.xlsx,.xls" onchange="updateNewFilesCount()">
             <div id="newFilesStatus" class="form-text small mb-3 text-success d-none"></div>
 
             <div class="modal fade" id="existingFilesModal" tabindex="-1" aria-hidden="true">
@@ -377,7 +377,9 @@
         .then(data => { 
             if (data.status === 'success') {
                 window.location.href = "{{ url_for('admin.dashboard') }}#reportsTab"; 
-            } 
+            } else {
+                coppAlert(data.message || 'Произошла ошибка при сохранении отчета', 'error');
+            }
         })
         .catch(err => {
             console.error("Ошибка при сохранении:", err);

@@ -1,3 +1,6 @@
+"""
+Миграция: Добавление столбца completed к таблице отчетов.
+"""
 import os
 from app import create_app, db
 

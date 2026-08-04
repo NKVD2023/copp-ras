@@ -79,17 +79,24 @@ def constructor():
         
         UPLOAD_FOLDER = os.path.join(basedir, 'app', 'uploads', 'reports')
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        from app.admin.routes_files import allowed_file, MAX_FILE_SIZE
         
         new_files = request.files.getlist('new_files')
         for file in new_files:
             if file and file.filename:
-                original_name = secure_filename(file.filename)
-                unique_filename = f"{uuid.uuid4().hex}_{original_name}"
-                file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-                
+                if not allowed_file(file.filename):
+                    return jsonify({'status': 'error', 'message': f'Формат файла {file.filename} не поддерживается (разрешены pdf, docx, xlsx, doc, xls)'}), 400
+                    
                 file.seek(0, os.SEEK_END)
                 size = file.tell()
                 file.seek(0)
+                
+                if size > MAX_FILE_SIZE:
+                    return jsonify({'status': 'error', 'message': f'Файл {file.filename} превышает лимит в 50 МБ'}), 400
+
+                original_name = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4().hex}_{original_name}"
+                file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
                 
                 file.save(file_path)
                 
@@ -175,17 +182,24 @@ def edit_constructor(template_id):
         
         UPLOAD_FOLDER = os.path.join(basedir, 'app', 'uploads', 'reports')
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        from app.admin.routes_files import allowed_file, MAX_FILE_SIZE
         
         new_files = request.files.getlist('new_files')
         for file in new_files:
             if file and file.filename:
-                original_name = secure_filename(file.filename)
-                unique_filename = f"{uuid.uuid4().hex}_{original_name}"
-                file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-                
+                if not allowed_file(file.filename):
+                    return jsonify({'status': 'error', 'message': f'Формат файла {file.filename} не поддерживается (разрешены pdf, docx, xlsx, doc, xls)'}), 400
+                    
                 file.seek(0, os.SEEK_END)
                 size = file.tell()
                 file.seek(0)
+                
+                if size > MAX_FILE_SIZE:
+                    return jsonify({'status': 'error', 'message': f'Файл {file.filename} превышает лимит в 50 МБ'}), 400
+
+                original_name = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4().hex}_{original_name}"
+                file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
                 
                 file.save(file_path)
                 
