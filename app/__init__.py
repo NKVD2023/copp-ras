@@ -56,9 +56,9 @@ def create_app(config_class: type = Config) -> Flask:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline' fonts.googleapis.com; "
-            "font-src 'self' fonts.gstatic.com; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "font-src 'self' fonts.gstatic.com https://cdn.jsdelivr.net; "
             "img-src 'self' data:; "
             "object-src 'none';"
         )

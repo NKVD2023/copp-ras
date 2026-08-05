@@ -128,3 +128,13 @@ class BackgroundTask(db.Model):
     error_message = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+class Dictionary(db.Model):
+    """
+    Модель для хранения справочников (выпадающих списков).
+    """
+    __tablename__ = 'dictionaries'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    items = db.Column(JSON, nullable=False, default=list) # Список строк (вариантов ответа)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

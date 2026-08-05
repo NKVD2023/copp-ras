@@ -1,0 +1,110 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Шаблоны выпадающих списков</h4>
+    <button class="btn btn-copp shadow-sm" data-bs-toggle="modal" data-bs-target="#addDictModal">
+        <i class="bi bi-plus-lg me-1"></i>Создать шаблон
+    </button>
+</div>
+
+{% if dictionaries %}
+<div class="row">
+    {% for dict in dictionaries %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card shadow-sm h-100 hoverable">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">{{ dict.name }}</h5>
+                <div class="dropdown">
+                    <button class="btn btn-link text-muted p-0 border-0" type="button" data-bs-toggle="dropdown" style="font-size: 1.5rem; line-height: 1; padding: 0 5px;">
+                        &#8942;
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editDictModal{{ dict.id }}">✎ Редактировать</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="{{ url_for('admin.delete_dictionary', dict_id=dict.id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот шаблон?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="dropdown-item text-danger">✖ Удалить</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Вариантов: {{ dict.items|length }}</p>
+                <div class="bg-light p-2 rounded" style="max-height: 150px; overflow-y: auto;">
+                    <ul class="list-unstyled mb-0 small">
+                        {% for item in dict.items[:10] %}
+                        <li>&bull; {{ item }}</li>
+                        {% endfor %}
+                        {% if dict.items|length > 10 %}
+                        <li class="text-muted fst-italic">...и еще {{ dict.items|length - 10 }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования шаблона -->
+    <div class="modal fade" id="editDictModal{{ dict.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('admin.edit_dictionary', dict_id=dict.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Редактирование шаблона списка</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Название шаблона</label>
+                            <input type="text" name="name" class="form-control" value="{{ dict.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Варианты выбора (каждый с новой строки)</label>
+                            <textarea name="items" class="form-control" rows="8" required>{{ dict.items | join('\n') }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-copp">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info border-0 shadow-sm">
+    <i class="bi bi-info-circle me-2"></i>Нет созданных шаблонов выпадающих списков. Создайте первый шаблон, чтобы использовать списки в конструкторе отчетов.
+</div>
+{% endif %}
+
+<!-- Модальное окно добавления шаблона -->
+<div class="modal fade" id="addDictModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('admin.add_dictionary') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Новый шаблон выпадающего списка</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Название (например: Школы города)</label>
+                        <input type="text" name="name" class="form-control" required placeholder="Введите название">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Варианты выбора (каждый с новой строки)</label>
+                        <textarea name="items" class="form-control" rows="8" required placeholder="Вариант 1&#10;Вариант 2&#10;Вариант 3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-copp">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

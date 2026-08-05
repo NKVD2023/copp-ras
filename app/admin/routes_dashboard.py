@@ -90,6 +90,9 @@ def dashboard():
     # 6. Файлы
     all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
 
+    from app.models import Dictionary
+    dictionaries = Dictionary.query.order_by(Dictionary.name).all()
+
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
                            users=users, 
@@ -107,6 +110,7 @@ def dashboard():
                            logs_list=logs_list,
                            all_groups=all_groups,
                            all_files=all_files,
+                           dictionaries=dictionaries,
                            current_sort=sort_param,
                            current_date=datetime.date.today())
 

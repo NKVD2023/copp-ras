@@ -244,26 +244,33 @@
                 <div class="table-responsive-custom">
                     <table class="table table-hover table-bordered table-custom align-middle small">
                         <thead>
+                            {% set max_depth = sheet.header_rows|length %}
+                            {% for row in sheet.header_rows %}
                             <tr>
-                                <th class="p-3 sticky-col">Наименование образовательного учреждения</th>
-                                {% for field in sheet.fields %}
-                                <th class="p-3 text-center report-col-header">
-                                    {{ field.label }}
-                                    {% if field.hint %}
+                                {% if loop.first %}
+                                <th class="p-3 sticky-col align-middle" rowspan="{{ max_depth }}">Наименование образовательного учреждения</th>
+                                {% endif %}
+                                {% for cell in row %}
+                                <th class="p-3 text-center report-col-header align-middle" 
+                                    {% if cell.colspan > 1 %}colspan="{{ cell.colspan }}"{% endif %}
+                                    {% if cell.rowspan > 1 %}rowspan="{{ cell.rowspan }}"{% endif %}>
+                                    {{ cell.label }}
+                                    {% if cell.hint %}
                                     <span class="hint-icon hint-icon-table"
                                           data-bs-toggle="tooltip"
                                           data-bs-placement="bottom"
-                                          title="{{ field.hint }}">?</span>
+                                          title="{{ cell.hint }}">?</span>
                                     {% endif %}
                                 </th>
                                 {% endfor %}
                             </tr>
+                            {% endfor %}
                         </thead>
                         <tbody>
                             {% for sub in submissions %}
                             <tr>
                                 <td class="p-3 fw-bold sticky-col">{{ sub.user.description }}</td>
-                                {% for field in sheet.fields %}
+                                {% for field in sheet.leaf_fields %}
                                 <td class="p-0 align-top text-center text-dark" title="Кликните для редактирования">
                                     {% set val = sub.data.get(field.name, '') %}
                                     {% if val is iterable and val is not string %}
@@ -290,7 +297,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="{{ sheet.fields|length + 1 }}"
+                                <td colspan="{{ sheet.leaf_fields|length + 1 }}"
                                     class="text-center py-5 text-muted bg-white">Нет привязанных организаций.</td>
                             </tr>
                             {% endfor %}
@@ -298,7 +305,7 @@
                         <tfoot>
                             <tr>
                                 <td class="p-3 sticky-col text-dark">Итого</td>
-                                {% for field in sheet.fields %}
+                                {% for field in sheet.leaf_fields %}
                                 <td class="p-3 text-center text-primary-copp">
                                     {% if field.type == 'number' %}
                                     {% set ns = namespace(total=0, has_data=false) %}

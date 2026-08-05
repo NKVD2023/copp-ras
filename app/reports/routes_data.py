@@ -39,6 +39,15 @@ def view_data(template_id):
     
     # Сортируем по дате сдачи (сначала новые). Для этого используем id в обратном порядке.
     submissions.sort(key=lambda x: x.id, reverse=True)
+    
+    from app.utils import build_table_headers
+    
+    # Обогащаем схему шаблона данными для сложной шапки
+    for sheet in template.schema:
+        fields = sheet.get('fields', [])
+        header_rows, leaf_fields = build_table_headers(fields)
+        sheet['header_rows'] = header_rows
+        sheet['leaf_fields'] = leaf_fields
         
     return render_template('report_data_view.html', template=template, submissions=submissions)
 

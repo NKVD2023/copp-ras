@@ -12,6 +12,8 @@
 <script src="{{ url_for('static', filename='js/period_selector.js') }}"></script>
 {% endblock %}
 
+{% block container_class %}container-fluid px-4 px-xxl-5{% endblock %}
+
 {% block content %}
 <div class="card col-12 col-xxl-11 mx-auto mb-5 border-0 shadow-sm">
     <div class="card-body p-4 p-md-5">
@@ -19,7 +21,12 @@
             <h4 class="fw-bold text-dark m-0">
                 {% if template %}Редактирование формы{% else %}Конструктор структуры формы{% endif %}
             </h4>
-            <a href="{{ url_for('admin.dashboard') }}#reportsTab" class="btn btn-outline-secondary btn-sm px-3">Отмена</a>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm px-3" onclick="openPreview()">
+                    <i class="bi bi-eye"></i> Предпросмотр
+                </button>
+                <a href="{{ url_for('admin.dashboard') }}#reportsTab" class="btn btn-outline-secondary btn-sm px-3">Отмена</a>
+            </div>
         </div>
 
         <div class="row g-4 mb-5 pb-4 border-bottom">
@@ -154,6 +161,23 @@
     // ИСПРАВЛЕНИЕ: УМНАЯ РАСПАКОВКА ДАННЫХ ИЗ БАЗЫ
     // ==========================================
     let rawSchema = {% if template %}{{ template.schema | tojson | safe }}{% else %}[]{% endif %};
+    
+    // Передаем словари из Jinja в Javascript
+    const allDictionaries = {
+        {% for dict in all_dictionaries %}
+        "{{ dict.id }}": {
+            "name": "{{ dict.name }}",
+            "items": {{ dict.items | tojson | safe }}
+        },
+        {% endfor %}
+    };
+
+    function toggleDictionarySelect(sIdx, typeValue) {
+        const dictWrapper = document.getElementById(`dict-wrapper-${sIdx}`);
+        if (dictWrapper) {
+            dictWrapper.style.display = (typeValue === 'select') ? 'block' : 'none';
+        }
+    }
     let reportStructure = [];
 
     // База данных может отдать схему как текст, поэтому мы ее распаковываем (JSON.parse)
@@ -184,6 +208,43 @@
         }
     }
 
+    function openPreview() {
+        if (reportStructure.length === 0) {
+            coppAlert('Сначала добавьте хотя бы один лист со структурой!', 'warning');
+            return;
+        }
+        
+        const schema = JSON.stringify(reportStructure);
+        const name = document.getElementById('templateShortName').value.trim() || 'Предпросмотр отчета';
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("admin.preview_constructor") }}';
+        form.target = '_blank';
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        form.appendChild(csrfInput);
+        
+        const schemaInput = document.createElement('input');
+        schemaInput.type = 'hidden';
+        schemaInput.name = 'schema';
+        schemaInput.value = schema;
+        form.appendChild(schemaInput);
+        
+        const nameInput = document.createElement('input');
+        nameInput.type = 'hidden';
+        nameInput.name = 'name';
+        nameInput.value = name;
+        form.appendChild(nameInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    }
+
     function addSheet() {
         const title = document.getElementById('newSheetTitle').value.trim();
         if (!title) return;
@@ -197,20 +258,119 @@
         renderStructure(); 
     }
 
+    function toggleGroupMode(sIdx) {
+        const isGroup = document.getElementById(`groupMode-${sIdx}`).checked;
+        const typeSelect = document.getElementById(`type-${sIdx}`);
+        const reqCheck = document.getElementById(`req-${sIdx}`);
+        const hintInput = document.getElementById(`hint-${sIdx}`);
+        const labelInput = document.getElementById(`label-${sIdx}`);
+        
+        if (isGroup) {
+            typeSelect.disabled = true;
+            reqCheck.disabled = true;
+            hintInput.disabled = true;
+            hintInput.style.opacity = '0.3';
+            labelInput.placeholder = 'Введите название группы полей (например: "из них:")';
+        } else {
+            typeSelect.disabled = false;
+            reqCheck.disabled = false;
+            hintInput.disabled = false;
+            hintInput.style.opacity = '1';
+            labelInput.placeholder = 'Заголовок столбца';
+        }
+    }
+
+    function changeLevel(sIdx, fIdx, delta) {
+        if (!reportStructure[sIdx].fields[fIdx].level) {
+            reportStructure[sIdx].fields[fIdx].level = 0;
+        }
+        reportStructure[sIdx].fields[fIdx].level += delta;
+        if (reportStructure[sIdx].fields[fIdx].level < 0) {
+            reportStructure[sIdx].fields[fIdx].level = 0;
+        }
+        renderStructure();
+    }
+
+    function calculateNumbering(fields) {
+        let counters = [0, 0, 0, 0, 0, 0, 0];
+        let prevLevel = -1;
+        for (let f of fields) {
+            if (!f.level) f.level = 0;
+            if (f.level > prevLevel) {
+                counters[f.level] = 1;
+            } else if (f.level === prevLevel) {
+                counters[f.level]++;
+            } else {
+                counters[f.level]++;
+                for(let i = f.level + 1; i < counters.length; i++) counters[i] = 0;
+            }
+            prevLevel = f.level;
+            let numStr = "";
+            for(let i=0; i<=f.level; i++) numStr += counters[i] + ".";
+            f.numbering = numStr;
+        }
+    }
+
     function addFieldToSheet(sIdx) {
         const labelInput = document.getElementById(`label-${sIdx}`);
         const typeInput = document.getElementById(`type-${sIdx}`);
         const reqInput = document.getElementById(`req-${sIdx}`);
-        const multInput = document.getElementById(`mult-${sIdx}`);
         const hintInput = document.getElementById(`hint-${sIdx}`);
+        const groupInput = document.getElementById(`groupMode-${sIdx}`);
+        
         const label = labelInput.value.trim();
         if (!label) { coppAlert('Заполните заголовок показателя!', 'warning'); return; }
 
-        const name = `s${sIdx}_c${Date.now().toString().slice(-6)}`;
-        reportStructure[sIdx].fields.push({ name, label, type: typeInput.value, required: reqInput.checked, is_multiple: multInput.checked, hint: hintInput.value.trim() });
+        const isGroup = groupInput ? groupInput.checked : false;
+        
+        let level = 0;
+        const fields = reportStructure[sIdx].fields;
+        if (fields.length > 0) {
+            const lastField = fields[fields.length - 1];
+            level = (lastField.level || 0) + (lastField.isGroup ? 1 : 0);
+        }
+
+        // Поддержка и старого 'name', и нового 'id'
+        const fieldName = `s${sIdx}_c${Date.now().toString().slice(-6)}`;
+        
+        const newField = { 
+            name: fieldName, 
+            id: fieldName,
+            label: label, 
+            isGroup: isGroup, 
+            level: level,
+            validateSum: true
+        };
+        
+        if (!isGroup) {
+            newField.type = typeInput.value;
+            newField.required = reqInput.checked;
+            newField.hint = hintInput.value.trim();
+            
+            if (typeInput.value === 'select') {
+                const dictSelect = document.getElementById(`dict-${sIdx}`);
+                const dictId = dictSelect.value;
+                if (!dictId) {
+                    coppAlert('Пожалуйста, выберите шаблон для выпадающего списка!', 'warning');
+                    return;
+                }
+                const dictData = allDictionaries[dictId];
+                if (dictData) {
+                    newField.dictionary_id = parseInt(dictId);
+                    newField.dictionary_name = dictData.name;
+                    newField.options = dictData.items; // Снапшот вариантов
+                }
+            }
+        }
+
+        reportStructure[sIdx].fields.push(newField);
+        
         labelInput.value = '';
-        hintInput.value = '';
-        multInput.checked = false;
+        if (hintInput) hintInput.value = '';
+        // Скрываем обёртку блока выбора шаблона (а не сам select напрямую)
+        toggleDictionarySelect(sIdx, 'number');
+        typeInput.value = 'number'; // reset to default
+        
         renderStructure();
     }
 
@@ -248,9 +408,66 @@
         reportStructure[sIdx].fields[fIdx].hint = newHint.trim();
     }
 
+    function updateFieldValidateSum(sIdx, fIdx, validateSum) {
+        reportStructure[sIdx].fields[fIdx].validateSum = validateSum;
+        renderStructure();
+    }
+
     function removeField(sIdx, fIdx) { 
         reportStructure[sIdx].fields.splice(fIdx, 1); 
         renderStructure(); 
+    }
+
+    let draggedField = null;
+
+    function dragStartField(event, sIdx, fIdx) {
+        draggedField = { sIdx, fIdx };
+        event.dataTransfer.effectAllowed = 'move';
+        // Required for Firefox
+        event.dataTransfer.setData('text/plain', '');
+        event.currentTarget.style.opacity = '0.4';
+    }
+
+    function dragOverField(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        event.currentTarget.classList.add('bg-light', 'border-primary');
+    }
+
+    function dragLeaveField(event) {
+        event.currentTarget.classList.remove('bg-light', 'border-primary');
+    }
+
+    function dropField(event, targetSIdx, targetFIdx) {
+        event.preventDefault();
+        event.currentTarget.classList.remove('bg-light', 'border-primary');
+        event.currentTarget.style.opacity = '1';
+        
+        if (draggedField && draggedField.sIdx === targetSIdx && draggedField.fIdx !== targetFIdx) {
+            const fields = reportStructure[targetSIdx].fields;
+            const movedItem = fields.splice(draggedField.fIdx, 1)[0];
+            fields.splice(targetFIdx, 0, movedItem);
+            
+            // Adjust level if moved item's level is invalid in new position
+            let newLvl = movedItem.level || 0;
+            if (targetFIdx > 0) {
+                const prevLvl = fields[targetFIdx - 1].level || 0;
+                if (newLvl > prevLvl + 1) {
+                    newLvl = prevLvl + 1;
+                }
+            } else {
+                newLvl = 0;
+            }
+            movedItem.level = newLvl;
+            
+            renderStructure();
+        }
+        draggedField = null;
+    }
+
+    function dragEndField(event) {
+        event.currentTarget.style.opacity = '1';
+        draggedField = null;
     }
 
     function renderStructure() {
@@ -260,7 +477,25 @@
             return; 
         }
 
-        container.innerHTML = reportStructure.map((sheet, sIdx) => `
+        container.innerHTML = reportStructure.map((sheet, sIdx) => {
+            calculateNumbering(sheet.fields);
+            
+            // Подсчет количества дочерних элементов для каждого поля
+            let childrenCount = {};
+            let parentStack = [];
+            for (let i = 0; i < sheet.fields.length; i++) {
+                let lvl = sheet.fields[i].level || 0;
+                while (parentStack.length > 0 && parentStack[parentStack.length - 1].lvl >= lvl) {
+                    parentStack.pop();
+                }
+                if (parentStack.length > 0) {
+                    let pIdx = parentStack[parentStack.length - 1].idx;
+                    childrenCount[pIdx] = (childrenCount[pIdx] || 0) + 1;
+                }
+                parentStack.push({idx: i, lvl: lvl});
+            }
+            
+            return `
             <div class="card mb-4 border-primary-subtle shadow-sm">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3 gap-3">
                     <div class="d-flex align-items-center flex-grow-1 gap-2">
@@ -269,66 +504,128 @@
                     </div>
                     <button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0 flex-shrink-0">Удалить лист</button>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <div class="mb-4">
-                        ${sheet.fields.map((f, fIdx) => `
-                            <div class="py-3 border-bottom">
-                                <div class="d-flex align-items-start gap-3 mb-2">
-                                    <span class="text-muted small fw-bold constructor-idx mt-1">${fIdx + 1}.</span>
-                                    <textarea class="form-control form-control-sm constructor-textarea border-light-subtle" rows="2" oninput="updateFieldLabel(${sIdx}, ${fIdx}, this.value)">${String(f.label || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                        ${sheet.fields.map((f, fIdx) => {
+                            const lvl = f.level || 0;
+                            const canIndent = fIdx > 0 && lvl <= (sheet.fields[fIdx-1].level || 0);
+                            const canOutdent = lvl > 0;
+                            
+                            // Проверяем, включена ли проверка суммы (по умолчанию true)
+                            const validateSum = f.validateSum !== false;
+                            
+                            // Показывать ли подсказку? (если больше 2 детей и проверка включена)
+                            const hasManyChildren = (childrenCount[fIdx] > 2) && validateSum && !f.isGroup;
+
+                            let controlsHtml = '';
+                            if (f.isGroup) {
+                                controlsHtml = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Режим Группы</span><div class="flex-grow-1"></div>`;
+                            } else if (f.type === 'select') {
+                                controlsHtml = `
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-list-ul me-1"></i>${f.dictionary_name || 'Шаблон списка'}</span>
+                                <div class="form-check mb-0 ms-2">
+                                    <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
+                                    <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
-                                <div class="d-flex align-items-center gap-3 ms-4 ps-2 mb-2">
-                                    <select class="form-select form-select-sm w-auto text-muted" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
-                                        <option value="number" ${f.type === 'number' ? 'selected' : ''}>Числовое</option>
-                                        <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текстовое</option>
-                                    </select>
-                                    <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
-                                        <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
-                                    </div>
-                                    <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox" id="mult-${sIdx}-${fIdx}" ${f.is_multiple ? 'checked' : ''} onchange="updateFieldMultiple(${sIdx}, ${fIdx}, this.checked)">
-                                        <label class="form-check-label small text-dark" for="mult-${sIdx}-${fIdx}">Разрешить несколько значений (+)</label>
-                                    </div>
+                                <div class="flex-grow-1" style="min-width: 200px;">
+                                    <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                </div>`;
+                            } else {
+                                controlsHtml = `<select class="form-select form-select-sm w-auto text-muted" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
+                                    <option value="number" ${f.type === 'number' || f.type === 'Числовое' ? 'selected' : ''}>Числовое</option>
+                                    <option value="text" ${f.type === 'text' || f.type === 'Текстовое' ? 'selected' : ''}>Текстовое</option>
+                                </select>
+                                <div class="form-check mb-0 ms-2">
+                                    <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
+                                    <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center ms-4 ps-2">
-                                    <div class="flex-grow-1 me-3">
-                                        <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="2" placeholder="Подсказка для пользователя (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                <div class="form-check mb-0 border-start ps-3" style="display: ${f.type === 'text' ? 'none' : 'block'}">
+                                    <input class="form-check-input" type="checkbox" id="valsum-${sIdx}-${fIdx}" ${validateSum ? 'checked' : ''} onchange="updateFieldValidateSum(${sIdx}, ${fIdx}, this.checked)">
+                                    <label class="form-check-label small text-dark" for="valsum-${sIdx}-${fIdx}">Строгая проверка суммы</label>
+                                </div>
+                                <div class="flex-grow-1" style="min-width: 200px;">
+                                    <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                </div>`;
+                            }
+
+                            return `
+                            <div class="py-3 border-bottom field-row level-${lvl} rounded-end pe-2 position-relative"
+                                 draggable="true" 
+                                 ondragstart="dragStartField(event, ${sIdx}, ${fIdx})" 
+                                 ondragover="dragOverField(event)" 
+                                 ondragleave="dragLeaveField(event)"
+                                 ondrop="dropField(event, ${sIdx}, ${fIdx})"
+                                 ondragend="dragEndField(event)">
+                                <div class="d-flex align-items-start gap-2 mb-2">
+                                    <div class="btn-group btn-group-sm mt-1 me-2 shadow-sm flex-shrink-0" style="min-width: 50px;">
+                                        <button onclick="changeLevel(${sIdx}, ${fIdx}, -1)" class="btn btn-light border text-muted py-0 px-2 fw-bold" ${!canOutdent ? 'disabled' : ''}>&lt;</button>
+                                        <button onclick="changeLevel(${sIdx}, ${fIdx}, 1)" class="btn btn-light border text-muted py-0 px-2 fw-bold" ${!canIndent ? 'disabled' : ''}>&gt;</button>
                                     </div>
-                                    <div class="d-flex align-items-center gap-3 flex-shrink-0">
-                                        <span class="badge bg-light border text-muted font-monospace constructor-badge">${f.name}</span>
+                                    <span class="text-muted small fw-bold mt-1 text-nowrap">${f.numbering}</span>
+                                    <textarea class="form-control form-control-sm constructor-textarea border-light-subtle ${f.isGroup ? 'fw-bold' : ''}" rows="${f.isGroup ? '1' : '2'}" oninput="updateFieldLabel(${sIdx}, ${fIdx}, this.value)">${String(f.label || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                </div>
+                                <div class="d-flex align-items-center flex-wrap gap-3 ms-5 ps-4 mb-2">
+                                    ${controlsHtml}
+                                    <div class="d-flex align-items-center gap-3 flex-shrink-0 ms-auto">
+                                        <span class="badge bg-light border text-muted font-monospace constructor-badge">${f.name || f.id}</span>
                                         <button onclick="removeField(${sIdx}, ${fIdx})" class="btn btn-sm btn-link text-danger p-0 text-decoration-none fw-bold">Удалить</button>
                                     </div>
                                 </div>
+                                ${hasManyChildren ? `
+                                <div class="alert alert-warning py-1 px-3 mt-1 ms-5 ps-4 mb-2 small d-flex align-items-center border border-warning-subtle">
+                                    <i class="bi bi-lightbulb-fill me-2 text-warning fs-5"></i>
+                                    <span>У этого поля много вложенных элементов. Если они относятся к разным категориям, рекомендуем снять галочку «Строгая проверка суммы вложенных полей».</span>
+                                </div>
+                                ` : ''}
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
-                    <div class="bg-light p-3 rounded border border-light-subtle d-flex flex-column gap-2">
+                    <div class="bg-light p-3 rounded border border-light-subtle d-flex flex-column gap-2 shadow-sm">
                         <textarea id="label-${sIdx}" class="form-control form-control-sm constructor-textarea" placeholder="Заголовок столбца" rows="3"></textarea>
                         
-                        <div class="d-flex align-items-center gap-3">
-                            <select id="type-${sIdx}" class="form-select form-select-sm" style="width: 200px;">
-                                <option value="number">Числовое</option>
-                                <option value="text">Текстовое</option>
-                            </select>
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="checkbox" id="req-${sIdx}" checked>
-                                <label class="form-check-label small text-dark" for="req-${sIdx}">Обязательно</label>
+                        <div class="d-flex align-items-center gap-3 mt-1">
+                            <div class="d-flex gap-3 align-items-center flex-wrap">
+                                <select id="type-${sIdx}" class="form-select form-select-sm" style="width: 200px;" data-no-tomselect="true" onchange="toggleDictionarySelect(${sIdx}, this.value)">
+                                    <option value="number">Числовое</option>
+                                    <option value="text">Текстовое</option>
+                                    <option value="select">Выпадающий список</option>
+                                </select>
+                                
+                                <div id="dict-wrapper-${sIdx}" style="display: none;">
+                                    <select id="dict-${sIdx}" class="form-select form-select-sm" style="width: 250px;">
+                                        <option value="">-- Выберите шаблон списка --</option>
+                                        {% for dict in all_dictionaries %}
+                                        <option value="{{ dict.id }}">{{ dict.name }} ({{ dict.items|length }} вар.)</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="req-${sIdx}" checked>
+                                    <label class="form-check-label small text-dark" for="req-${sIdx}">Обязательно</label>
+                                </div>
                             </div>
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="checkbox" id="mult-${sIdx}">
-                                <label class="form-check-label small text-dark" for="mult-${sIdx}">Несколько значений (+)</label>
+                            
+                            <div class="form-check mb-0 ms-4 border-start ps-4">
+                                <input class="form-check-input" type="checkbox" id="groupMode-${sIdx}" onchange="toggleGroupMode(${sIdx})">
+                                <label class="form-check-label small fw-bold text-primary" for="groupMode-${sIdx}">Режим Группировки</label>
                             </div>
                         </div>
 
-                        <div class="d-flex align-items-start gap-2">
+                        <div class="d-flex align-items-start gap-2 mt-1">
                             <textarea id="hint-${sIdx}" class="form-control form-control-sm flex-grow-1 constructor-textarea" rows="2" placeholder="Подсказка (необязательно)"></textarea>
-                            <button onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-dark px-4 flex-shrink-0 mt-1">Добавить</button>
+                            <button onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-copp px-4 flex-shrink-0 mt-1 shadow-sm">Добавить</button>
                         </div>
                     </div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
+        
+        if (window.initTomSelects) {
+            window.initTomSelects(document.getElementById('sheetsContainer'));
+        }
     }
 
     function saveFullReportTemplate() {

@@ -91,6 +91,14 @@ def fill_report(template_id):
                                 return jsonify({'status': 'error', 'message': f'Значение в поле "{field["label"]}" должно быть числом.'}), 400
                         elif field.get('type') == 'text':
                             pass # No length restriction needed
+                            
+        # 3. Иерархическая валидация (суммы вложенных полей)
+        from app.utils import build_schema_tree
+        from app.services.validation_service import validate_hierarchy
+        schema_tree = build_schema_tree(schema)
+        is_valid, error_msg = validate_hierarchy(schema_tree, json_data)
+        if not is_valid:
+            return jsonify({'status': 'error', 'message': error_msg}), 400
         # ----------------------------
 
         submission.data = json_data
@@ -99,8 +107,21 @@ def fill_report(template_id):
         return jsonify({'status': 'success'})
         
     # Отрисовка формы для пользователя (GET запрос)
+    from app.utils import build_schema_tree
+    import copy
+    
+    schema_obj = template.schema
+    if isinstance(schema_obj, str):
+        import json
+        try:
+            schema_obj = json.loads(schema_obj)
+        except:
+            schema_obj = []
+            
+    schema_tree = build_schema_tree(schema_obj)
+    
     template_name = 'mobile/fill_report.html' if is_mobile(request) else 'fill_report.html'
-    return render_template(template_name, template=template, submission=submission, is_locked=is_locked)
+    return render_template(template_name, template=template, schema=schema_tree, submission=submission, is_locked=is_locked)
 
 @reports_bp.route('/fill/<int:template_id>/previous_data', methods=['GET'])
 @login_required
@@ -148,25 +169,41 @@ def get_previous_data(template_id):
     old_schema = get_schema(previous_template)
     new_schema = get_schema(template)
     
-    # 1. Map old field name to normalized label
-    old_name_to_norm = {}
-    for sheet in old_schema:
-        for field in sheet.get('fields', []):
-            old_name_to_norm[field['name']] = normalize_label(field.get('label', ''))
-            
-    # 2. Map normalized label to new field name
-    norm_to_new_name = {}
-    for sheet in new_schema:
-        for field in sheet.get('fields', []):
-            norm_to_new_name[normalize_label(field.get('label', ''))] = field['name']
-            
+    def build_path_mapping(schema):
+        mapping = {}
+        for sheet in schema:
+            stack = []
+            for field in sheet.get('fields', []):
+                level = int(field.get('level', 0))
+                norm = normalize_label(field.get('label', ''))
+                
+                while stack and stack[-1]['level'] >= level:
+                    stack.pop()
+                    
+                path = '/'.join([s['norm'] for s in stack] + [norm])
+                
+                # Если такой путь уже есть (одинаковые поля на одном уровне), добавляем индекс
+                original_path = path
+                counter = 1
+                while path in mapping.values():
+                    path = f"{original_path}_{counter}"
+                    counter += 1
+                
+                mapping[field['name']] = path
+                stack.append({'level': level, 'norm': norm})
+        return mapping
+
+    old_name_to_path = build_path_mapping(old_schema)
+    new_name_to_path = build_path_mapping(new_schema)
+    path_to_new_name = {path: name for name, path in new_name_to_path.items()}
+    
     # 3. Translate old data to new data
     mapped_data = {}
     for old_name, value in prev_submission.data.items():
-        if old_name in old_name_to_norm:
-            norm_label = old_name_to_norm[old_name]
-            if norm_label in norm_to_new_name:
-                new_name = norm_to_new_name[norm_label]
+        if old_name in old_name_to_path:
+            path = old_name_to_path[old_name]
+            if path in path_to_new_name:
+                new_name = path_to_new_name[path]
                 mapped_data[new_name] = value
         else:
             # If field wasn't in schema (e.g. meta field), just pass it along just in case

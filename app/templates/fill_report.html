@@ -7,11 +7,27 @@
 {% extends "base.html" %}
 {% block title %}ЦОПП | Заполнение отчета{% endblock %}
 {% block content %}
-<div class="card mb-5">
+<style>
+    .edge-to-edge-hr {
+        border-top: 1px dashed #dee2e6 !important;
+        opacity: 1;
+        margin-top: 2.5rem;
+        margin-bottom: 2.5rem;
+        margin-left: -1.5rem;
+        margin-right: -1.5rem;
+    }
+    @media (min-width: 768px) {
+        .edge-to-edge-hr {
+            margin-left: -3rem;
+            margin-right: -3rem;
+        }
+    }
+</style>
+<div class="card mb-5 shadow-none border-0">
     <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
         <h4 class="fw-bold text-dark mb-4">{{ template.name }}</h4>
         <ul class="nav nav-tabs" id="excelSheetsTabs" role="tablist">
-            {% for sheet in template.schema %}
+            {% for sheet in schema %}
             <li class="nav-item"><button class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab"
                     data-bs-target="#sheet-{{ loop.index }}" type="button">{{ sheet.sheet_title }}</button></li>
             {% endfor %}
@@ -19,7 +35,14 @@
     </div>
 
     <div class="card-body p-4 p-md-5">
-        {% if is_locked %}
+        {% if is_preview %}
+        <div class="alert bg-primary bg-opacity-10 border-primary border-opacity-25 text-primary small shadow-sm mb-5 p-3 rounded d-flex align-items-center gap-2">
+            <i class="bi bi-eye fs-4"></i>
+            <div>
+                <strong>Режим предпросмотра.</strong> Это то, как форму увидят заполняющие. Отправка и автосохранение отключены.
+            </div>
+        </div>
+        {% elif is_locked %}
         <div
             class="alert bg-danger bg-opacity-10 border-danger border-opacity-25 text-danger small shadow-sm mb-5 p-3 rounded">
             <strong>Срок сдачи отчета истек.</strong> Форма переведена в режим "Только чтение". Редактирование
@@ -64,55 +87,103 @@
         <form id="reportForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="tab-content">
-                {% for sheet in template.schema %}
+                {% for sheet in schema %}
                 <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="sheet-{{ loop.index }}"
                     role="tabpanel">
-                    <div class="row g-4 mt-1">
-                        {% for field in sheet.fields %}
+                    {% macro render_input(field, submission, is_locked) %}
+                        {% if field.hint and not is_locked %}
+                        <div class="form-text mt-0 mb-2 small text-muted">{{ field.hint }}</div>
+                        {% endif %}
                         
-                        <div class="col-12">
-                            <label class="form-label text-dark small fw-bold d-flex align-items-start gap-2 mb-1">
-                                <span class="text-muted">{{ loop.index }}.</span> 
-                                <span>{{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}</span>
-                            </label>
-                            {% if field.hint and not is_locked %}
-                            <div class="form-text mt-0 mb-2 small text-muted">{{ field.hint }}</div>
-                            {% endif %}
+                        {% if field.is_multiple %}
+                            {% set raw_val = submission.data.get(field.name) if submission else None %}
+                            {% set field_values = raw_val if raw_val is not none and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val is not none else ['']) %}
                             
-                            {% if field.is_multiple %}
-                                {% set raw_val = submission.data.get(field.name) if submission else None %}
-                                {% set field_values = raw_val if raw_val and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val else ['']) %}
-                                
-                                <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
-                                    {% for v in field_values %}
-                                    <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
-                                        {% if field.type == 'text' %}
-                                            <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ v }}</textarea>
-                                        {% else %}
-                                            <input type="{{ field.type }}" class="form-control" data-multiple="true" name="{{ field.name }}"
-                                                value="{{ v }}" min="0" step="any" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
-                                        {% endif %}
-                                        {% if not is_locked %}
-                                        <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
-                                        {% endif %}
-                                    </div>
-                                    {% endfor %}
+                            <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
+                                {% for v in field_values %}
+                                <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
+                                    {% if field.type == 'text' or field.type == 'Текстовое' %}
+                                        <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ v }}</textarea>
+                                    {% elif field.type == 'select' %}
+                                        <select class="form-select" data-multiple="true" name="{{ field.name }}" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                            <option value="">-- Выберите значение --</option>
+                                            {% for opt in field.options %}
+                                            <option value="{{ opt }}" {% if v == opt %}selected{% endif %}>{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    {% else %}
+                                        <input type="number" class="form-control" data-multiple="true" name="{{ field.name }}"
+                                            value="{{ v }}" min="0" step="any" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                    {% endif %}
                                     {% if not is_locked %}
-                                    <button type="button" class="btn btn-add-dynamic" onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
-                                        <i class="bi bi-plus-circle"></i> Добавить еще поле
-                                    </button>
+                                    <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
                                     {% endif %}
                                 </div>
+                                {% endfor %}
+                                {% if not is_locked %}
+                                <button type="button" class="btn btn-add-dynamic mt-1" 
+                                        data-options="{% if field.type == 'select' %}{{ field.options | tojson | forceescape }}{% else %}[]{% endif %}"
+                                        onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
+                                    <i class="bi bi-plus-circle"></i> Добавить еще
+                                </button>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            {% if field.type == 'text' or field.type == 'Текстовое' %}
+                                <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                            {% elif field.type == 'select' %}
+                                <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                    <option value="">-- Выберите значение --</option>
+                                    {% for opt in field.options %}
+                                    <option value="{{ opt }}" {% if submission and submission.data.get(field.name) == opt %}selected{% endif %}>{{ opt }}</option>
+                                    {% endfor %}
+                                </select>
                             {% else %}
-                                {% if field.type == 'text' %}
-                                    <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                                <input type="number" class="form-control" name="{{ field.name }}"
+                                    value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                            {% endif %}
+                        {% endif %}
+                    {% endmacro %}
+
+                    {% macro render_field_node(node, submission, is_locked) %}
+                        {% set field = node.field %}
+                        {% set lvl = field.level|default(0)|int %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-dark d-flex align-items-start gap-2 mb-1 {% if lvl == 0 %}fw-bold fs-6{% else %}small fw-semibold{% endif %}">
+                                <span class="text-muted">{{ field.numbering|default('') }}</span> 
+                                <span>{{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}</span>
+                            </label>
+                            {{ render_input(field, submission, is_locked) }}
+                            
+                            {% if node.children %}
+                                {% if lvl == 0 %}
+                                <div class="mt-3">
+                                    <div class="row g-4">
+                                        {% for child in node.children %}
+                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                                {{ render_field_node(child, submission, is_locked) }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
                                 {% else %}
-                                    <input type="{{ field.type }}" class="form-control" name="{{ field.name }}"
-                                        value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                <div class="mt-2">
+                                    {% for child in node.children %}
+                                        {{ render_field_node(child, submission, is_locked) }}
+                                    {% endfor %}
+                                </div>
                                 {% endif %}
                             {% endif %}
-                            
                         </div>
+                    {% endmacro %}
+
+                    <div class="mt-4">
+                        {% for node in sheet.fields_tree %}
+                            {{ render_field_node(node, submission, is_locked) }}
+                            {% if not loop.last %}
+                                <hr class="edge-to-edge-hr">
+                            {% endif %}
                         {% endfor %}
                     </div>
                 </div>
@@ -121,35 +192,37 @@
             <hr class="border-secondary opacity-10 my-5">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div class="d-flex flex-column">
-                    <span class="text-muted small">{% if is_locked %}Просмотр исторической записи.{% else %}Данные сохраняются в единый документ.{% endif %}</span>
-                    {% if not is_locked %}
+                    <span class="text-muted small">
+                        {% if is_preview %}Только для просмотра.{% elif is_locked %}Просмотр исторической записи.{% else %}Данные сохраняются в единый документ.{% endif %}
+                    </span>
+                    {% if not is_locked and not is_preview %}
                     <span id="autosave-indicator" class="text-success small fw-medium mt-1" style="opacity: 0; transition: opacity 0.3s;">
                         <i class="bi bi-check-circle"></i> <span id="autosave-time"></span>
                     </span>
                     {% endif %}
                 </div>
-                {% if not is_locked %}
+                {% if not is_locked and not is_preview %}
                 <div class="d-flex gap-2 flex-wrap justify-content-between w-100 mt-2 align-items-center">
                     <div class="d-flex gap-2 flex-wrap">
                         <a href="{{ url_for('reports.dashboard') }}" class="btn btn-light border px-4 py-2 d-flex align-items-center gap-2">
-                            <i class="bi bi-arrow-left"></i> На главную
+                            На главную
                         </a>
                         <button type="button" onclick="loadPreviousData()" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2" id="btn-no-changes">
-                            <i class="bi bi-clock-history text-secondary"></i> Без изменений
+                            Без изменений
                         </button>
                         <button type="button" onclick="saveDraftManual(this)" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2">
-                            <i class="bi bi-save"></i> Сохранить черновик
+                            Сохранить черновик
                         </button>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
                         <button type="button" class="btn btn-light border px-4 py-2 d-none align-items-center gap-2" id="btn-prev-step" onclick="prevTab()">
-                            <i class="bi bi-arrow-left"></i> Шаг назад
+                            Шаг назад
                         </button>
                         <button type="button" class="btn btn-copp px-4 py-2 d-flex align-items-center gap-2" id="btn-next-step" onclick="nextTab()">
-                            Далее <i class="bi bi-arrow-right"></i>
+                            Далее
                         </button>
                         <button type="button" id="btn-submit-report" onclick="submitFullForm(this)" class="btn btn-copp px-5 py-2 d-none align-items-center gap-2">
-                            <i class="bi bi-check2"></i> Сдать отчет
+                            Сдать отчет
                         </button>
                     </div>
                 </div>
@@ -159,8 +232,15 @@
     </div>
 </div>
 
+<script>
+    // Передаем схему в JS для валидации
+    const schemaTree = {{ schema | tojson | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/report_validation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 <script>
+    let runClientValidation = null;
+    
     // Инициализация Bootstrap Tooltips для иконок подсказок
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
@@ -171,8 +251,25 @@
     const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
     const form = document.getElementById('reportForm');
     
+    function getFormDataObj(formElement) {
+        const formData = new FormData(formElement);
+        const dataObj = {};
+        
+        const multipleInputs = Array.from(formElement.querySelectorAll('[data-multiple="true"]'));
+        const multipleNames = new Set(multipleInputs.map(el => el.name));
+        
+        for (const key of new Set(formData.keys())) {
+            if (multipleNames.has(key)) {
+                dataObj[key] = formData.getAll(key).filter(v => v.trim() !== '');
+            } else {
+                dataObj[key] = formData.get(key);
+            }
+        }
+        return dataObj;
+    }
+    
     // Логика мастера (wizard)
-    const totalTabs = {{ template.schema|length }};
+    const totalTabs = {{ schema|length }};
     let currentTabIndex = 0; // 0-indexed
 
     function updateWizardButtons(index) {
@@ -243,6 +340,12 @@
 
     // Восстановление данных и инициализация
     document.addEventListener("DOMContentLoaded", () => {
+        {% if is_preview %}
+        const IS_PREVIEW = true;
+        {% else %}
+        const IS_PREVIEW = false;
+        {% endif %}
+        
         // Подключение отслеживания ручного переключения вкладок
         const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"]');
         tabElements.forEach((tab, index) => {
@@ -253,7 +356,7 @@
         });
         updateWizardButtons(0);
 
-        {% if not is_locked %}
+        {% if not is_locked and not is_preview %}
         const savedDraft = localStorage.getItem(DRAFT_KEY);
         if (savedDraft) {
             try {
@@ -288,7 +391,9 @@
         // Настройка сохранения при изменении
         let autosaveTimeout;
         let fadeOutTimeout;
-        form.addEventListener('input', () => {
+        // Автосохранение при изменении (input для текста/числа, change для Tom Select)
+        const triggerAutosave = () => {
+            if (IS_PREVIEW) return;
             clearTimeout(autosaveTimeout);
             clearTimeout(fadeOutTimeout);
             
@@ -319,27 +424,20 @@
                     }, 3000);
                 }
             }, 1000); // Сохраняем с задержкой в 1 секунду после окончания ввода
-        });
+        };
+
+        // Слушаем ввод текста/чисел
+        form.addEventListener('input', triggerAutosave);
+        // Слушаем выбор из выпадающих списков (Tom Select генерирует 'change')
+        form.addEventListener('change', triggerAutosave);
+
         {% endif %}
-    });
-
-    function getFormDataObj(formElement) {
-        const formData = new FormData(formElement);
-        const dataObj = {};
         
-        const multipleInputs = Array.from(formElement.querySelectorAll('[data-multiple="true"]'));
-        const multipleNames = new Set(multipleInputs.map(el => el.name));
-        
-        for (const key of new Set(formData.keys())) {
-            if (multipleNames.has(key)) {
-                dataObj[key] = formData.getAll(key).filter(v => v.trim() !== '');
-            } else {
-                dataObj[key] = formData.get(key);
-            }
+        // Инициализация клиентской валидации (суммы вложенных полей)
+        if (typeof initRealTimeValidation === 'function') {
+            runClientValidation = initRealTimeValidation(schemaTree, getFormDataObj, form);
         }
-        return dataObj;
-    }
-
+    });
     
     function saveDraftManual(btn) {
         const originalHtml = btn.innerHTML;
@@ -372,6 +470,12 @@
 
     function submitFullForm(btn) {
         if (!form.reportValidity()) {
+            return;
+        }
+        
+        // Клиентская валидация иерархии сумм
+        if (runClientValidation && !runClientValidation()) {
+            coppAlert('Пожалуйста, исправьте ошибки валидации сумм перед отправкой (подсвечены красным).', 'warning');
             return;
         }
         
@@ -416,14 +520,24 @@
         item.className = 'dynamic-field-item d-flex gap-2 mb-2 align-items-start';
         
         let inputHtml = '';
-        if (type === 'text') {
+        if (type === 'text' || type === 'Текстовое') {
             inputHtml = `<textarea class="form-control" data-multiple="true" name="${name}" rows="2"></textarea>`;
+        } else if (type === 'select') {
+            const options = JSON.parse(btn.dataset.options || '[]');
+            let optionsHtml = `<option value="">-- Выберите значение --</option>`;
+            options.forEach(opt => {
+                optionsHtml += `<option value="${opt}">${opt}</option>`;
+            });
+            inputHtml = `<select class="form-select" data-multiple="true" name="${name}">${optionsHtml}</select>`;
         } else {
-            inputHtml = `<input type="${type}" class="form-control" data-multiple="true" name="${name}" value="" min="0" step="any">`;
+            inputHtml = `<input type="number" class="form-control" data-multiple="true" name="${name}" value="" min="0" step="any">`;
         }
         
         item.innerHTML = inputHtml + `<button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>`;
         wrapper.insertBefore(item, btn);
+        if (window.initTomSelects) {
+            window.initTomSelects(item);
+        }
     }
     
     function removeDynamicField(btn) {
@@ -450,7 +564,11 @@
                     for (const [name, value] of Object.entries(data.data)) {
                         const field = form.elements[name];
                         if (field) {
-                            field.value = value;
+                            if (field.tomselect) {
+                                field.tomselect.setValue(value);
+                            } else {
+                                field.value = value;
+                            }
                             updatedCount++;
                         }
                     }

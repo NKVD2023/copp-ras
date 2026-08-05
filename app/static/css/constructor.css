@@ -15,3 +15,15 @@
     /* Добавляем плавность появления эффекта */
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
+
+/* Стили для вложенности полей */
+.level-0 { border-left: 3px solid transparent; }
+.level-1 { border-left: 3px solid #0d6efd; margin-left: 40px !important; background-color: #f8faff; }
+.level-2 { border-left: 3px solid #198754; margin-left: 80px !important; background-color: #f6fcf8; }
+.level-3 { border-left: 3px solid #ffc107; margin-left: 120px !important; background-color: #fffdf6; }
+.level-4 { border-left: 3px solid #dc3545; margin-left: 160px !important; background-color: #fff5f5; }
+.level-5 { border-left: 3px solid #6f42c1; margin-left: 200px !important; background-color: #fcfaff; }
+
+.field-row { transition: all 0.2s ease-in-out; }
+.constructor-textarea { background-color: #fcfcfc; }
+.constructor-textarea:focus { background-color: #fff; }

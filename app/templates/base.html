@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -41,7 +42,7 @@
         </div>
     </header>
     
-    <div class="container mt-5 mb-5">
+    <div class="{% block container_class %}container{% endblock %} mt-5 mb-5">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -62,6 +63,7 @@
 
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script>
         window.coppAlert = function(text, type='info', title='Внимание') {
             return Swal.fire({
@@ -88,6 +90,22 @@
                 }
             });
         };
+
+        window.initTomSelects = function(container = document) {
+            if (typeof TomSelect === 'undefined') return;
+            container.querySelectorAll('select.form-select').forEach(el => {
+                if (!el.tomselect && !el.hasAttribute('data-no-tomselect')) {
+                    new TomSelect(el, {
+                        create: false,
+                        maxOptions: null // Убираем ограничение на 50 элементов при скролле
+                    });
+                }
+            });
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            window.initTomSelects();
+        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>

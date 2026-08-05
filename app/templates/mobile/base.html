@@ -15,6 +15,9 @@
     <!-- Toastify CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     
+    <!-- Tom Select (красивые выпадающие списки с поиском) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css">
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -125,6 +128,22 @@
                 }
             }).showToast();
         }
+    </script>
+    <!-- Tom Select JS -->
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        window.initTomSelects = function(container = document) {
+            if (typeof TomSelect === 'undefined') return;
+            container.querySelectorAll('select.form-select').forEach(el => {
+                if (!el.tomselect && !el.hasAttribute('data-no-tomselect')) {
+                    new TomSelect(el, {
+                        create: false,
+                        maxOptions: null
+                    });
+                }
+            });
+        };
+        document.addEventListener('DOMContentLoaded', () => window.initTomSelects());
     </script>
     {% block scripts %}{% endblock %}
 </body>

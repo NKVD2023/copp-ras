@@ -34,36 +34,47 @@
     {% endif %}
 
     <div class="d-flex justify-content-between align-items-end mb-1">
-        <div class="fw-bold small text-muted" id="wizard-progress-text">Шаг 1 из {{ template.schema|length }}</div>
+        <div class="fw-bold small text-muted" id="wizard-progress-text">Шаг 1 из {{ schema|length }}</div>
         <div id="autosave-indicator" class="small text-success" style="opacity: 0; transition: opacity 0.3s;"><i class="bi bi-check-circle"></i> Сохранено</div>
     </div>
     <div class="progress mb-4" style="height: 6px; border-radius: 3px;">
         <div class="progress-bar" id="wizard-progress-bar" role="progressbar" style="background-color: #00334e; width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
     </div>
 
-    {% for sheet in template.schema %}
+    {% for sheet in schema %}
     <div class="wizard-step {% if loop.first %}active{% endif %}" id="step-{{ loop.index }}">
-        <div class="mobile-card">
+        <div class="mobile-card shadow-none border-0">
             <h6 class="fw-bold text-primary mb-3">{{ sheet.sheet_title }}</h6>
             
             {% for field in sheet.fields %}
+            {% set lvl = field.level|default(0)|int %}
+            {% if lvl == 0 and not loop.first %}
+                <hr style="border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1;">
+            {% endif %}
             <div class="mb-4">
                 <label class="form-label small d-flex align-items-center gap-1">
-                    {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                    {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
                 </label>
                 
                 {% if field.is_multiple %}
                     {% set raw_val = submission.data.get(field.name) if submission else None %}
-                    {% set field_values = raw_val if raw_val and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val else ['']) %}
+                    {% set field_values = raw_val if raw_val is not none and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val is not none else ['']) %}
                     
                     <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
                         {% for v in field_values %}
                         <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
-                            {% if field.type == 'text' %}
+                            {% if field.type == 'text' or field.type == 'Текстовое' %}
                                 <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ v }}</textarea>
+                            {% elif field.type == 'select' %}
+                                <select class="form-select" data-multiple="true" name="{{ field.name }}" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                    <option value="">-- Выберите значение --</option>
+                                    {% for opt in field.options %}
+                                    <option value="{{ opt }}" {% if v == opt %}selected{% endif %}>{{ opt }}</option>
+                                    {% endfor %}
+                                </select>
                             {% else %}
-                                <input type="{{ field.type }}" class="form-control" data-multiple="true" name="{{ field.name }}"
-                                    value="{{ v }}" min="0" step="any" {% if field.type == 'number' %}inputmode="decimal"{% endif %} {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                <input type="number" class="form-control" data-multiple="true" name="{{ field.name }}"
+                                    value="{{ v }}" min="0" step="any" inputmode="decimal" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
                             {% endif %}
                             {% if not is_locked %}
                             <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
@@ -71,17 +82,26 @@
                         </div>
                         {% endfor %}
                         {% if not is_locked %}
-                        <button type="button" class="btn-add-dynamic-mobile" onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
+                        <button type="button" class="btn-add-dynamic-mobile" 
+                                data-options="{% if field.type == 'select' %}{{ field.options | tojson | forceescape }}{% else %}[]{% endif %}"
+                                onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
                             + Добавить еще
                         </button>
                         {% endif %}
                     </div>
                 {% else %}
-                    {% if field.type == 'text' %}
-                        <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                    {% if field.type == 'text' or field.type == 'Текстовое' %}
+                        <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name) or '' if submission else '' }}</textarea>
+                    {% elif field.type == 'select' %}
+                        <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                            <option value="">-- Выберите значение --</option>
+                            {% for opt in field.options %}
+                            <option value="{{ opt }}" {% if submission and submission.data.get(field.name) == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
                     {% else %}
-                        <input type="{{ field.type }}" class="form-control" name="{{ field.name }}"
-                            value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.type == 'number' %}inputmode="decimal"{% endif %} {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                        <input type="number" class="form-control" name="{{ field.name }}"
+                            value="{{ submission.data.get(field.name) or '' if submission else '' }}" min="0" step="any" inputmode="decimal" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
                     {% endif %}
                 {% endif %}
                 
@@ -119,8 +139,14 @@
 
 {% block scripts %}
 <script>
+    // Передаем схему в JS для валидации
+    const schemaTree = {{ schema | tojson | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/report_validation.js') }}"></script>
+<script>
+    let runClientValidation = null;
     let currentStep = 1;
-    const totalSteps = {{ template.schema|length }};
+    const totalSteps = {{ schema|length }};
     const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
     const form = document.getElementById('reportForm');
     
@@ -241,6 +267,11 @@
                 prevStep();
             }
         }
+        
+        // Инициализация клиентской валидации (суммы вложенных полей)
+        if (typeof initRealTimeValidation === 'function') {
+            runClientValidation = initRealTimeValidation(schemaTree, getFormData, form);
+        }
     });
 
     function getFormData() {
@@ -329,6 +360,12 @@
             form.reportValidity();
             return;
         }
+        
+        // Клиентская валидация иерархии сумм
+        if (runClientValidation && !runClientValidation()) {
+            showNotification('Пожалуйста, исправьте ошибки валидации сумм перед отправкой (подсвечены красным).', 'warning');
+            return;
+        }
 
         const originalText = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Отправка...';
@@ -370,6 +407,13 @@
         let inputHtml = '';
         if (type === 'text') {
             inputHtml = `<textarea class="form-control" data-multiple="true" name="${name}" rows="2">${value}</textarea>`;
+        } else if (type === 'select') {
+            const options = JSON.parse(btn.dataset.options || '[]');
+            let optionsHtml = `<option value="">-- Выберите значение --</option>`;
+            options.forEach(opt => {
+                optionsHtml += `<option value="${opt}">${opt}</option>`;
+            });
+            inputHtml = `<select class="form-select" data-multiple="true" name="${name}">${optionsHtml}</select>`;
         } else {
             inputHtml = `<input type="${type}" class="form-control" data-multiple="true" name="${name}" value="${value}" min="0" step="any">`;
         }
