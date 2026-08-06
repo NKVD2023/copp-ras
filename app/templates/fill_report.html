@@ -129,19 +129,21 @@
                                 {% endif %}
                             </div>
                         {% else %}
-                            {% if field.type == 'text' or field.type == 'Текстовое' %}
-                                <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
-                            {% elif field.type == 'select' %}
-                                <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
-                                    <option value="">-- Выберите значение --</option>
-                                    {% for opt in field.options %}
-                                    <option value="{{ opt }}" {% if submission and submission.data.get(field.name) == opt %}selected{% endif %}>{{ opt }}</option>
-                                    {% endfor %}
-                                </select>
-                            {% else %}
-                                <input type="number" class="form-control" name="{{ field.name }}"
-                                    value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
-                            {% endif %}
+                            <div class="input-wrapper mt-2">
+                                {% if field.type == 'text' or field.type == 'Текстовое' %}
+                                    <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                                {% elif field.type == 'select' %}
+                                    <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                        <option value="">-- Выберите значение --</option>
+                                        {% for opt in field.options %}
+                                        <option value="{{ opt }}" {% if submission and submission.data.get(field.name) == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="number" class="form-control" name="{{ field.name }}"
+                                        value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                {% endif %}
+                            </div>
                         {% endif %}
                     {% endmacro %}
 
@@ -159,9 +161,9 @@
                             {% if node.children %}
                                 {% if lvl == 0 %}
                                 <div class="mt-3">
-                                    <div class="row g-4">
+                                    <div class="fields-grid">
                                         {% for child in node.children %}
-                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                            <div>
                                                 {{ render_field_node(child, submission, is_locked) }}
                                             </div>
                                         {% endfor %}

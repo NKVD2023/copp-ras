@@ -74,3 +74,19 @@
     color: var(--primary-color) !important;
     border-bottom: 2px solid var(--primary-color);
 }
+
+/* ==================================================
+   Адаптивная сетка полей в заполнении отчета
+   ================================================== */
+.fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.input-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
