@@ -6,52 +6,6 @@
 <div id="section-active" class="content-section">
     <h5 class="fw-bold mb-3 text-dark">К заполнению</h5>
     
-    {% if overdue_templates %}
-        <div class="mb-4 d-none">
-            <h6 class="text-danger fw-bold small text-uppercase mb-2">Просроченные</h6>
-            <div class="d-flex flex-column gap-3">
-            {% for template in overdue_templates %}
-                {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
-                {% set is_overdue = True %}
-                {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe3e3 50%, #ffcaca 100%); border-color: #ffcaca;" %}
-                
-                <div class="card shadow-sm p-3 position-relative d-flex flex-column" style="{{ card_style }} border-radius: 12px;">
-                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                        <span class="badge bg-white text-dark border"><i class="bi bi-calendar"></i> Период: {{ template.period or 'не указан' }}</span>
-                        {% if template.attachments|length > 0 %}
-                        <span class="badge bg-secondary border"><i class="bi bi-paperclip"></i> Файлов: {{ template.attachments|length }}</span>
-                        {% endif %}
-                    </div>
-                    <h6 class="card-title fw-bold text-dark mb-2">{{ template.short_name or template.name }}</h6>
-                    {% if template.name and template.name != template.short_name %}
-                    <p class="text-muted small mb-3" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="{{ template.name }}">{{ template.name }}</p>
-                    {% endif %}
-                    
-                    <div class="mt-auto pt-2">
-                        <div class="d-flex justify-content-start align-items-center mb-3 small flex-wrap gap-2">
-                            <span class="fw-medium text-dark">До:</span>
-                            <span class="text-danger fw-bold d-flex align-items-center gap-1">
-                                <i class="bi bi-clock"></i>
-                                {{ template.deadline.strftime('%d.%m.%Y') }}
-                            </span>
-                            <span class="badge bg-danger text-white border border-danger ms-1">Просрочено</span>
-                        </div>
-                        <div class="action-buttons-container" data-template-id="{{ template.id }}">
-                            <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2 btn-default-fill" style="background-color: #00334e; color: white; border-radius: 8px;">
-                                <i class="bi bi-pencil-square"></i> Заполнить форму
-                            </a>
-                            <div class="d-none gap-2 btn-draft-split">
-                                <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-50 d-flex align-items-center justify-content-center" style="background-color: #00334e; color: white; border-radius: 8px;">Черновик</a>
-                                <a href="#" onclick="clearDraftAndStart('{{ template.id }}', '{{ url_for('reports.fill_report', template_id=template.id) }}'); return false;" class="btn btn-outline-secondary w-50 d-flex align-items-center justify-content-center" style="border-radius: 8px;">Заново</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-            </div>
-        </div>
-    {% endif %}
-
     {% if unfilled_templates %}
         <div class="d-flex flex-column gap-3">
             {% for template in unfilled_templates %}
@@ -114,12 +68,10 @@
             {% endfor %}
         </div>
     {% else %}
-        {% if not overdue_templates %}
         <div class="text-center py-5 text-muted">
             <i class="bi bi-check-circle fs-1 mb-2 d-block"></i>
             <p>У вас нет активных отчетов для сдачи.</p>
         </div>
-        {% endif %}
     {% endif %}
     
     {% if attached_files %}
@@ -283,103 +235,5 @@
             });
         };
     });
-    
-    // Analytics Logic for Mobile
-    let mobileCharts = [];
 
-    function loadMobileAnalytics() {
-        const select = document.getElementById('mobileAnalyticsReportSelect');
-        if (select.options.length > 1) return; // Уже загружали
-        
-        fetch('/api/my_analytics/reports')
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    select.innerHTML = '<option value="">-- Выберите отчет --</option>';
-                    data.reports.forEach(name => {
-                        const opt = document.createElement('option');
-                        opt.value = name;
-                        opt.textContent = name;
-                        select.appendChild(opt);
-                    });
-                }
-            });
-    }
-
-    function fetchMobileAnalyticsData(shortName) {
-        const container = document.getElementById('mobileAnalyticsChartsContainer');
-        const emptyState = document.getElementById('mobileAnalyticsEmptyState');
-        
-        mobileCharts.forEach(c => c.destroy());
-        mobileCharts = [];
-        container.innerHTML = '';
-        
-        if (!shortName) {
-            if(emptyState) emptyState.style.display = 'block';
-            return;
-        }
-        
-        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-secondary" role="status"></div></div>';
-        
-        fetch('/api/my_analytics/data/' + encodeURIComponent(shortName))
-            .then(res => res.json())
-            .then(data => {
-                container.innerHTML = ''; // Убираем лоадер
-                
-                if (data.status === 'success' && data.periods.length > 0 && Object.keys(data.datasets).length > 0) {
-                    let chartIdx = 0;
-                    for (const [label, values] of Object.entries(data.datasets)) {
-                        const card = document.createElement('div');
-                        card.className = 'card shadow-sm';
-                        card.style.borderRadius = '12px';
-                        card.innerHTML = `
-                            <div class="card-body">
-                                <h6 class="card-title fw-bold text-dark text-truncate" title="${label}">${label}</h6>
-                                <canvas id="mobileChart-${chartIdx}" style="max-height: 200px;"></canvas>
-                            </div>
-                        `;
-                        container.appendChild(card);
-                        
-                        const ctx = document.getElementById(`mobileChart-${chartIdx}`).getContext('2d');
-                        const isBar = chartIdx % 2 !== 0; 
-                        const colorIndex = chartIdx % 5;
-                        const colors = [
-                            'rgba(0, 51, 78, 0.7)',
-                            'rgba(40, 167, 69, 0.7)',
-                            'rgba(23, 162, 184, 0.7)',
-                            'rgba(255, 193, 7, 0.7)',
-                            'rgba(108, 117, 125, 0.7)'
-                        ];
-                        
-                        const chart = new Chart(ctx, {
-                            type: isBar ? 'bar' : 'line',
-                            data: {
-                                labels: data.periods,
-                                datasets: [{
-                                    label: label,
-                                    data: values,
-                                    backgroundColor: colors[colorIndex],
-                                    borderColor: colors[colorIndex].replace('0.7', '1'),
-                                    borderWidth: 2,
-                                    fill: !isBar ? true : false,
-                                    tension: 0.3
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: { legend: { display: false } },
-                                scales: { y: { beginAtZero: true } }
-                            }
-                        });
-                        mobileCharts.push(chart);
-                        chartIdx++;
-                    }
-                } else {
-                    container.innerHTML = '<div class="text-muted text-center py-5">Нет числовых данных для построения графиков.</div>';
-                }
-            });
-    }
-</script>
-<script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
 {% endblock %}

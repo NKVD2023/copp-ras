@@ -11,20 +11,12 @@
     <div class="container-fluid px-4 overflow-x-auto">
         <ul class="admin-nav-list nav flex-nowrap mb-0 border-0" id="userTabs" role="tablist" style="gap: 1.5rem; padding-top: 0.5rem; padding-bottom: 0.5rem;">
             {% set total_unfilled = unfilled_templates|length %}
-            {% set total_overdue = overdue_templates|length %}
             {% set total_filled = filled_templates|length %}
             
             <li class="admin-nav-item">
                 <button class="admin-nav-link active d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#unfilledTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>
                     Активные отчеты
-                    
-                </button>
-            </li>
-            <li class="admin-nav-item d-none">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#overdueTab" type="button">
-                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/><path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/></svg>
-                    Просроченные
                     
                 </button>
             </li>
@@ -40,12 +32,6 @@
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/></svg>
                     Файлы
                     
-                </button>
-            </li>
-            <li class="admin-nav-item d-none">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#analyticsTab" type="button" onclick="loadMyAnalytics()">
-                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5v12h-2V2h2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3z"/></svg>
-                    Моя статистика
                 </button>
             </li>
             <li class="admin-nav-item ms-auto">
@@ -77,22 +63,13 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-4">
                         <label class="form-label text-muted">Сменить пароль</label>
-                        <input type="text" name="new_password" class="form-control" required autocomplete="off" placeholder="Введите новый пароль">
+                        <input type="password" name="new_password" class="form-control" required autocomplete="off" placeholder="Введите новый пароль">
                     </div>
                     <button type="submit" class="btn btn-copp w-100">Сохранить новый пароль</button>
                 </form>
             </div>
         </div>
     </div>
-    
-    <!-- Вкладка аналитики -->
-    <div class="tab-pane fade" id="analyticsTab" role="tabpanel">
-        <div class="d-flex align-items-center gap-3 mb-4">
-            <h5 class="m-0 fw-bold">Аналитика по вашим отчетам</h5>
-            <select id="analyticsReportSelect" class="form-select form-select-sm w-auto" onchange="fetchAnalyticsData(this.value)" style="min-width: 250px;">
-                <option value="">Загрузка отчетов...</option>
-            </select>
-        </div>
         <div id="analyticsChartsContainer" class="row g-4">
             <div class="col-12 text-muted text-center py-5" id="analyticsEmptyState">
                 Выберите отчет для отображения графиков
@@ -101,110 +78,4 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
-<script>
-let myCharts = [];
-
-function loadMyAnalytics() {
-    const select = document.getElementById('analyticsReportSelect');
-    if (select.options.length > 1) return; // Уже загружали
-    
-    fetch('/api/my_analytics/reports')
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                select.innerHTML = '<option value="">-- Выберите отчет --</option>';
-                data.reports.forEach(name => {
-                    const opt = document.createElement('option');
-                    opt.value = name;
-                    opt.textContent = name;
-                    select.appendChild(opt);
-                });
-            }
-        });
-}
-
-function fetchAnalyticsData(shortName) {
-    const container = document.getElementById('analyticsChartsContainer');
-    const emptyState = document.getElementById('analyticsEmptyState');
-    
-    // Очистка старых графиков
-    myCharts.forEach(c => c.destroy());
-    myCharts = [];
-    container.innerHTML = '';
-    
-    if (!shortName) {
-        if(emptyState) emptyState.style.display = 'block';
-        return;
-    }
-    
-    container.innerHTML = '<div class="col-12 text-center py-4"><div class="spinner-border text-secondary" role="status"></div></div>';
-    
-    fetch('/api/my_analytics/data/' + encodeURIComponent(shortName))
-        .then(res => res.json())
-        .then(data => {
-            container.innerHTML = ''; // Убираем лоадер
-            
-            if (data.status === 'success' && data.periods.length > 0 && Object.keys(data.datasets).length > 0) {
-                let chartIdx = 0;
-                for (const [label, values] of Object.entries(data.datasets)) {
-                    // Создаем карточку
-                    const col = document.createElement('div');
-                    col.className = 'col-12 col-md-6 col-lg-4';
-                    col.innerHTML = `
-                        <div class="card shadow-sm h-100">
-                            <div class="card-body">
-                                <h6 class="card-title fw-bold text-dark text-truncate" title="${label}">${label}</h6>
-                                <canvas id="myChart-${chartIdx}" style="max-height: 250px;"></canvas>
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(col);
-                    
-                    // Строим график
-                    const ctx = document.getElementById(`myChart-${chartIdx}`).getContext('2d');
-                    const isBar = chartIdx % 2 !== 0; // Чередуем линии и столбцы для разнообразия
-                    const colorIndex = chartIdx % 5;
-                    const colors = [
-                        'rgba(0, 51, 78, 0.7)',
-                        'rgba(40, 167, 69, 0.7)',
-                        'rgba(23, 162, 184, 0.7)',
-                        'rgba(255, 193, 7, 0.7)',
-                        'rgba(108, 117, 125, 0.7)'
-                    ];
-                    
-                    const chart = new Chart(ctx, {
-                        type: isBar ? 'bar' : 'line',
-                        data: {
-                            labels: data.periods,
-                            datasets: [{
-                                label: label,
-                                data: values,
-                                backgroundColor: colors[colorIndex],
-                                borderColor: colors[colorIndex].replace('0.7', '1'),
-                                borderWidth: 2,
-                                fill: !isBar ? true : false,
-                                tension: 0.3
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
-                            },
-                            scales: {
-                                y: { beginAtZero: true }
-                            }
-                        }
-                    });
-                    myCharts.push(chart);
-                    chartIdx++;
-                }
-            } else {
-                container.innerHTML = '<div class="col-12 text-muted text-center py-5">Нет числовых данных для построения графиков.</div>';
-            }
-        });
-}
-</script>
 {% endblock %}

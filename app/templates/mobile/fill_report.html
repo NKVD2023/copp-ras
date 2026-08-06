@@ -51,7 +51,11 @@
             {% if lvl == 0 and not loop.first %}
                 <hr style="border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1;">
             {% endif %}
-            <div class="mb-4">
+            <div class="mb-4 {% if lvl > 0 %}ps-4 position-relative border-start border-2{% endif %}" {% if lvl > 0 %}style="border-color: rgba(0, 51, 78, 0.1) !important;"{% endif %}>
+                {% if lvl > 0 %}
+                <!-- Tree branch horizontal line -->
+                <div style="position: absolute; left: 0; top: 0.85rem; width: 0.75rem; height: 2px; background-color: rgba(0, 51, 78, 0.1);"></div>
+                {% endif %}
                 <label class="form-label small d-flex align-items-center gap-1">
                     {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
                 </label>
@@ -431,29 +435,61 @@
     
     // Загрузка предыдущих данных
     async function loadPreviousData() {
-        coppConfirm("Загрузить данные из вашего предыдущего отчета? Текущие введенные данные будут заменены.", async () => {
-
-        
-        const btn = document.querySelector('.fab-secondary');
+        const btn = document.querySelector('.fab-secondary') || document.querySelector('button[onclick="loadPreviousData()"]');
         const iconHtml = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        
+
         try {
-            const response = await fetch('{{ url_for("reports.get_previous_data", template_id=template.id) }}');
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                populateForm(result.data);
-                showNotification(result.message, 'success');
-            } else {
-                showNotification(result.message, 'error');
-            }
-        } catch (error) {
-            showNotification('Ошибка при загрузке данных', 'error');
-        } finally {
+            const listResponse = await fetch('{{ url_for("reports.get_past_submissions", template_id=template.id) }}');
+            const listData = await listResponse.json();
+
             btn.innerHTML = iconHtml;
+
+            if (listData.status !== 'success') {
+                return showNotification('Ошибка: ' + listData.message, 'error');
+            }
+
+            const pastList = listData.data;
+            if (!pastList || pastList.length === 0) {
+                return showNotification('У вас нет отчетов за прошлые периоды.', 'error');
+            }
+
+            const latestReport = pastList[0];
+
+            Swal.fire({
+                title: 'Подтверждение',
+                html: `Данные будут скопированы из вашего последнего отчета:<br><b class="mt-2 d-inline-block text-primary">${latestReport.label}</b><br><br>Это действие перезапишет все текущие заполненные поля.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#003366',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Скопировать',
+                cancelButtonText: 'Отмена',
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                    try {
+                        const url = '{{ url_for("reports.get_previous_data", template_id=template.id) }}' + '?submission_id=' + latestReport.submission_id;
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            populateForm(data.data);
+                            showNotification('Данные успешно скопированы', 'success');
+                        } else {
+                            showNotification(data.message, 'error');
+                        }
+                    } catch (error) {
+                        showNotification('Ошибка при загрузке данных', 'error');
+                    } finally {
+                        btn.innerHTML = iconHtml;
+                    }
+                }
+            });
+        } catch (error) {
+            btn.innerHTML = iconHtml;
+            showNotification('Ошибка сети', 'error');
         }
-        });
     }
 </script>
 {% endblock %}

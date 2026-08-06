@@ -1,0 +1,277 @@
+/* components/forms.css — Поля ввода, выпадающие списки, Tom Select */
+
+.form-control,
+.input-group-text {
+    border-radius: var(--radius-input);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1rem;
+    color: var(--text-main);
+    transition: var(--transition);
+    background-color: #fcfcfc;
+}
+
+.form-select {
+    border-radius: var(--radius-input);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 2.5rem 0.6rem 1rem;
+    color: var(--text-main);
+    transition: var(--transition);
+    background-color: #fcfcfc;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--bg-card);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1);
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.4rem;
+}
+
+/* Стилизация Tom Select */
+.ts-wrapper .ts-dropdown {
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #dee2e6;
+}
+
+.ts-wrapper .ts-dropdown .ts-dropdown-content {
+    max-height: 400px;
+}
+
+.ts-wrapper .ts-dropdown .option {
+    padding: 10px 12px;
+}
+
+/* Убираем синее свечение внутри input-group */
+.input-group .form-control.border-start-0:focus {
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+
+/* Ховер для нативных option */
+select option:hover,
+select option:focus,
+select option:active,
+select option:checked {
+    background: linear-gradient(0deg, var(--primary-color) 0%, var(--primary-color) 100%) !important;
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
+
+/* ==========================================================================
+   КАСТОМНЫЙ ДРОПЛАУН (.custom-dropdown)
+   Заменяет нативный <select> — красивый, анимированный, в стиле проекта
+   ========================================================================== */
+.custom-dropdown {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.custom-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    background: #ffffff;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-input);
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+    min-height: 42px;
+    font-family: inherit;
+}
+
+.custom-dropdown-trigger:hover {
+    border-color: var(--primary-hover);
+    box-shadow: 0 4px 14px rgba(0, 51, 78, 0.10);
+}
+
+.custom-dropdown-trigger.is-open {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 51, 78, 0.08);
+}
+
+.custom-dropdown-trigger .dd-icon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.custom-dropdown-trigger .dd-text {
+    flex: 1;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-dropdown-trigger .dd-chevron {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.custom-dropdown-trigger.is-open .dd-chevron {
+    transform: rotate(180deg);
+}
+
+/* Выпадающий список */
+.custom-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid rgba(0, 51, 78, 0.12);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(13, 46, 97, 0.16);
+    z-index: 1050;
+    overflow: hidden;
+    padding: 5px;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top center;
+    transition:
+        opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
+        transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    pointer-events: none;
+}
+
+.custom-dropdown-menu.is-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+/* Пункты меню */
+.custom-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    transition: background 0.15s ease, color 0.15s ease;
+    font-family: inherit;
+}
+
+.custom-dropdown-item:hover {
+    background: var(--primary-color);
+    color: #ffffff;
+}
+
+.custom-dropdown-item:hover .dd-check {
+    color: #ffffff;
+}
+
+.custom-dropdown-item.is-selected {
+    color: var(--primary-color);
+    font-weight: 600;
+    background: rgba(0, 51, 78, 0.05);
+}
+
+.custom-dropdown-item .dd-check {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--primary-color);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.custom-dropdown-item.is-selected .dd-check {
+    opacity: 1;
+}
+
+.custom-dropdown-item .dd-item-text {
+    flex: 1;
+    line-height: 1.3;
+}
+
+/* Tree Branch Visualization for nested children (e.g. 2.1 -> 2.1.1) */
+.tree-branch-wrapper {
+    margin-top: 0.5rem;
+    padding-left: 1.25rem;
+    margin-left: 0.5rem;
+    border-left: 2px solid rgba(0, 51, 78, 0.15);
+}
+.tree-branch-item {
+    position: relative;
+}
+.tree-branch-item::before {
+    content: '';
+    position: absolute;
+    left: -1.25rem;
+    top: 0.75rem; /* align with the label text roughly */
+    width: 0.75rem;
+    height: 2px;
+    background-color: rgba(0, 51, 78, 0.15);
+}
+/* Optional: cut off the bottom of the border for the last item to make an L curve */
+.tree-branch-wrapper .tree-branch-item:last-child {
+    border-left: 2px solid #fff; /* hack to cover the overflow if needed, or rely on wrapper height */
+}
+
+/* ==================================================
+   Стилизация Tom Select (поиск-списки) 
+   чтобы выглядели как наш custom_dropdown
+   ================================================== */
+.ts-dropdown {
+    border: 1px solid rgba(0, 51, 78, 0.12) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 16px 40px rgba(13, 46, 97, 0.16) !important;
+    padding: 5px !important;
+    overflow: hidden !important;
+}
+
+.ts-dropdown .option {
+    border-radius: 9px !important;
+    padding: 9px 11px !important;
+    font-size: 0.875rem !important;
+    color: var(--text-main) !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+    margin-bottom: 2px;
+}
+
+.ts-dropdown .option.active,
+.ts-dropdown .option:hover {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
+
+.ts-dropdown .option.selected {
+    font-weight: 600 !important;
+    background-color: rgba(0, 51, 78, 0.05) !important;
+    color: var(--primary-color) !important;
+}
+
+.ts-dropdown .option.selected.active,
+.ts-dropdown .option.selected:hover {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
+
+.ts-control {
+    border: 1px solid var(--border-color) !important;
+    border-radius: 50rem !important;
+    padding: 10px 35px 10px 16px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.ts-wrapper.focus .ts-control {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 4px rgba(0, 51, 78, 0.08) !important;
+}

@@ -1,60 +1,53 @@
 /* ==========================================================================
    STYLE.CSS
    Главный стилевой файл приложения ЦОПП РАС.
-   Определяет глобальные переменные, типографику, базовые стили 
-   компонентов (кнопки, карточки, формы, таблицы) и фирменные цвета.
+   Глобальные переменные, типографика, базовые стили.
+
+   Компоненты вынесены в отдельные файлы (подключаются в base.html):
+     - css/components/cards.css    — карточки
+     - css/components/buttons.css  — кнопки
+     - css/components/forms.css    — поля ввода, Tom Select
+     - css/components/tables.css   — таблицы
+     - css/components/tabs.css     — вкладки
    ========================================================================== */
 
 /* ==========================================================================
    ОСНОВНЫЕ ПЕРЕМЕННЫЕ (Цвета, отступы, тени, анимации)
    ========================================================================== */
 :root {
-    /* Цвета фона */
-    --bg-body: #f6f6f5;        /* Основной фон страницы */
-    --bg-card: #ffffff;        /* Фон для карточек и панелей */
-
-    /* Фирменные цвета (ЦОПП) */
-    --primary-color: #00334e;  /* Главный синий цвет */
-    --primary-hover: #007fbd;  /* Синий цвет при наведении (светлее) */
-
-    /* Цвета текста */
-    --text-main: #2c3e50;      /* Основной темный текст */
-    --text-muted: #7f8c8d;     /* Второстепенный серый текст */
-    
-    /* Обводки и границы */
-    --border-color: #e2e8f0;   /* Цвет тонких рамок */
-
-    /* Скругления (Border-radius) */
-    --radius-card: 16px;       /* Скругление карточек */
-    --radius-btn: 10px;        /* Скругление кнопок */
-    --radius-input: 10px;       /* Скругление полей ввода */
-
-    /* Тени */
+    --bg-body: #f6f6f5;
+    --bg-card: #ffffff;
+    --primary-color: #00334e;
+    --primary-hover: #007fbd;
+    --text-main: #2c3e50;
+    --text-muted: #7f8c8d;
+    --border-color: #e2e8f0;
+    --radius-card: 16px;
+    --radius-btn: 10px;
+    --radius-input: 10px;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 12px 32px rgba(13, 46, 97, 0.12);
-    --shadow-hover: 0 8px 24px rgba(14, 44, 88, 0.274); /* Тень при наведении на карточку */
-
-    /* Анимации и плавность */
+    --shadow-hover: 0 8px 24px rgba(14, 44, 88, 0.274);
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* ==========================================================================
-   БАЗОВЫЕ НАСТРОЙКИ СТРАНИЦЫ (Глобальные теги)
+   БАЗОВЫЕ НАСТРОЙКИ СТРАНИЦЫ
    ========================================================================== */
 html {
-    overflow-y: scroll;        /* Старый, но 100% надежный способ скрыть прыжки экрана */
-    scrollbar-gutter: stable;  /* Современный способ: резервирует место под скролл */
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
 }
 
 body {
     background-color: var(--bg-body) !important;
     font-family: 'Inter', '-apple-system', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     color: var(--text-main);
-    -webkit-font-smoothing: antialiased; /* Сглаживание шрифтов на Mac/iOS */
+    -webkit-font-smoothing: antialiased;
 }
 
 /* ==========================================================================
-   НАВИГАЦИОННАЯ ПАНЕЛЬ (Шапка / Navbar)
+   НАВИГАЦИОННАЯ ПАНЕЛЬ
    ========================================================================== */
 .navbar {
     background-color: var(--bg-card) !important;
@@ -73,7 +66,6 @@ body {
     font-weight: 500;
 }
 
-/* Логотип и название (Бренд-контейнер) */
 .brand-container {
     display: flex;
     flex-direction: column;
@@ -81,9 +73,7 @@ body {
     text-decoration: none !important;
 }
 
-.brand-container:hover .brand-main {
-    color: var(--primary-hover);
-}
+.brand-container:hover .brand-main { color: var(--primary-hover); }
 
 .brand-main {
     color: var(--primary-color);
@@ -102,234 +92,7 @@ body {
 }
 
 /* ==========================================================================
-   КАРТОЧКИ (Cards)
-   ========================================================================== */
-.card {
-    background-color: var(--bg-card);
-    border: 1px solid rgba(0, 0, 0, 0.03);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-md);
-    transition: var(--transition);
-    overflow: hidden;
-}
-
-.card.hoverable:hover {
-    transform: translateY(-4px); /* Карточка слегка приподнимается */
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15) !important;
-}
-
-.card-header {
-    background-color: #70c6d1;
-    border-bottom: 1px solid var(--border-color);
-    padding: 1.5rem 1.5rem 1rem;
-}
-
-.card-body {
-    padding: 1.5rem;
-}
-
-/* ==========================================================================
-   КНОПКИ (Buttons)
-   ========================================================================== */
-/* Базовая кнопка */
-.btn {
-    border-radius: var(--radius-btn);
-    font-weight: 500;
-    padding: 0.5rem 1.25rem;
-    transition: var(--transition);
-    border: none;
-}
-
-/* Основная акцентная кнопка (ЦОПП) */
-.btn-copp {
-    background-color: var(--primary-color);
-    color: white;
-    border: 1px solid var(--primary-color);
-    box-shadow: 0 2px 4px rgba(13, 71, 161, 0.2);
-}
-
-.btn-copp:hover {
-    background-color: white;
-    color: var(--primary-color);
-    border: 1px solid var(--primary-color);
-    box-shadow: 0 4px 12px rgba(13, 71, 161, 0.3);
-    transform: translateY(-1px);
-}
-
-/* Контурная кнопка (ЦОПП) */
-.btn-outline-copp {
-    background-color: transparent;
-    border: 1px solid var(--primary-color);
-    color: var(--primary-color);
-}
-
-.btn-outline-copp:hover {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-/* Базовый вид для кастомных кнопок списков (серо-белые) */
-/* --- БАЗОВЫЙ ВИД ДЛЯ ВСЕХ КНОПОК В КАРТОЧКАХ --- */
-.btn-custom-outline, 
-.btn-custom-danger {
-    color: var(--text-muted); 
-    border: 1px solid var(--border-color);
-    background-color: transparent;
-    transition: var(--transition);
-}
-
-/* --- ХОВЕР: Обычные кнопки (становятся фирменными синими) --- */
-.btn-custom-outline:hover {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-color: var(--primary-color);
-}
-
-/* --- ХОВЕР: Кнопки отмены/удаления (становятся красными) --- */
-.btn-custom-danger:hover {
-    background-color: #dc3545; 
-    color: #ffffff;
-    border-color: #dc3545;
-}
-
-/* Кнопка выхода (Logout) */
-.exit-btn {
-    background-color: #00334e;
-    border-radius: var(--radius-btn);
-    text-decoration: none; /* Убираем подчеркивание */
-    color: #ffffff; 
-    padding: 8px 20px; 
-    font-size: 1rem; 
-    display: inline-block; /* Необходимо для корректных отступов */
-    transition: background-color 0.2s ease; 
-}
-
-.exit-btn:hover {
-    background-color: var(--primary-hover);
-    color: #ffffff;
-}
-
-/* ==========================================================================
-   ФОРМЫ И ПОЛЯ ВВОДА (Inputs, Selects)
-   ========================================================================== */
-.form-control, 
-.input-group-text {
-    border-radius: var(--radius-input);
-    border: 1px solid var(--border-color);
-    padding: 0.6rem 1rem;
-    color: var(--text-main);
-    transition: var(--transition);
-    background-color: #fcfcfc;
-}
-
-.form-select {
-    border-radius: var(--radius-input);
-    border: 1px solid var(--border-color);
-    padding: 0.6rem 2.5rem 0.6rem 1rem; /* 2.5rem on the right for the arrow */
-    color: var(--text-main);
-    transition: var(--transition);
-    background-color: #fcfcfc;
-}
-
-/* Состояние при клике (Фокус) */
-.form-control:focus, 
-.form-select:focus {
-    background-color: var(--bg-card);
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1); /* Синее свечение */
-}
-
-/* Стилизация выпадающего списка TomSelect */
-.ts-wrapper .ts-dropdown {
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border-color: #dee2e6;
-}
-
-.ts-wrapper .ts-dropdown .ts-dropdown-content {
-    max-height: 400px; /* Увеличиваем высоту окна выбора (по умолчанию около 200px) */
-}
-
-.ts-wrapper .ts-dropdown .option {
-    padding: 10px 12px;
-}
-
-/* Убираем синее свечение для строки поиска в группах */
-.input-group .form-control.border-start-0:focus {
-    box-shadow: none; 
-    border-color: #dee2e6; /* Оставляем стандартный серый цвет рамки */
-}
-
-/* Стили для опций выпадающего списка */
-select option:hover,
-select option:focus,
-select option:active,
-select option:checked {
-    background: linear-gradient(0deg, var(--primary-color) 0%, var(--primary-color) 100%) !important;
-    background-color: var(--primary-color) !important;
-    color: #ffffff !important;
-}
-
-.form-label {
-    font-weight: 600;
-    color: var(--text-main);
-    margin-bottom: 0.4rem;
-}
-
-/* ==========================================================================
-   ВКЛАДКИ (Tabs)
-   ========================================================================== */
-.nav-tabs {
-    border-bottom: 1px solid var(--border-color);
-    gap: 0.5rem;
-}
-
-.nav-tabs .nav-link {
-    border: none;
-    color: var(--text-muted);
-    font-weight: 500;
-    padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-btn) var(--radius-btn) 0 0;
-    transition: var(--transition);
-}
-
-.nav-tabs .nav-link:hover {
-    color: var(--primary-color);
-    background-color: rgba(13, 71, 161, 0.04);
-}
-
-.nav-tabs .nav-link.active {
-    color: var(--primary-color) !important;
-    background-color: transparent !important;
-    border-bottom: 2px solid var(--primary-color);
-}
-
-/* ==========================================================================
-   ТАБЛИЦЫ (Tables)
-   ========================================================================== */
-.table {
-    color: var(--text-main);
-}
-
-.table thead th {
-    border-bottom: 2px solid var(--border-color);
-    color: var(--text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-}
-
-.table tbody tr {
-    transition: var(--transition);
-}
-
-.table tbody tr:hover {
-    background-color: rgba(13, 71, 161, 0.02) !important; /* Легкое выделение строки */
-}
-
-/* ==========================================================================
-   АККОРДЕОНЫ (Скрываемые блоки)
+   АККОРДЕОНЫ
    ========================================================================== */
 .accordion-item {
     border: 1px solid var(--border-color);
@@ -342,7 +105,7 @@ select option:checked {
     font-weight: 500;
     color: var(--text-main);
     background-color: var(--bg-card);
-    box-shadow: none !important; /* Убирает синюю рамку Bootstrap при клике */
+    box-shadow: none !important;
 }
 
 .accordion-button:not(.collapsed) {
@@ -351,7 +114,7 @@ select option:checked {
 }
 
 /* ==========================================================================
-   УТИЛИТЫ И ВСПОМОГАТЕЛЬНЫЕ КЛАССЫ
+   УТИЛИТЫ
    ========================================================================== */
 .badge {
     padding: 0.4em 0.8em;
@@ -359,17 +122,11 @@ select option:checked {
     border-radius: 6px;
 }
 
-.text-primary-copp {
-    color: var(--primary-color) !important;
-}
-
-.text-muted {
-    color: var(--text-muted) !important;
-}
+.text-primary-copp { color: var(--primary-color) !important; }
+.text-muted { color: var(--text-muted) !important; }
 
 /* ==========================================================================
-   ИКОНКА ПОДСКАЗКИ (hint-icon)
-   Отображается рядом с подписью поля в форме заполнения.
+   ИКОНКА ПОДСКАЗКИ
    ========================================================================== */
 .hint-icon {
     display: inline-flex;
@@ -388,61 +145,101 @@ select option:checked {
     flex-shrink: 0;
     transition: background-color 0.2s ease, transform 0.2s ease;
     user-select: none;
+    opacity: 0.8;
+    margin-left: 6px;
 }
 
 .hint-icon:hover {
     background-color: var(--primary-hover);
-    transform: scale(1.15);
+    transform: scale(1.1);
+    opacity: 1;
 }
 
-/* В сводной таблице иконка чуть меньше и с отступом */
 .hint-icon-table {
     width: 14px;
     vertical-align: middle;
 }
-
-/* Стили для кнопки добавления динамического поля */
-.btn-add-dynamic {
-    width: 100%;
-    margin-top: 0.5rem;
-    padding: 0.6rem;
-    border: 2px dashed var(--primary-color);
-    color: var(--primary-color);
-    background-color: rgba(13, 71, 161, 0.03);
-    border-radius: var(--radius-btn);
-    font-weight: 500;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+/* ==================================================
+   ГЛОБАЛЬНАЯ СТИЛИЗАЦИЯ SWEETALERT2 (МОДАЛЬНЫЕ ОКНА)
+   ================================================== */
+body .swal2-container .swal2-popup {
+    border-radius: 24px !important;
+    box-shadow: 0 24px 56px rgba(0, 51, 78, 0.16), 0 0 0 1px rgba(0, 51, 78, 0.05) !important;
+    padding: 2.5rem 1.5rem !important;
+    font-family: inherit !important;
 }
 
-.btn-add-dynamic:hover {
-    background-color: rgba(13, 71, 161, 0.08);
-    color: var(--primary-hover);
-    border-color: var(--primary-hover);
+body .swal2-container .swal2-title {
+    font-weight: 700 !important;
+    color: var(--text-main) !important;
+    font-size: 1.5rem !important;
 }
 
-/* Стили для иконки-подсказки */
-.hint-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background-color: var(--primary-color);
-    color: white;
-    font-size: 13px;
-    font-weight: bold;
-    cursor: help;
-    margin-left: 6px;
-    opacity: 0.8;
-    transition: opacity 0.2s, transform 0.2s;
+body .swal2-container .swal2-html-container,
+body .swal2-container .swal2-content {
+    color: var(--text-muted) !important;
+    font-size: 1.05rem !important;
+    position: relative !important;
+    z-index: 10 !important;
 }
 
-.hint-icon:hover {
-    opacity: 1;
-    transform: scale(1.1);
+body .swal2-container .swal2-actions {
+    position: relative !important;
+    z-index: 1 !important;
+    margin-top: 2rem !important;
+    gap: 12px !important;
+}
+
+body .swal2-container .swal2-styled {
+    border-radius: 50rem !important;
+    padding: 12px 32px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px !important;
+    transition: all 0.2s ease !important;
+}
+
+body .swal2-container .swal2-styled.swal2-confirm {
+    background-color: var(--primary-color) !important;
+    box-shadow: 0 4px 12px rgba(0, 51, 78, 0.15) !important;
+}
+body .swal2-container .swal2-styled.swal2-confirm:hover {
+    background-color: #002244 !important;
+    box-shadow: 0 6px 16px rgba(0, 51, 78, 0.25) !important;
+    transform: translateY(-1px) !important;
+}
+
+body .swal2-container .swal2-styled.swal2-cancel {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
+}
+body .swal2-container .swal2-styled.swal2-cancel:hover {
+    background-color: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+/* Иконки SweetAlert */
+body .swal2-container .swal2-icon {
+    border-width: 3px !important;
+    margin-bottom: 1.5rem !important;
+}
+
+body .swal2-container .swal2-select {
+    min-width: 80% !important;
+    max-width: 100% !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 50rem !important;
+    padding: 12px 35px 12px 16px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+    font-size: 0.95rem !important;
+    color: var(--text-main) !important;
+    background-color: #ffffff !important;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    margin: 1.5em auto 0 !important;
+}
+
+body .swal2-container .swal2-select:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 4px rgba(0, 51, 78, 0.08) !important;
+    outline: none !important;
 }

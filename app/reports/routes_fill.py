@@ -123,34 +123,83 @@ def fill_report(template_id):
     template_name = 'mobile/fill_report.html' if is_mobile(request) else 'fill_report.html'
     return render_template(template_name, template=template, schema=schema_tree, submission=submission, is_locked=is_locked)
 
-@reports_bp.route('/fill/<int:template_id>/previous_data', methods=['GET'])
+@reports_bp.route('/fill/<int:template_id>/past_submissions', methods=['GET'])
 @login_required
-def get_previous_data(template_id):
+def get_past_submissions(template_id):
     """
-    Возвращает данные из самого свежего предыдущего отчета с таким же short_name.
-    Используется для кнопки "Без изменений".
-    Сортировка по deadline (строгая дата) по убыванию.
+    Возвращает список всех предыдущих отчетов пользователя (с тем же short_name),
+    для которых есть сохраненные данные.
     """
     template = ReportTemplate.query.get_or_404(template_id)
     
     if current_user.role != 'user' or template not in current_user.assigned_templates:
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         
-    # Ищем предыдущий шаблон с таким же short_name, но другим ID
-    # Сортируем по deadline по убыванию (сначала самые свежие)
-    previous_template = ReportTemplate.query.filter_by(short_name=template.short_name) \
-                                            .filter(ReportTemplate.id != template.id) \
-                                            .order_by(ReportTemplate.deadline.desc().nullslast(), ReportTemplate.id.desc()) \
-                                            .first()
-                                            
-    if not previous_template:
-        return jsonify({'status': 'error', 'message': 'Предыдущий период для данного отчета не найден.'}), 404
+    # Ищем все предыдущие шаблоны с таким же short_name
+    past_templates = ReportTemplate.query.filter_by(short_name=template.short_name) \
+                                         .filter(ReportTemplate.id != template.id) \
+                                         .order_by(ReportTemplate.deadline.desc().nullslast(), ReportTemplate.id.desc()) \
+                                         .all()
+                                         
+    if not past_templates:
+        return jsonify({'status': 'success', 'data': []})
         
-    # Ищем заполненные данные пользователя в этом предыдущем отчете
-    prev_submission = ReportSubmission.query.filter_by(template_id=previous_template.id, user_id=current_user.id).first()
+    past_template_ids = [t.id for t in past_templates]
+    
+    # Ищем submission для этих шаблонов
+    submissions = ReportSubmission.query.filter(
+        ReportSubmission.template_id.in_(past_template_ids),
+        ReportSubmission.user_id == current_user.id
+    ).all()
+    
+    # Формируем результат
+    sub_map = {s.template_id: s for s in submissions if s.data}
+    
+    result = []
+    for t in past_templates:
+        if t.id in sub_map:
+            # Формат: [Период] Название отчета
+            label = f"[{t.period if t.period else 'Без периода'}] {t.name}"
+            result.append({
+                'submission_id': sub_map[t.id].id,
+                'label': label,
+                'deadline': t.deadline.strftime('%d.%m.%Y') if t.deadline else 'Без срока'
+            })
+            
+    return jsonify({'status': 'success', 'data': result})
+
+
+@reports_bp.route('/fill/<int:template_id>/previous_data', methods=['GET'])
+@login_required
+def get_previous_data(template_id):
+    """
+    Возвращает данные из указанного submission_id (если передан) или из самого свежего предыдущего отчета.
+    """
+    template = ReportTemplate.query.get_or_404(template_id)
+    
+    if current_user.role != 'user' or template not in current_user.assigned_templates:
+        return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
+        
+    submission_id = request.args.get('submission_id', type=int)
+    
+    if submission_id:
+        prev_submission = ReportSubmission.query.get(submission_id)
+        if not prev_submission or prev_submission.user_id != current_user.id:
+            return jsonify({'status': 'error', 'message': 'Отчет не найден или нет доступа.'}), 404
+        previous_template = prev_submission.template
+    else:
+        # Старая логика: Ищем самый свежий
+        previous_template = ReportTemplate.query.filter_by(short_name=template.short_name) \
+                                                .filter(ReportTemplate.id != template.id) \
+                                                .order_by(ReportTemplate.deadline.desc().nullslast(), ReportTemplate.id.desc()) \
+                                                .first()
+        if not previous_template:
+            return jsonify({'status': 'error', 'message': 'Предыдущий период для данного отчета не найден.'}), 404
+            
+        prev_submission = ReportSubmission.query.filter_by(template_id=previous_template.id, user_id=current_user.id).first()
     
     if not prev_submission or not prev_submission.data:
-        return jsonify({'status': 'error', 'message': 'Вы не заполняли (или не сохраняли данные) в предыдущем периоде этого отчета.'}), 404
+        return jsonify({'status': 'error', 'message': 'Данные для выбранного отчета не найдены.'}), 404
         
     import re
     def normalize_label(label):
