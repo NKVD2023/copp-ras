@@ -80,9 +80,42 @@
    ================================================== */
 .fields-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
     gap: 1.5rem;
     align-items: start;
+}
+
+.grid-item {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.grid-label { margin-bottom: 0.25rem; }
+.grid-input { margin-top: auto; margin-bottom: 0.5rem; }
+
+@supports (grid-template-rows: subgrid) {
+    .fields-grid {
+        align-items: stretch; /* Required for subgrid to stretch across rows */
+    }
+    .fields-grid > .grid-item {
+        display: grid;
+        grid-template-rows: subgrid;
+        grid-row: span 3;
+        gap: 0;
+        margin-bottom: 0 !important;
+    }
+    .fields-grid > .grid-item > .grid-label {
+        align-self: start;
+        margin-bottom: 0.5rem;
+    }
+    .fields-grid > .grid-item > .grid-input {
+        align-self: end;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+    .fields-grid > .grid-item > .grid-children {
+        align-self: start;
+    }
 }
 
 .input-wrapper {

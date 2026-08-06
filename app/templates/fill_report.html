@@ -129,7 +129,7 @@
                                 {% endif %}
                             </div>
                         {% else %}
-                            <div class="input-wrapper mt-2">
+                            <div class="input-wrapper">
                                 {% if field.type == 'text' or field.type == 'Текстовое' %}
                                     <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
                                 {% elif field.type == 'select' %}
@@ -151,34 +151,39 @@
                         {% set field = node.field %}
                         {% set lvl = field.level|default(0)|int %}
                         
-                        <div class="mb-3">
-                            <label class="form-label text-dark d-flex align-items-start gap-2 mb-1 {% if lvl == 0 %}fw-bold fs-6{% else %}small fw-semibold{% endif %}">
-                                <span class="text-muted">{{ field.numbering|default('') }}</span> 
-                                <span>{{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}</span>
-                            </label>
-                            {{ render_input(field, submission, is_locked) }}
+                        <div class="mb-4 grid-item">
+                            <div class="grid-label">
+                                <label class="form-label text-dark d-flex align-items-start gap-2 mb-1 {% if lvl == 0 %}fw-bold fs-6{% else %}small fw-semibold{% endif %}">
+                                    <span class="text-muted">{{ field.numbering|default('') }}</span> 
+                                    <span>{{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}</span>
+                                </label>
+                            </div>
                             
-                            {% if node.children %}
-                                {% if lvl == 0 %}
-                                <div class="mt-3">
-                                    <div class="fields-grid">
+                            <div class="grid-input">
+                                {{ render_input(field, submission, is_locked) }}
+                            </div>
+                            
+                            <div class="grid-children">
+                                {% if node.children %}
+                                    {% if lvl == 0 %}
+                                    <div class="mt-4">
+                                        <div class="fields-grid">
+                                            {% for child in node.children %}
+                                                {{ render_field_node(child, submission, is_locked) }}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="tree-branch-wrapper mt-3">
                                         {% for child in node.children %}
-                                            <div>
+                                            <div class="tree-branch-item">
                                                 {{ render_field_node(child, submission, is_locked) }}
                                             </div>
                                         {% endfor %}
                                     </div>
-                                </div>
-                                {% else %}
-                                <div class="tree-branch-wrapper">
-                                    {% for child in node.children %}
-                                        <div class="tree-branch-item">
-                                            {{ render_field_node(child, submission, is_locked) }}
-                                        </div>
-                                    {% endfor %}
-                                </div>
+                                    {% endif %}
                                 {% endif %}
-                            {% endif %}
+                            </div>
                         </div>
                     {% endmacro %}
 
