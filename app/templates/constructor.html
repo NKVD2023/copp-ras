@@ -258,6 +258,24 @@
         renderStructure(); 
     }
 
+    function copySheet(sIdx) {
+        // Делаем глубокую копию объекта листа
+        const sheetToCopy = reportStructure[sIdx];
+        const newSheet = JSON.parse(JSON.stringify(sheetToCopy));
+        
+        // Меняем название
+        newSheet.sheet_title = newSheet.sheet_title ? newSheet.sheet_title + ' (Копия)' : 'Новый лист (Копия)';
+        
+        // Вставляем после текущего листа
+        reportStructure.splice(sIdx + 1, 0, newSheet);
+        renderStructure();
+        
+        // Показываем уведомление
+        if (typeof showNotification === 'function') {
+            showNotification('Лист успешно скопирован', 'success');
+        }
+    }
+
     function toggleGroupMode(sIdx) {
         const isGroup = document.getElementById(`groupMode-${sIdx}`).checked;
         const typeSelect = document.getElementById(`type-${sIdx}`);
@@ -502,7 +520,12 @@
                         <span class="fw-bold text-primary-copp text-nowrap">Лист:</span>
                         <input type="text" class="form-control form-control-sm border-light-subtle fw-bold text-primary-copp" value="${String(sheet.sheet_title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&quot;/g, '&quot;')}" oninput="updateSheetTitle(${sIdx}, this.value)">
                     </div>
-                    <button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0 flex-shrink-0">Удалить лист</button>
+                    <div class="d-flex align-items-center">
+                        <button onclick="copySheet(${sIdx})" class="btn btn-sm btn-outline-secondary px-3 border-0 flex-shrink-0 me-2" title="Копировать лист">
+                            <i class="bi bi-copy"></i> Копировать
+                        </button>
+                        <button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0 flex-shrink-0">Удалить лист</button>
+                    </div>
                 </div>
                 <div class="card-body p-4">
                     <div class="mb-4">
