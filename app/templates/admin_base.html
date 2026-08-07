@@ -13,9 +13,9 @@
     <title>{% block title %}ЦОПП | Админ{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logoblue2.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}?v=1.1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v=1.1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
     <!-- CSS-компоненты (карточки, кнопки, формы, таблицы, вкладки) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
@@ -42,14 +42,14 @@
                 <div class="d-flex flex-column align-items-end me-4">
                     <span class="navbar-text p-0 small fw-bold text-dark">{{ current_user.username }}</span>
                 </div>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-copp btn-sm px-3 text-white">Выйти</a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-copp btn-sm px-3">Выйти</a>
             </div>
         </div>
     </header>
 
     {% block admin_navbar %}{% endblock %}
     
-    <div class="container-fluid mt-2 mb-4">
+    <div class="container-fluid mt-2 mb-4" id="adminContent">
         {% block content %}{% endblock %}
     </div>
 

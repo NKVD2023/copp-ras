@@ -37,6 +37,12 @@
                     Файлы
                 </button>
             </li>
+            <li class="admin-nav-item">
+                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#statisticsTab" id="statisticsTabBtn" type="button">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M0 0h1v15h15v1H0V0Zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07Z"/></svg>
+                    Статистика
+                </button>
+            </li>
             {% if current_user.role == 'admin' %}
             <li class="admin-nav-item">
                 <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#databaseTab" type="button">
@@ -44,6 +50,7 @@
                     База данных
                 </button>
             </li>
+
             <li class="admin-nav-item">
                 <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#logsTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
@@ -63,16 +70,20 @@
 {% endblock %}
 
 {% block content %}
-<div class="tab-content">
+<div class="tab-content" id="adminTabsContent">
     {% if current_user.role == 'admin' %}
-    <div class="tab-pane fade show active" id="usersTab" role="tabpanel">
+    <div class="tab-pane fade {% if not selected_user_id and not selected_short_name %}show active{% endif %}" id="usersTab" role="tabpanel">
         <div class="card p-4">
             {% include 'admin_tabs/users_tabs.html' %}
         </div>
     </div>
     {% endif %}
+    
+    <div class="tab-pane fade" id="statisticsTab" role="tabpanel">
+        {% include 'admin_tabs/statistics/statistics_main.html' %}
+    </div>
 
-    <div class="tab-pane fade {% if current_user.role == 'manager' %}show active{% endif %}" id="reportsTab" role="tabpanel">
+    <div class="tab-pane fade {% if current_user.role == 'manager' and not selected_user_id and not selected_short_name %}show active{% endif %}" id="reportsTab" role="tabpanel">
         <div class="card p-4">
             {% include 'admin_tabs/reports_tabs.html' %}
         </div>
@@ -179,16 +190,27 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Сохранение и восстановление активных вкладок
+        // Флаг от сервера: нужно ли открыть вкладку статистики
+        const openStats = {{ 'true' if (selected_user_id or selected_short_name) else 'false' }};
+
         const navLists = document.querySelectorAll('.nav-tabs, .nav-pills, .admin-nav-list');
         
         navLists.forEach(nav => {
             const navId = nav.id || 'defaultNav';
             const storageKey = 'activeTab_' + navId;
-            
+
             let targetHash = null;
-            if (navId === 'adminTabs' && window.location.hash) {
-                targetHash = window.location.hash;
+
+            if (navId === 'adminTabs') {
+                if (openStats) {
+                    // Сервер вернул данные статистики — принудительно открываем эту вкладку
+                    targetHash = '#statisticsTab';
+                    localStorage.setItem(storageKey, targetHash);
+                } else if (window.location.hash) {
+                    targetHash = window.location.hash;
+                } else {
+                    targetHash = localStorage.getItem(storageKey);
+                }
             } else {
                 targetHash = localStorage.getItem(storageKey);
             }
@@ -206,7 +228,6 @@
                     const target = event.target.getAttribute("data-bs-target");
                     if (target) {
                         localStorage.setItem(storageKey, target);
-                        
                         if (navId === 'adminTabs') {
                             history.replaceState(null, null, target);
                         }
@@ -214,6 +235,34 @@
                 });
             });
         });
+
+        // Полная ширина для вкладки статистики теперь обрабатывается через CSS :has()
+        // Ничего делать не нужно
+
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        function initStatsTomSelect() {
+            if (typeof TomSelect === 'undefined') return;
+            document.querySelectorAll('#statisticsTab select.form-select').forEach(el => {
+                if (!el.tomselect) {
+                    new TomSelect(el, { 
+                        create: false, 
+                        maxOptions: null,
+                        dropdownParent: 'body' 
+                    });
+                }
+            });
+        }
+        // Инициализация при открытии вкладки
+        const statsBtn = document.getElementById('statisticsTabBtn');
+        if (statsBtn) {
+            statsBtn.addEventListener('shown.bs.tab', initStatsTomSelect);
+        }
+        // Если сразу активна
+        setTimeout(initStatsTomSelect, 100);
     });
 </script>
 {% endblock %}

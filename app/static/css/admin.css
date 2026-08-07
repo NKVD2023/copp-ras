@@ -142,3 +142,25 @@
     border: none !important;
     box-shadow: none !important;
 }
+
+/* ==========================================================================
+   ВКЛАДКА СТАТИСТИКИ — полноэкранный flex-layout (как сводная таблица)
+   ========================================================================== */
+
+/* Вкладка занимает весь доступный контейнер ТОЛЬКО когда она активна */
+.tab-content > #statisticsTab.active {
+    width: 100%;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Когда статистика активна — убираем отступы и overflow у обёртки, 
+   а внутренние элементы (фильтры/вкладки) имеют свой padding 1.5rem */
+#adminContent:has(> .tab-content > #statisticsTab.show.active) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-top: 0 !important;
+    overflow: hidden;
+}
+

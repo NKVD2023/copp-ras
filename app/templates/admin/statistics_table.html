@@ -1,0 +1,60 @@
+<div class="table-stats-wrapper">
+    <table class="table table-hover table-bordered table-stats mb-0">
+        <thead>
+            <!-- Сложная шапка -->
+            {% set max_depth = sheet.header_rows|length %}
+            {% for row in sheet.header_rows %}
+                <tr>
+                    {% if loop.first %}
+                        <th rowspan="{{ max_depth }}" class="sticky-col align-middle text-center" style="width: 250px;">
+                            Период
+                        </th>
+                    {% endif %}
+                    {% for col in row %}
+                        <th colspan="{{ col.colspan }}" rowspan="{{ col.rowspan }}" class="text-center">
+                            {{ col.label }}
+                            {% if col.hint %}
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="{{ col.hint }}"></i>
+                            {% endif %}
+                        </th>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </thead>
+        <tbody>
+            {% for p_data in sheet.periods_data %}
+                <tr>
+                    <td class="sticky-col">{{ p_data.period }}</td>
+                    
+                    {% for field in sheet.leaf_fields %}
+                        {% set f_id = (field.get('name') or field.get('id', ''))|string %}
+                        <td class="text-center">
+                            {% if p_data.has_submission %}
+                                {% set val = p_data['values'].get(f_id, '') %}
+                                {% if val == '' or val is none %}
+                                    <span class="text-muted">-</span>
+                                {% else %}
+                                    <span>{{ val }}</span>
+                                    
+                                    <!-- Динамика -->
+                                    {% if field.type == 'number' and p_data.deltas is defined and f_id in p_data.deltas %}
+                                        {% set delta = p_data.deltas[f_id] %}
+                                        {% if delta > 0 %}
+                                            <span class="delta-up"><i class="bi bi-arrow-up-short"></i>+{{ delta|round(2)|string|replace('.0', '') }}</span>
+                                        {% elif delta < 0 %}
+                                            <span class="delta-down"><i class="bi bi-arrow-down-short"></i>{{ delta|round(2)|string|replace('.0', '') }}</span>
+                                        {% else %}
+                                            <span class="delta-zero">(0)</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <span class="no-data-cell">Данные не предоставлены</span>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,172 @@
+{% if stat_schema %}
+<div class="p-4" style="flex-grow: 1; overflow: auto; background-color: #f8fafc;">
+    <div id="statisticsChartsContainer">
+        <!-- JS will render charts here -->
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const initCharts = () => {
+        if(window.statsChartsRendered) return;
+        window.statsChartsRendered = true;
+        
+        const rawData = {{ stat_schema | tojson | safe }};
+        const container = document.getElementById('statisticsChartsContainer');
+        
+        if (!rawData || rawData.length === 0) return;
+        
+        rawData.forEach((sheet, sheetIndex) => {
+            // Create a section for the sheet
+            const sheetTitle = document.createElement('h5');
+            sheetTitle.className = "fw-bold mb-3 text-secondary";
+            if (sheetIndex > 0) sheetTitle.classList.add("mt-5");
+            sheetTitle.textContent = sheet.sheet_title;
+            container.appendChild(sheetTitle);
+            
+            const row = document.createElement('div');
+            row.className = "row g-4";
+            container.appendChild(row);
+            
+            // Extract periods (X axis). Reverse them so time goes left-to-right.
+            const periods = sheet.periods_data.slice().reverse();
+            const labels = periods.map(p => p.period);
+            
+            let chartsAdded = false;
+            
+            sheet.leaf_fields.forEach(field => {
+                if (field.type !== 'number') return;
+                
+                const fId = field.name || field.id;
+                const dataPoints = periods.map(p => {
+                    if (!p.has_submission) return null;
+                    const val = p.values[fId];
+                    if (val === '' || val === null || val === undefined) return null;
+                    // Handle numbers with comma
+                    const numStr = String(val).replace(',', '.');
+                    const num = parseFloat(numStr);
+                    return isNaN(num) ? null : num;
+                });
+                
+                // If all data points are null, skip this chart
+                if (dataPoints.every(dp => dp === null)) return;
+                
+                chartsAdded = true;
+                
+                // Create canvas container
+                const col = document.createElement('div');
+                col.className = "col-12";
+                
+                const card = document.createElement('div');
+                card.className = "card border-0 shadow-sm h-100 rounded-4";
+                
+                const cardBody = document.createElement('div');
+                cardBody.className = "card-body p-4 d-flex flex-column";
+                
+                const title = document.createElement('h6');
+                title.className = "card-title text-muted fw-bold mb-3";
+                title.style.fontSize = "0.9rem";
+                title.style.lineHeight = "1.4";
+                title.textContent = field.label;
+                
+                const chartWrapper = document.createElement('div');
+                chartWrapper.style.position = "relative";
+                chartWrapper.style.flexGrow = "1";
+                chartWrapper.style.minHeight = "350px";
+                
+                const canvas = document.createElement('canvas');
+                chartWrapper.appendChild(canvas);
+                
+                cardBody.appendChild(title);
+                cardBody.appendChild(chartWrapper);
+                card.appendChild(cardBody);
+                col.appendChild(card);
+                row.appendChild(col);
+                
+                // Render chart
+                new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: field.label,
+                            data: dataPoints,
+                            borderColor: '#0284c7', // Sky blue
+                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#0284c7',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.3,
+                            spanGaps: true // Connect lines through missing data
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                titleFont: { size: 13 },
+                                bodyFont: { size: 14, weight: 'bold' },
+                                padding: 10,
+                                cornerRadius: 8,
+                                displayColors: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                border: { display: false },
+                                grid: {
+                                    color: '#f1f5f9',
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#64748b',
+                                    font: { size: 11 },
+                                    maxTicksLimit: 6
+                                }
+                            },
+                            x: {
+                                border: { display: false },
+                                grid: { display: false },
+                                ticks: {
+                                    color: '#64748b',
+                                    font: { size: 11 },
+                                    maxRotation: 45,
+                                    minRotation: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+            
+            if (!chartsAdded) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.className = "text-muted small ms-2";
+                emptyMsg.innerHTML = "<i>Нет числовых данных для построения графиков</i>";
+                container.appendChild(emptyMsg);
+            }
+        });
+    };
+
+    // Initialize when tab is shown
+    const dashboardTabBtn = document.getElementById('dashboard-view-tab');
+    if (dashboardTabBtn) {
+        dashboardTabBtn.addEventListener('shown.bs.tab', initCharts);
+    }
+    
+    // If it's already active on load
+    if (dashboardTabBtn && dashboardTabBtn.classList.contains('active')) {
+        initCharts();
+    }
+});
+</script>
+{% endif %}
