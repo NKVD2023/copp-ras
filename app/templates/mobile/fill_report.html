@@ -50,6 +50,8 @@
             {% set lvl = field.level|default(0)|int %}
             {% set is_active = field.get('is_active', True) %}
             {% set effective_locked = is_locked or not is_active %}
+            
+            {% if is_active %}
             {% if lvl == 0 and not loop.first %}
                 <hr style="border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1;">
             {% endif %}
@@ -60,9 +62,6 @@
                 {% endif %}
                 <label class="form-label small d-flex align-items-center gap-1 flex-wrap">
                     {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
-                    {% if not is_active %}
-                        <span class="badge bg-danger rounded-pill bg-opacity-10 text-danger border border-danger border-opacity-25 fw-normal mt-1" style="font-size: 0.7rem;"><i class="bi bi-x-circle me-1"></i>Ввод не требуется</span>
-                    {% endif %}
                 </label>
                 
                 {% if field.is_multiple %}
@@ -118,6 +117,7 @@
                 <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle"></i> {{ field.hint }}</div>
                 {% endif %}
             </div>
+            {% endif %}
             {% endfor %}
         </div>
     </div>

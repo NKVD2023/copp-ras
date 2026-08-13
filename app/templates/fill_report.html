@@ -153,15 +153,13 @@
                         {% set is_active = field.get('is_active', True) %}
                         {% set effective_locked = is_locked or not is_active %}
                         
+                        {% if is_active %}
                         <div class="mb-4 grid-item">
                             <div class="grid-label">
                                 <label class="form-label text-dark d-flex align-items-start gap-2 mb-1 {% if lvl == 0 %}fw-bold fs-6{% else %}small fw-semibold{% endif %}">
                                     <span class="text-muted">{{ field.numbering|default('') }}</span> 
                                     <span>
                                         {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
-                                        {% if not is_active %}
-                                            <span class="badge bg-danger rounded-pill bg-opacity-10 text-danger border border-danger border-opacity-25 ms-2 fw-normal" style="font-size: 0.75rem;"><i class="bi bi-x-circle me-1"></i>Ввод не требуется</span>
-                                        {% endif %}
                                     </span>
                                 </label>
                             </div>
@@ -192,6 +190,7 @@
                                 {% endif %}
                             </div>
                         </div>
+                        {% endif %}
                     {% endmacro %}
 
                     <div class="mt-4">
