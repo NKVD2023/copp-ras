@@ -41,6 +41,10 @@ def view_data(template_id):
     submissions.sort(key=lambda x: x.id, reverse=True)
     
     from app.utils import build_table_headers
+    from app.reports.routes_fill import get_historical_data
+    
+    has_inactive_fields = False
+    inactive_field_names = []
     
     # Обогащаем схему шаблона данными для сложной шапки
     for sheet in template.schema:
@@ -48,6 +52,28 @@ def view_data(template_id):
         header_rows, leaf_fields = build_table_headers(fields)
         sheet['header_rows'] = header_rows
         sheet['leaf_fields'] = leaf_fields
+        for field in leaf_fields:
+            if field.get('is_active') is False:
+                has_inactive_fields = True
+                inactive_field_names.append(field['name'])
+
+    if has_inactive_fields:
+        submitted_user_ids = {s.user_id for s in submissions}
+        unsubmitted_users = [u for u in template.assigned_users if u.id not in submitted_user_ids]
+        
+        class DummySubmission:
+            def __init__(self, user, data):
+                self.user = user
+                self.data = data
+                
+        for user in unsubmitted_users:
+            hist_data = get_historical_data(template, user.id)
+            if hist_data:
+                dummy_data = {}
+                for fname in inactive_field_names:
+                    if fname in hist_data:
+                        dummy_data[fname] = hist_data[fname]
+                submissions.append(DummySubmission(user=user, data=dummy_data))
         
     return render_template('report_data_view.html', template=template, submissions=submissions)
 
