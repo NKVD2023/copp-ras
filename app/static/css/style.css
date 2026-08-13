@@ -243,3 +243,30 @@ body .swal2-container .swal2-select:focus {
     box-shadow: 0 0 0 4px rgba(0, 51, 78, 0.08) !important;
     outline: none !important;
 }
+
+/* Custom styles for COPP Modals Tabs */
+.modal .nav-tabs .nav-link.active {
+    border-bottom: 3px solid var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+.modal .nav-tabs .nav-link {
+    border-bottom: 3px solid transparent !important;
+    color: var(--bs-secondary) !important;
+}
+
+/* Custom Switches for form-check-input */
+.form-switch-copp .form-check-input:checked {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+.form-switch-copp .form-check-input {
+    width: 2.7em; 
+    height: 1.35em;
+    cursor: pointer;
+}
+.form-switch-copp .form-check-label {
+    cursor: pointer;
+    padding-top: 0.2rem;
+    padding-left: 0.5rem;
+}

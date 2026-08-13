@@ -305,8 +305,8 @@
                                             <div class="fw-bold mb-2 mt-3">{{ sheet.name }}</div>
                                             {% for field in sheet.fields %}
                                                 {% if not field.isGroup %}
-                                                <div class="form-check mb-2">
-                                                    <input class="form-check-input" type="checkbox" name="active_fields" value="{{ field.name }}" id="efield_{{ t.id }}_{{ field.name }}" {% if field.get('is_active', True) %}checked{% endif %}>
+                                                <div class="form-check form-switch form-switch-copp mb-2">
+                                                    <input class="form-check-input" type="checkbox" role="switch" name="active_fields" value="{{ field.name }}" id="efield_{{ t.id }}_{{ field.name }}" {% if field.get('is_active', True) %}checked{% endif %}>
                                                     <label class="form-check-label text-dark" for="efield_{{ t.id }}_{{ field.name }}">
                                                         {{ field.label }}
                                                     </label>
@@ -409,8 +409,8 @@
                                             <div class="fw-bold mb-2 mt-3">{{ sheet.name }}</div>
                                             {% for field in sheet.fields %}
                                                 {% if not field.isGroup %}
-                                                <div class="form-check mb-2">
-                                                    <input class="form-check-input" type="checkbox" name="active_fields" value="{{ field.name }}" id="cfield_{{ t.id }}_{{ field.name }}" {% if field.get('is_active', True) %}checked{% endif %}>
+                                                <div class="form-check form-switch form-switch-copp mb-2">
+                                                    <input class="form-check-input" type="checkbox" role="switch" name="active_fields" value="{{ field.name }}" id="cfield_{{ t.id }}_{{ field.name }}" {% if field.get('is_active', True) %}checked{% endif %}>
                                                     <label class="form-check-label text-dark" for="cfield_{{ t.id }}_{{ field.name }}">
                                                         {{ field.label }}
                                                     </label>
