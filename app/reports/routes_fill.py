@@ -15,6 +15,29 @@ from app.utils import log_action, is_mobile
 # ЗАПОЛНЕНИЕ ОТЧЕТОВ ПОЛЬЗОВАТЕЛЯМИ
 # ==========================================
 
+def get_historical_data(template, user_id):
+    """
+    Найти самую свежую submission пользователя для предыдущих шаблонов с тем же short_name.
+    """
+    past_templates = ReportTemplate.query.filter_by(short_name=template.short_name) \
+                                         .filter(ReportTemplate.id != template.id) \
+                                         .order_by(ReportTemplate.deadline.desc().nullslast(), ReportTemplate.id.desc()) \
+                                         .all()
+    if not past_templates:
+        return {}
+        
+    past_template_ids = [t.id for t in past_templates]
+    submissions = ReportSubmission.query.filter(
+        ReportSubmission.template_id.in_(past_template_ids),
+        ReportSubmission.user_id == user_id
+    ).all()
+    
+    for t in past_templates:
+        for s in submissions:
+            if s.template_id == t.id and s.data:
+                return s.data
+    return {}
+
 @reports_bp.route('/fill/<int:template_id>', methods=['GET', 'POST'])
 @login_required
 def fill_report(template_id):
@@ -22,7 +45,6 @@ def fill_report(template_id):
     Страница, где учреждение вводит свои данные (цифры и текст).
     GET: Отрисовывает форму на основе JSON-схемы шаблона.
     POST: Принимает заполненные данные в виде JSON (AJAX-запрос) и сохраняет в БД.
-    Проверяет права доступа, статус публикации и блокировку по дедлайну.
     """
     template = ReportTemplate.query.get_or_404(template_id)
     
@@ -50,10 +72,12 @@ def fill_report(template_id):
             return jsonify({'status': 'error', 'message': 'Дедлайн прошел. Редактирование запрещено.'}), 403
             
         if not submission:
-            # Создаем новую запись, если её не было
             submission = ReportSubmission(template_id=template.id, user_id=current_user.id)
             db.session.add(submission)
-            
+        else:
+            schema = template.schema or []
+        old_data = submission.data or {}
+        
         json_data = request.get_json()
         
         # --- СЕРВЕРНАЯ ВАЛИДАЦИЯ ---
@@ -66,8 +90,22 @@ def fill_report(template_id):
         else:
             schema = template.schema or []
             
+        historical_data = None
         for sheet in schema:
             for field in sheet.get('fields', []):
+                if field.get('is_active') is False:
+                    # Принудительно восстанавливаем старое значение и пропускаем валидацию
+                    if field['name'] in old_data:
+                        json_data[field['name']] = old_data[field['name']]
+                    else:
+                        if historical_data is None:
+                            historical_data = get_historical_data(template, current_user.id)
+                        if field['name'] in historical_data:
+                            json_data[field['name']] = historical_data[field['name']]
+                        elif field['name'] in json_data:
+                            del json_data[field['name']]
+                    continue
+                    
                 val = json_data.get(field['name'])
                 
                 # Приводим к списку для унифицированной проверки
@@ -90,16 +128,15 @@ def fill_report(template_id):
                             except ValueError:
                                 return jsonify({'status': 'error', 'message': f'Значение в поле "{field["label"]}" должно быть числом.'}), 400
                         elif field.get('type') == 'text':
-                            pass # No length restriction needed
+                            pass
                             
-        # 3. Иерархическая валидация (суммы вложенных полей)
+        # 3. Иерархическая валидация
         from app.utils import build_schema_tree
         from app.services.validation_service import validate_hierarchy
         schema_tree = build_schema_tree(schema)
         is_valid, error_msg = validate_hierarchy(schema_tree, json_data)
         if not is_valid:
             return jsonify({'status': 'error', 'message': error_msg}), 400
-        # ----------------------------
 
         submission.data = json_data
         db.session.commit()
@@ -108,7 +145,6 @@ def fill_report(template_id):
         
     # Отрисовка формы для пользователя (GET запрос)
     from app.utils import build_schema_tree
-    import copy
     
     schema_obj = template.schema
     if isinstance(schema_obj, str):
@@ -118,10 +154,31 @@ def fill_report(template_id):
         except:
             schema_obj = []
             
+    # Подготавливаем отображаемые данные, подтягивая историю для неактивных полей
+    display_data = submission.data.copy() if (submission and submission.data) else {}
+    historical_data = None
+    
+    for sheet in schema_obj:
+        for field in sheet.get('fields', []):
+            if field.get('is_active') is False:
+                if field['name'] not in display_data:
+                    if historical_data is None:
+                        historical_data = get_historical_data(template, current_user.id)
+                    if field['name'] in historical_data:
+                        display_data[field['name']] = historical_data[field['name']]
+                        
+    class DummySubmission:
+        def __init__(self, data):
+            self.data = data
+            
+    virtual_submission = DummySubmission(
+        data=display_data
+    )
+            
     schema_tree = build_schema_tree(schema_obj)
     
     template_name = 'mobile/fill_report.html' if is_mobile(request) else 'fill_report.html'
-    return render_template(template_name, template=template, schema=schema_tree, submission=submission, is_locked=is_locked)
+    return render_template(template_name, template=template, schema=schema_tree, submission=virtual_submission, is_locked=is_locked)
 
 @reports_bp.route('/fill/<int:template_id>/past_submissions', methods=['GET'])
 @login_required

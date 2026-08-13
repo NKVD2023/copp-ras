@@ -40,7 +40,7 @@ def dashboard():
     систему вкладок (tabs) для их отображения.
     """
     
-    sort_param = request.args.get('sort', 'deadline_asc')
+    sort_param = request.args.get('sort')
     
     # 1. Данные пользователей (исключая текущего)
     users = User.query.filter(User.id != current_user.id).all()
@@ -51,11 +51,11 @@ def dashboard():
     # 3. Собираем словарь должников и распределяем шаблоны
     debtors_map, pure_templates, published_templates, draft_templates, archived_templates, completed_templates = TemplateService.get_dashboard_stats(all_templates)
 
-    pure_templates = TemplateService.sort_templates(pure_templates, sort_param)
-    published_templates = TemplateService.sort_templates(published_templates, sort_param)
-    draft_templates = TemplateService.sort_templates(draft_templates, sort_param)
-    archived_templates = TemplateService.sort_templates(archived_templates, sort_param)
-    completed_templates = TemplateService.sort_templates(completed_templates, sort_param)
+    pure_templates = TemplateService.sort_templates(pure_templates, sort_param or 'deadline_asc')
+    published_templates = TemplateService.sort_templates(published_templates, sort_param or 'deadline_asc')
+    draft_templates = TemplateService.sort_templates(draft_templates, sort_param or 'deadline_asc')
+    archived_templates = TemplateService.sort_templates(archived_templates, sort_param or 'deadline_asc')
+    completed_templates = TemplateService.sort_templates(completed_templates, sort_param or 'id_desc')
 
     # Данные для вкладки "База Данных" и "Сданные отчёты" (если нужны)
     all_users = User.query.all()

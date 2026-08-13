@@ -31,12 +31,26 @@ def dashboard():
     submissions = ReportSubmission.query.filter_by(user_id=current_user.id).all()
     filled_ids = [s.template_id for s in submissions]
     
-    # Активные отчеты: назначенные, опубликованные и еще не сданные
+    # Активные отчеты: назначенные, опубликованные
     assigned = [t for t in current_user.assigned_templates if t.is_published]
     
+    # Автоматическое закрытие отчетов с истекшим дедлайном
+    needs_commit = False
+    today = date.today()
+    for t in assigned:
+        if not t.is_completed and t.deadline and today > t.deadline:
+            t.is_completed = True
+            needs_commit = True
+            
+    if needs_commit:
+        from app import db
+        db.session.commit()
+    
     # Архив пользователя (теперь "Завершенные отчеты"):
-    # Сюда попадают отчеты, которые пользователь уже сдал ИЛИ которые глобально закрыты руководителем
+    # Сюда попадают отчеты, которые пользователь уже сдал ИЛИ которые глобально закрыты
     filled = [t for t in assigned if t.id in filled_ids or t.is_completed]
+    # Сортируем завершенные новые сверху
+    filled.sort(key=lambda x: x.id, reverse=True)
     
     # К заполнению: назначены, еще не сданные и не завершенные глобально
     unfilled = [t for t in assigned if t.id not in filled_ids and not t.is_completed]
@@ -44,7 +58,7 @@ def dashboard():
     # Сортируем невыполненные по дедлайну (сначала те, что нужно сдать раньше)
     unfilled.sort(key=lambda x: x.deadline or date.max)
     
-    active = unfilled  # все неотправленные — активные, без отдельной категории «просроченных»
+    active = unfilled  # все неотправленные — активные
     
     # Собираем все прикрепленные файлы из назначенных и сданных отчетов
     files_list = []

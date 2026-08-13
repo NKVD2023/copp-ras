@@ -39,6 +39,11 @@ class TemplateService:
         debtors_map = {}
 
         for t in all_templates:
+            # Автоматическое закрытие отчетов с истекшим сроком
+            if not t.is_completed and t.is_published and t.deadline and datetime.date.today() > t.deadline:
+                t.is_completed = True
+                db.session.commit()
+                
             assigned_users = assigned_users_map.get(t.id, [])
             submitted_user_ids = submitted_user_ids_map.get(t.id, set())
             

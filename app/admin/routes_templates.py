@@ -183,6 +183,28 @@ def clone_template(template_id):
         for f in files_to_attach:
             new_template.attachments.append(f)
             
+    # Обновляем активность полей при клонировании
+    active_fields = request.form.getlist('active_fields')
+    if new_template.schema:
+        import copy
+        from sqlalchemy.orm.attributes import flag_modified
+        
+        if isinstance(new_template.schema, str):
+            try:
+                schema_data = json.loads(new_template.schema)
+            except:
+                schema_data = []
+        else:
+            schema_data = copy.deepcopy(new_template.schema)
+            
+        for sheet in schema_data:
+            for field in sheet.get('fields', []):
+                if not field.get('isGroup'):
+                    field['is_active'] = (field['name'] in active_fields)
+                    
+        new_template.schema = schema_data
+        flag_modified(new_template, 'schema')
+            
     db.session.add(new_template)
     db.session.commit()
     log_action('Копирование отчета', f'Создана копия отчета {original.short_name} с новым именем {new_template.short_name}')
@@ -234,6 +256,28 @@ def edit_template_meta(template_id):
         files_to_attach = UploadedFile.query.filter(UploadedFile.id.in_(attached_file_ids)).all()
         for f in files_to_attach:
             template.attachments.append(f)
+            
+    # Обновляем активность полей
+    active_fields = request.form.getlist('active_fields')
+    if template.schema:
+        import copy
+        from sqlalchemy.orm.attributes import flag_modified
+        
+        if isinstance(template.schema, str):
+            try:
+                schema_data = json.loads(template.schema)
+            except:
+                schema_data = []
+        else:
+            schema_data = copy.deepcopy(template.schema)
+            
+        for sheet in schema_data:
+            for field in sheet.get('fields', []):
+                if not field.get('isGroup'):
+                    field['is_active'] = (field['name'] in active_fields)
+                    
+        template.schema = schema_data
+        flag_modified(template, 'schema')
     
     db.session.commit()
     log_action('Редактирование отчета', f'Изменены метаданные отчета {template.short_name}')
