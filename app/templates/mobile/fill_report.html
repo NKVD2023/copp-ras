@@ -48,6 +48,8 @@
             
             {% for field in sheet.fields %}
             {% set lvl = field.level|default(0)|int %}
+            {% set is_active = field.get('is_active', True) %}
+            {% set effective_locked = is_locked or not is_active %}
             {% if lvl == 0 and not loop.first %}
                 <hr style="border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1;">
             {% endif %}
@@ -56,8 +58,11 @@
                 <!-- Tree branch horizontal line -->
                 <div style="position: absolute; left: 0; top: 0.85rem; width: 0.75rem; height: 2px; background-color: rgba(0, 51, 78, 0.1);"></div>
                 {% endif %}
-                <label class="form-label small d-flex align-items-center gap-1">
+                <label class="form-label small d-flex align-items-center gap-1 flex-wrap">
                     {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                    {% if not is_active %}
+                        <span class="badge bg-danger rounded-pill bg-opacity-10 text-danger border border-danger border-opacity-25 fw-normal mt-1" style="font-size: 0.7rem;"><i class="bi bi-x-circle me-1"></i>Ввод не требуется</span>
+                    {% endif %}
                 </label>
                 
                 {% if field.is_multiple %}
@@ -68,9 +73,9 @@
                         {% for v in field_values %}
                         <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
                             {% if field.type == 'text' or field.type == 'Текстовое' %}
-                                <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ v }}</textarea>
+                                <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>{{ v }}</textarea>
                             {% elif field.type == 'select' %}
-                                <select class="form-select" data-multiple="true" name="{{ field.name }}" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                <select class="form-select" data-multiple="true" name="{{ field.name }}" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
                                     <option value="">-- Выберите значение --</option>
                                     {% for opt in field.options %}
                                     <option value="{{ opt }}" {% if v == opt %}selected{% endif %}>{{ opt }}</option>
@@ -78,14 +83,14 @@
                                 </select>
                             {% else %}
                                 <input type="number" class="form-control" data-multiple="true" name="{{ field.name }}"
-                                    value="{{ v }}" min="0" step="any" inputmode="decimal" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                    value="{{ v }}" min="0" step="any" inputmode="decimal" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
                             {% endif %}
-                            {% if not is_locked %}
+                            {% if not effective_locked %}
                             <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
                             {% endif %}
                         </div>
                         {% endfor %}
-                        {% if not is_locked %}
+                        {% if not effective_locked %}
                         <button type="button" class="btn-add-dynamic-mobile" 
                                 data-options="{% if field.type == 'select' %}{{ field.options | tojson | forceescape }}{% else %}[]{% endif %}"
                                 onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
@@ -95,9 +100,9 @@
                     </div>
                 {% else %}
                     {% if field.type == 'text' or field.type == 'Текстовое' %}
-                        <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name) or '' if submission else '' }}</textarea>
+                        <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>{{ submission.data.get(field.name) or '' if submission else '' }}</textarea>
                     {% elif field.type == 'select' %}
-                        <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                        <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
                             <option value="">-- Выберите значение --</option>
                             {% for opt in field.options %}
                             <option value="{{ opt }}" {% if submission and submission.data.get(field.name) == opt %}selected{% endif %}>{{ opt }}</option>
@@ -105,11 +110,11 @@
                         </select>
                     {% else %}
                         <input type="number" class="form-control" name="{{ field.name }}"
-                            value="{{ submission.data.get(field.name) or '' if submission else '' }}" min="0" step="any" inputmode="decimal" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                            value="{{ submission.data.get(field.name) or '' if submission else '' }}" min="0" step="any" inputmode="decimal" {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
                     {% endif %}
                 {% endif %}
                 
-                {% if field.hint and not is_locked %}
+                {% if field.hint and not effective_locked %}
                 <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle"></i> {{ field.hint }}</div>
                 {% endif %}
             </div>
