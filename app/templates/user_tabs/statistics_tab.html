@@ -173,6 +173,41 @@
         background-color: #00334e !important;
         color: #fff !important;
     }
+
+    /* Tom Select — настройка ширины */
+    .stats-filter-bar .ts-wrapper.form-select {
+        border: none !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+    .stats-filter-bar .ts-control {
+        border: none !important;
+        background: #f1f5f9 !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+        font-size: 0.85rem;
+        font-weight: 600;
+        min-height: 34px;
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+    .stats-filter-bar .ts-dropdown {
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 8px 24px rgba(0,51,78,.12) !important;
+        font-size: 0.85rem;
+        z-index: 9999;
+        /* Делаем выпадающий список шире, чем сама "кнопка" */
+        width: max-content !important;
+        min-width: 100% !important;
+        max-width: 450px !important;
+    }
+    .stats-filter-bar .ts-dropdown .option.selected,
+    .stats-filter-bar .ts-dropdown .option:hover,
+    .stats-filter-bar .ts-dropdown .active {
+        background: #00334e !important;
+        color: #fff !important;
+    }
 </style>
 
 <!-- ===== ШАПКА СТАТИСТИКИ ===== -->
@@ -191,8 +226,8 @@
         <!-- Форма: только выбор отчёта и кнопка Показать -->
         <form method="GET" action="{{ url_for('reports.dashboard') }}" class="d-flex align-items-center gap-2" style="overflow: visible;">
             <input type="hidden" name="tab" value="statisticsTab">
-            <div style="min-width: 300px; max-width: 520px; flex: 1 1 320px;">
-                <select name="short_name" id="short_name"
+            <div style="min-width: 220px; max-width: 260px;">
+                <select name="short_name" id="stat-short-name-select" name="short_name"
                         class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
                         style="font-size: 0.85rem;" required>
                     <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Выберите тип отчёта...</option>
@@ -271,3 +306,22 @@
     <p class="mt-3 mb-0">Выберите тип отчета для просмотра динамики.</p>
 </div>
 {% endif %}
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('stat-short-name-select');
+    if (el && !el.tomselect) {
+        new TomSelect(el, {
+            maxOptions: null,
+            placeholder: 'Выберите отчёт...',
+            allowEmptyOption: true,
+            render: {
+                no_results: function(data, escape) {
+                    return '<div class="no-results" style="padding:8px;">Не найдено: ' + escape(data.input) + '</div>';
+                }
+            }
+        });
+    }
+});
+</script>
