@@ -3,7 +3,7 @@
         {% set total_assigned = total_unfilled + total_filled %}
 
 
-        <div class="row mb-4 align-items-center g-2 mx-0">
+        <div class="row mb-4 align-items-center g-2 mx-0" id="userReportsFilterBar">
             <div class="col-md-8">
                 <div class="input-group shadow-sm">
                     <span class="input-group-text bg-white border-end-0 text-muted">
@@ -56,6 +56,29 @@
                 const sortSelect = document.getElementById('userReportSort');
                 const navTabs = document.getElementById('userTabs'); // from user_dashboard.html
                 
+                // Скрываем строку поиска для не-отчетных вкладок
+                const filterBar = document.getElementById('userReportsFilterBar');
+                if (filterBar && navTabs) {
+                    const updateFilterBarVisibility = () => {
+                        const activeBtn = navTabs.querySelector('.active');
+                        if (activeBtn) {
+                            const target = activeBtn.getAttribute('data-bs-target');
+                            if (target === '#statisticsTab' || target === '#profileTab') {
+                                filterBar.classList.add('d-none');
+                            } else {
+                                filterBar.classList.remove('d-none');
+                            }
+                        }
+                    };
+                    
+                    navTabs.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
+                        btn.addEventListener('shown.bs.tab', updateFilterBarVisibility);
+                    });
+                    
+                    // Первичная инициализация
+                    updateFilterBarVisibility();
+                }
+
                 // Показываем измененные кнопки при наличии черновика
                 const currentUserId = "{{ current_user.id }}";
                 document.querySelectorAll('.action-buttons-container').forEach(container => {

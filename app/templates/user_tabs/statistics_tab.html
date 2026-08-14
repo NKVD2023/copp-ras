@@ -181,30 +181,42 @@
         box-shadow: none !important;
     }
     .stats-filter-bar .ts-control {
-        border: none !important;
-        background: #f1f5f9 !important;
-        border-radius: 8px !important;
+        border: 1px solid rgba(0, 51, 78, 0.12) !important;
+        background: #ffffff !important;
+        border-radius: 50px !important;
         box-shadow: none !important;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         font-weight: 600;
-        min-height: 34px;
-        padding: 6px 10px;
+        min-height: 38px;
+        padding: 6px 16px;
         cursor: pointer;
+        display: flex;
+        align-items: center;
     }
-    .stats-filter-bar .ts-dropdown {
-        border-radius: 10px !important;
-        border: 1px solid #e2e8f0 !important;
-        box-shadow: 0 8px 24px rgba(0,51,78,.12) !important;
+    .stats-dropdown {
+        border-radius: 14px !important;
+        border: 1px solid rgba(0, 51, 78, 0.12) !important;
+        box-shadow: 0 16px 40px rgba(13, 46, 97, 0.16) !important;
         font-size: 0.85rem;
-        z-index: 9999;
+        z-index: 9999 !important;
         /* Делаем выпадающий список шире, чем сама "кнопка" */
         width: max-content !important;
         min-width: 100% !important;
         max-width: 450px !important;
+        padding: 5px !important;
     }
-    .stats-filter-bar .ts-dropdown .option.selected,
-    .stats-filter-bar .ts-dropdown .option:hover,
-    .stats-filter-bar .ts-dropdown .active {
+    .stats-dropdown .ts-dropdown-content {
+        max-height: 250px !important;
+        overflow-y: auto !important;
+    }
+    .stats-dropdown .option {
+        padding: 8px 12px !important;
+        border-radius: 8px !important;
+        margin-bottom: 2px !important;
+    }
+    .stats-dropdown .option.selected,
+    .stats-dropdown .option:hover,
+    .stats-dropdown .active {
         background: #00334e !important;
         color: #fff !important;
     }
@@ -224,11 +236,11 @@
     <div class="d-flex align-items-center gap-2 flex-wrap">
 
         <!-- Форма: только выбор отчёта и кнопка Показать -->
-        <form method="GET" action="{{ url_for('reports.dashboard') }}" class="d-flex align-items-center gap-2" style="overflow: visible;">
+        <form method="GET" action="{{ url_for('reports.dashboard') }}" class="d-flex align-items-center gap-2" style="overflow: visible; flex: 1; max-width: 800px;">
             <input type="hidden" name="tab" value="statisticsTab">
-            <div style="min-width: 220px; max-width: 260px;">
+            <div style="flex: 1 1 auto; min-width: 250px;">
                 <select name="short_name" id="stat-short-name-select" name="short_name"
-                        class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
+                        class="form-select border-0 bg-light rounded-3 fw-semibold"
                         style="font-size: 0.85rem;" required>
                     <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Выберите тип отчёта...</option>
                     {% for sn in stat_short_names %}
@@ -236,7 +248,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <button type="submit" class="btn btn-copp btn-sm rounded-pill fw-semibold px-3">
+            <button type="submit" class="btn btn-copp rounded-pill fw-semibold px-4" style="flex: 0 0 auto; min-height: 38px;">
                 <i class="bi bi-search me-1"></i> Показать
             </button>
         </form>

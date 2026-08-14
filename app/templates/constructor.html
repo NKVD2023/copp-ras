@@ -436,11 +436,32 @@
         renderStructure(); 
     }
 
-    
-    // Автоскролл
+    function insertFieldAt(sIdx, fIdx) {
+        const sheet = reportStructure[sIdx];
+        if (!sheet) return;
+        
+        let newLvl = sheet.fields[fIdx].level || 0;
+        const newField = {
+            id: 'temp_' + Date.now(),
+            label: 'Новое поле',
+            type: 'text',
+            required: false,
+            isGroup: false,
+            level: newLvl
+        };
+        sheet.fields.splice(fIdx + 1, 0, newField);
+        renderStructure();
+        
+        setTimeout(() => {
+            const el = document.getElementById(`field-${sIdx}-${fIdx + 1}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
+
+    // Автоскролл при перетаскивании
     function handleDragScroll(event) {
-        const edgeSize = 80;
-        const speed = 15;
+        const edgeSize = 120; // Увеличенная зона для лучшего срабатывания
+        const speed = 25; // Увеличенная скорость
         const viewportY = event.clientY;
         const viewportHeight = window.innerHeight;
         

@@ -86,8 +86,31 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        function initStatsTomSelect() {
+            if (typeof TomSelect === 'undefined') return;
+            document.querySelectorAll('#statisticsTab select.form-select, #section-analytics select.form-select').forEach(el => {
+                if (!el.tomselect) {
+                    new TomSelect(el, { 
+                        create: false, 
+                        maxOptions: null,
+                        dropdownParent: 'body',
+                        dropdownClass: 'ts-dropdown stats-dropdown'
+                    });
+                }
+            });
+        }
+        
+        // Initialize for mobile section if visible
+        initStatsTomSelect();
+
+        const statsTabBtn = document.querySelector('.admin-nav-link[data-bs-target="#statisticsTab"]');
+        if (statsTabBtn) {
+            statsTabBtn.addEventListener('shown.bs.tab', initStatsTomSelect);
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('tab') === 'statisticsTab' || window.location.hash === '#statisticsTab') {
             const statsTab = document.querySelector('[data-bs-target="#statisticsTab"]');
