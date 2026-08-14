@@ -181,6 +181,11 @@
     
     <div id="mobileAnalyticsChartsContainer" class="d-flex flex-column gap-3">
         {% if stat_schema %}
+            <div class="d-flex justify-content-end mb-2">
+                <a href="{{ url_for('reports.export_user_statistics', short_name=selected_short_name) }}" class="btn btn-sm btn-success rounded-pill fw-semibold shadow-sm d-flex align-items-center gap-2" style="background-color: #16a34a; border-color: #16a34a;">
+                    <i class="bi bi-file-earmark-excel"></i> Экспорт в Excel
+                </a>
+            </div>
             <div class="stats-table-scroll bg-white rounded-3 shadow-sm border p-0 overflow-auto">
                 <style>
                     /* Стили для таблицы статистики в мобилке */

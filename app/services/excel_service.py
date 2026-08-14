@@ -45,6 +45,105 @@ class ExcelService:
         return output, filename
 
     @staticmethod
+    def export_statistics(stat_schema, short_name, user_title=None):
+        """
+        Формирует Excel файл со сводной статистикой.
+        :param stat_schema: Словарь с периодами и полями (с дельтами).
+        :param short_name: Тип отчета.
+        :param user_title: Имя учреждения (для админа) или None (для пользователя).
+        :return: (output: BytesIO, filename: str)
+        """
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Статистика"
+
+        # Заголовок (учет учреждения, если есть)
+        title_text = f"Статистика: {short_name}"
+        if user_title:
+            title_text += f" | {user_title}"
+        
+        ws.append([title_text])
+        header_title = ws.cell(row=1, column=1)
+        header_title.font = Font(bold=True, size=14)
+        
+        # Заголовки таблицы
+        periods = stat_schema.get("periods", [])
+        headers = ["Поле"] + [p["period"] for p in periods]
+        ws.append(headers)
+
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'), 
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+
+        for col_num in range(1, len(headers) + 1):
+            cell = ws.cell(row=2, column=col_num)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = thin_border
+
+        ws.column_dimensions['A'].width = 60
+
+        # Цвета для дельт
+        color_up = "FF16A34A"   # Зеленый
+        color_down = "FFDC2626" # Красный
+        
+        # Заполнение данных
+        start_row = 3
+        fields = stat_schema.get("fields", [])
+        for i, field in enumerate(fields):
+            row_idx = start_row + i
+            # Название поля
+            cell_name = ws.cell(row=row_idx, column=1, value=field["name"])
+            cell_name.border = thin_border
+            cell_name.alignment = Alignment(vertical="center", wrap_text=True)
+
+            # Значения по периодам
+            for j, val_data in enumerate(field["values"]):
+                col_idx = 2 + j
+                cell = ws.cell(row=row_idx, column=col_idx)
+                
+                if val_data["has_data"]:
+                    val = val_data["value"]
+                    # Если числовой тип, записываем как float/int
+                    if val_data.get("type") in ["number", "float"] and val != "":
+                        try:
+                            val = float(val) if "." in str(val) else int(val)
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    cell.value = val
+                    
+                    # Раскраска в зависимости от статуса дельты
+                    status = val_data.get("status")
+                    if status == "up":
+                        cell.font = Font(color=color_up, bold=True)
+                    elif status == "down":
+                        cell.font = Font(color=color_down, bold=True)
+                else:
+                    cell.value = "Нет данных"
+                    cell.font = Font(color="FF94A3B8", italic=True) # Серый
+
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            # Подбор ширины для колонок периодов
+            for j in range(len(periods)):
+                col_letter = get_column_letter(2 + j)
+                ws.column_dimensions[col_letter].width = 20
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        safe_name = short_name.replace(" ", "_").replace("/", "-")
+        filename = f"Статистика_{safe_name}.xlsx"
+        return output, filename
+
+    @staticmethod
     def export_report(template, submissions):
         """
         Формирует сводный Excel файл со сданными отчетами (поддержка сложной шапки).

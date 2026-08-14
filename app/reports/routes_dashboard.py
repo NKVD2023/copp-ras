@@ -3,12 +3,13 @@
 Отвечает за отображение главной панели для обычного пользователя (учреждения),
 на которой показаны назначенные ему отчеты: сданные и ожидающие сдачи.
 """
-from flask import render_template, redirect, url_for, request, jsonify
+from flask import render_template, redirect, url_for, request, jsonify, send_file
 from flask_login import login_required, current_user
 from datetime import date
 from app.reports import reports_bp
 from app.models import ReportTemplate, ReportSubmission, User
 from app.utils import is_mobile
+from app.services.excel_service import ExcelService
 
 # ==========================================
 # ГЛАВНАЯ СТРАНИЦА (ДАШБОРДЫ)
