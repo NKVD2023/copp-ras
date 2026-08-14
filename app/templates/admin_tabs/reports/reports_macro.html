@@ -37,7 +37,7 @@
                     <li>
                         <form action="{{ url_for('admin.toggle_publish', template_id=t.id) }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="button" onclick="event.preventDefault(); {% if not t.is_published %}{% if not t.period or t.period == 'None' %}coppAlert('Невозможно опубликовать отчет: сначала задайте период (в меню Изменить настройки).', 'warning');{% else %}coppConfirm('После публикации отчета вы больше не сможете изменять его структуру. Продолжить?', () => { this.closest('form').submit(); });{% endif %}{% else %}this.closest('form').submit();{% endif %}" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
+                            <button type="button" onclick="event.preventDefault(); {% if not t.is_published %}{% if (not t.period or t.period == 'None') and not t.period_data %}coppAlert('Невозможно опубликовать отчет: сначала задайте период (в меню Изменить настройки).', 'warning');{% else %}coppConfirm('После публикации отчета вы больше не сможете изменять его структуру. Продолжить?', () => { this.closest('form').submit(); });{% endif %}{% else %}this.closest('form').submit();{% endif %}" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_published %}text-danger{% endif %}">
                                 <i class="bi {% if t.is_published %}bi-eye-slash{% else %}bi-eye{% endif %}"></i>
                                 {% if t.is_published %}Снять с публикации{% else %}Опубликовать{% endif %}
                             </button>
