@@ -21,7 +21,7 @@ class ExcelService:
         ws.append(["Организация"])
         header_cell = ws.cell(row=1, column=1)
         header_cell.font = Font(bold=True, color="FFFFFF")
-        header_cell.fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+        header_cell.fill = PatternFill(start_color="00334E", end_color="00334E", fill_type="solid")
         header_cell.alignment = Alignment(horizontal="center", vertical="center")
         
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
@@ -48,97 +48,126 @@ class ExcelService:
     def export_statistics(stat_schema, short_name, user_title=None):
         """
         Формирует Excel файл со сводной статистикой.
+        Макет: периоды вертикально (от новых к старым), поля горизонтально.
         :param stat_schema: Словарь с периодами и полями (с дельтами).
         :param short_name: Тип отчета.
         :param user_title: Имя учреждения (для админа) или None (для пользователя).
         :return: (output: BytesIO, filename: str)
         """
+        CORP_COLOR   = "00334E"   # Корп. цвет шапки
+        COLOR_UP     = "16A34A"   # Зелёный
+        COLOR_DOWN   = "DC2626"   # Красный
+        COLOR_EMPTY  = "94A3B8"   # Серый
+
+        header_font  = Font(bold=True, color="FFFFFF", name='Arial', size=11)
+        header_fill  = PatternFill(start_color=CORP_COLOR, end_color=CORP_COLOR, fill_type="solid")
+        data_font    = Font(name='Arial', size=11)
+        thin_border  = Border(
+            left=Side(style='thin', color='BFBFBF'),
+            right=Side(style='thin', color='BFBFBF'),
+            top=Side(style='thin', color='BFBFBF'),
+            bottom=Side(style='thin', color='BFBFBF')
+        )
+        align_center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        align_left   = Alignment(horizontal="left",   vertical="center", wrap_text=True)
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Статистика"
 
-        # Заголовок (учет учреждения, если есть)
+        periods = stat_schema.get("periods", [])
+        fields  = stat_schema.get("fields", [])
+
+        # Периоды хранятся от старых к новым (ASC) — для отображения разворачиваем
+        period_order = list(reversed(range(len(periods))))  # индексы от новых к старым
+
+        total_cols = 1 + len(fields)  # Период + поля
+
+        # ---- Строка 1: заголовок ----
         title_text = f"Статистика: {short_name}"
         if user_title:
             title_text += f" | {user_title}"
-        
-        ws.append([title_text])
-        header_title = ws.cell(row=1, column=1)
-        header_title.font = Font(bold=True, size=14)
-        
-        # Заголовки таблицы
-        periods = stat_schema.get("periods", [])
-        headers = ["Поле"] + [p["period"] for p in periods]
-        ws.append(headers)
 
-        header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
-        thin_border = Border(
-            left=Side(style='thin'), right=Side(style='thin'), 
-            top=Side(style='thin'), bottom=Side(style='thin')
-        )
+        title_cell = ws.cell(row=1, column=1, value=title_text)
+        title_cell.font = Font(bold=True, size=14, color="FFFFFF", name='Arial')
+        title_cell.fill = header_fill
+        title_cell.alignment = align_center
+        title_cell.border = thin_border
+        if total_cols > 1:
+            ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
+            for col in range(2, total_cols + 1):
+                ws.cell(row=1, column=col).border = thin_border
+        ws.row_dimensions[1].height = 36
 
-        for col_num in range(1, len(headers) + 1):
-            cell = ws.cell(row=2, column=col_num)
+        # ---- Строка 2: шапка (Период | Поле_1 | Поле_2 | ...) ----
+        ws.cell(row=2, column=1, value="Период")
+        for j, field in enumerate(fields):
+            ws.cell(row=2, column=2 + j, value=field["name"])
+
+        for col in range(1, total_cols + 1):
+            cell = ws.cell(row=2, column=col)
             cell.font = header_font
             cell.fill = header_fill
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.alignment = align_center
             cell.border = thin_border
+        ws.row_dimensions[2].height = 40
 
-        ws.column_dimensions['A'].width = 60
+        # ---- Строки 3+: периоды (от новых к старым) ----
+        for row_offset, p_idx in enumerate(period_order):
+            row_num = 3 + row_offset
+            period_info = periods[p_idx]
 
-        # Цвета для дельт
-        color_up = "FF16A34A"   # Зеленый
-        color_down = "FFDC2626" # Красный
-        
-        # Заполнение данных
-        start_row = 3
-        fields = stat_schema.get("fields", [])
-        for i, field in enumerate(fields):
-            row_idx = start_row + i
-            # Название поля
-            cell_name = ws.cell(row=row_idx, column=1, value=field["name"])
-            cell_name.border = thin_border
-            cell_name.alignment = Alignment(vertical="center", wrap_text=True)
+            # Название периода
+            period_label = period_info["period"]
+            if period_info.get("end_date"):
+                period_label += f"\nпо {period_info['end_date']}"
 
-            # Значения по периодам
-            for j, val_data in enumerate(field["values"]):
-                col_idx = 2 + j
-                cell = ws.cell(row=row_idx, column=col_idx)
-                
+            period_cell = ws.cell(row=row_num, column=1, value=period_label)
+            period_cell.font   = Font(bold=True, color="FFFFFF", name='Arial', size=11)
+            period_cell.fill   = header_fill
+            period_cell.alignment = align_center
+            period_cell.border = thin_border
+
+            # Значения полей
+            for j, field in enumerate(fields):
+                val_data = field["values"][p_idx]
+                cell = ws.cell(row=row_num, column=2 + j)
+
                 if val_data["has_data"]:
                     val = val_data["value"]
-                    # Если числовой тип, записываем как float/int
                     if val_data.get("type") in ["number", "float"] and val != "":
                         try:
                             val = float(val) if "." in str(val) else int(val)
                         except (ValueError, TypeError):
                             pass
-                    
                     cell.value = val
-                    
-                    # Раскраска в зависимости от статуса дельты
-                    status = val_data.get("status")
+
+                    status = val_data.get("status", "zero")
                     if status == "up":
-                        cell.font = Font(color=color_up, bold=True)
+                        cell.font = Font(color=COLOR_UP,   bold=True, name='Arial', size=11)
                     elif status == "down":
-                        cell.font = Font(color=color_down, bold=True)
+                        cell.font = Font(color=COLOR_DOWN, bold=True, name='Arial', size=11)
+                    else:
+                        cell.font = data_font
                 else:
                     cell.value = "Нет данных"
-                    cell.font = Font(color="FF94A3B8", italic=True) # Серый
+                    cell.font  = Font(color=COLOR_EMPTY, italic=True, name='Arial', size=11)
 
-                cell.border = thin_border
-                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.alignment = align_center
+                cell.border    = thin_border
 
-            # Подбор ширины для колонок периодов
-            for j in range(len(periods)):
-                col_letter = get_column_letter(2 + j)
-                ws.column_dimensions[col_letter].width = 20
+            ws.row_dimensions[row_num].height = 30
+
+        # ---- Ширина колонок ----
+        ws.column_dimensions['A'].width = 22
+        for j in range(len(fields)):
+            col_letter = get_column_letter(2 + j)
+            ws.column_dimensions[col_letter].width = 30
 
         output = BytesIO()
         wb.save(output)
         output.seek(0)
-        
+
         safe_name = short_name.replace(" ", "_").replace("/", "-")
         filename = f"Статистика_{safe_name}.xlsx"
         return output, filename
@@ -157,7 +186,7 @@ class ExcelService:
         # --- НАСТРОЙКИ СТИЛЕЙ ---
         title_font = Font(name='Arial', size=14, bold=True, color="000000")
         header_font = Font(name='Arial', size=11, bold=True, color="FFFFFF")
-        header_fill = PatternFill("solid", fgColor="0071DC")
+        header_fill = PatternFill("solid", fgColor="00334E")
         data_font = Font(name='Arial', size=11)
         total_font = Font(name='Arial', size=11, bold=True)
         total_fill = PatternFill("solid", fgColor="F8F9FA")
