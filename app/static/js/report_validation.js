@@ -85,7 +85,6 @@ function _validateNodes(nodes, dataObj) {
  * Инициализация проверки на лету
  */
 function initRealTimeValidation(schemaTree, getFormDataObjFunc, formElement) {
-    const inputs = formElement.querySelectorAll('input[type="number"], input[type="text"]');
     
     function clearAllValidationErrors() {
         formElement.querySelectorAll('.hierarchy-invalid').forEach(el => {
@@ -120,9 +119,11 @@ function initRealTimeValidation(schemaTree, getFormDataObjFunc, formElement) {
         return result.isValid;
     }
 
-    // Вешаем слушатели
-    inputs.forEach(input => {
-        input.addEventListener('input', runValidation);
+    // Делегирование событий на форму — работает для ВСЕХ инпутов включая динамически добавленные
+    formElement.addEventListener('input', function(e) {
+        if (e.target.matches('input[type="number"], input[type="text"]')) {
+            runValidation();
+        }
     });
     
     // Возвращаем функцию ручного запуска валидации (для вызова перед отправкой)

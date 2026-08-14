@@ -22,6 +22,53 @@
             margin-right: -3rem;
         }
     }
+
+    /* Разделитель между экземплярами многократного листа */
+    .sheet-instance-divider {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 2rem -1.5rem;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(to right, rgba(26,54,93,0.06), rgba(26,54,93,0.02));
+        border-left: 4px solid #1a365d;
+        border-top: 1px solid rgba(26,54,93,0.15);
+        border-bottom: 1px solid rgba(26,54,93,0.15);
+    }
+    @media (min-width: 768px) {
+        .sheet-instance-divider {
+            margin-left: -3rem;
+            margin-right: -3rem;
+            padding-left: 3rem;
+            padding-right: 3rem;
+        }
+    }
+    .sheet-instance-divider .divider-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #1a365d;
+        white-space: nowrap;
+    }
+    .sheet-instance-divider .divider-line {
+        flex: 1;
+        height: 1px;
+        background: rgba(26,54,93,0.2);
+    }
+    .sheet-instance-divider .divider-num {
+        background: #1a365d;
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
 </style>
 <div class="card mb-5 shadow-none border-0">
     <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
@@ -90,13 +137,17 @@
                 {% for sheet in schema %}
                 <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="sheet-{{ loop.index }}"
                     role="tabpanel">
-                    {% macro render_input(field, submission, is_locked) %}
+                    {% macro render_input(field, submission, is_locked, group_index=none, sheet_is_multiple=false) %}
                         {% if field.hint and not is_locked %}
                         <div class="form-text mt-0 mb-2 small text-muted">{{ field.hint }}</div>
                         {% endif %}
                         
-                        {% if field.is_multiple %}
+                        {# Поле-уровневый is_multiple: работает только если лист НЕ в режиме многократного заполнения #}
+                        {% if field.is_multiple and not sheet_is_multiple %}
                             {% set raw_val = submission.data.get(field.name) if submission else None %}
+                            {% if group_index is not none and raw_val is iterable and raw_val is not string %}
+                                {% set raw_val = raw_val[group_index] if group_index < raw_val|length else '' %}
+                            {% endif %}
                             {% set field_values = raw_val if raw_val is not none and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val is not none else ['']) %}
                             
                             <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
@@ -130,76 +181,122 @@
                             </div>
                         {% else %}
                             <div class="input-wrapper">
+                                {% set single_val = submission.data.get(field.name, '') if submission else '' %}
+                                {% if group_index is not none and single_val is iterable and single_val is not string %}
+                                    {% set single_val = single_val[group_index] if group_index < single_val|length else '' %}
+                                {% elif single_val is iterable and single_val is not string and single_val is not mapping %}
+                                    {% set single_val = single_val[0] if single_val|length > 0 else '' %}
+                                {% endif %}
+                                {% set is_mult_attr = 'data-multiple="true"' if group_index is not none else '' %}
                                 {% if field.type == 'text' or field.type == 'Текстовое' %}
-                                    <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ submission.data.get(field.name, '') if submission else '' }}</textarea>
+                                    <textarea class="form-control" name="{{ field.name }}" rows="3" {{ is_mult_attr|safe }} {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>{{ single_val }}</textarea>
                                 {% elif field.type == 'select' %}
-                                    <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                    <select class="form-select" name="{{ field.name }}" {{ is_mult_attr|safe }} {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
                                         <option value="">-- Выберите значение --</option>
                                         {% for opt in field.options %}
-                                        <option value="{{ opt }}" {% if submission and submission.data.get(field.name) == opt %}selected{% endif %}>{{ opt }}</option>
+                                        <option value="{{ opt }}" {% if single_val == opt %}selected{% endif %}>{{ opt }}</option>
                                         {% endfor %}
                                     </select>
                                 {% else %}
-                                    <input type="number" class="form-control" name="{{ field.name }}"
-                                        value="{{ submission.data.get(field.name, '') if submission else '' }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
+                                    <input type="number" class="form-control" name="{{ field.name }}" {{ is_mult_attr|safe }}
+                                        value="{{ single_val }}" min="0" step="any" {% if field.required %}required{% endif %} {% if is_locked %}disabled{% endif %}>
                                 {% endif %}
                             </div>
                         {% endif %}
                     {% endmacro %}
 
-                    {% macro render_field_node(node, submission, is_locked) %}
+                    {% macro render_field_node(node, submission, is_locked, group_index=none, sheet_is_multiple=false) %}
                         {% set field = node.field %}
                         {% set lvl = field.level|default(0)|int %}
                         {% set is_active = field.get('is_active', True) %}
                         {% set effective_locked = is_locked or not is_active %}
                         
                         {% if is_active %}
-                        <div class="mb-4 grid-item">
-                            <div class="grid-label">
-                                <label class="form-label text-dark d-flex align-items-start gap-2 mb-1 {% if lvl == 0 %}fw-bold fs-6{% else %}small fw-semibold{% endif %}">
-                                    <span class="text-muted">{{ field.numbering|default('') }}</span> 
-                                    <span>
-                                        {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
-                                    </span>
-                                </label>
-                            </div>
-                            
-                            <div class="grid-input">
-                                {{ render_input(field, submission, effective_locked) }}
-                            </div>
-                            
-                            <div class="grid-children">
-                                {% if node.children %}
-                                    {% if lvl == 0 %}
-                                    <div class="mt-4">
-                                        <div class="fields-grid">
-                                            {% for child in node.children %}
-                                                {{ render_field_node(child, submission, is_locked) }}
-                                            {% endfor %}
-                                        </div>
+                                <div class="mb-4 grid-item">
+                                    <div class="grid-label">
+                                        <label class="form-label text-dark d-flex align-items-start gap-2 mb-1 {% if lvl == 0 %}fw-bold fs-6{% else %}small fw-semibold{% endif %}">
+                                            <span class="text-muted">{{ field.numbering|default('') }}</span> 
+                                            <span>
+                                                {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                                            </span>
+                                        </label>
                                     </div>
-                                    {% else %}
-                                    <div class="tree-branch-wrapper mt-3">
-                                        {% for child in node.children %}
-                                            <div class="tree-branch-item">
-                                                {{ render_field_node(child, submission, is_locked) }}
+                                    
+                                    <div class="grid-input">
+                                        {{ render_input(field, submission, effective_locked, group_index, sheet_is_multiple) }}
+                                    </div>
+                                    
+                                    <div class="grid-children">
+                                        {% if node.children %}
+                                            {% if lvl == 0 %}
+                                            <div class="mt-4">
+                                                <div class="fields-grid">
+                                                    {% for child in node.children %}
+                                                        {{ render_field_node(child, submission, is_locked, group_index) }}
+                                                    {% endfor %}
+                                                </div>
                                             </div>
-                                        {% endfor %}
+                                            {% else %}
+                                            <div class="tree-branch-wrapper mt-3">
+                                                {% for child in node.children %}
+                                                    <div class="tree-branch-item">
+                                                        {{ render_field_node(child, submission, is_locked, group_index, sheet_is_multiple) }}
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
+                                </div>
                         {% endif %}
                     {% endmacro %}
 
-                    <div class="mt-4">
-                        {% for node in sheet.fields_tree %}
-                            {{ render_field_node(node, submission, is_locked) }}
-                            {% if not loop.last %}
-                                <hr class="edge-to-edge-hr">
+                    <div class="mt-4 sheet-content-wrapper" data-sheet-idx="{{ loop.index0 }}" data-is-multiple="{{ 'true' if sheet.get('is_multiple') else 'false' }}">
+                        {% set ns = namespace(max_len=1) %}
+                        {% if sheet.get('is_multiple') %}
+                            {% for field in sheet.fields %}
+                                {% set val = submission.data.get(field.name) %}
+                                {% if val is iterable and val is not string and val is not mapping %}
+                                    {% if val|length > ns.max_len %}
+                                        {% set ns.max_len = val|length %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        
+                        <div class="sheet-instances-container">
+                        {% for sheet_inst_idx in range(ns.max_len) %}
+                        <div class="sheet-instance position-relative" data-inst-idx="{{ sheet_inst_idx }}">
+                            {% if not loop.first %}
+                            <div class="sheet-instance-divider">
+                                <span class="divider-num">{{ sheet_inst_idx + 1 }}</span>
+                                <span class="divider-label">{{ sheet.sheet_title }}</span>
+                                <span class="divider-line"></span>
+                                {% if sheet.get('is_multiple') and not is_locked %}
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-sheet-instance" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
+                                {% endif %}
+                            </div>
                             {% endif %}
+                            {% if loop.first and sheet.get('is_multiple') and not is_locked %}
+                            <div class="position-absolute top-0 end-0">
+                                <button type="button" class="btn btn-outline-danger btn-sm px-3 remove-sheet-instance" style="display:none;" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
+                            </div>
+                            {% endif %}
+                            {% for node in sheet.fields_tree %}
+                                {{ render_field_node(node, submission, is_locked, sheet_inst_idx if sheet.get('is_multiple') else none, sheet_is_multiple=sheet.get('is_multiple', False)) }}
+                                {% if not loop.last %}
+                                    <hr class="edge-to-edge-hr">
+                                {% endif %}
+                            {% endfor %}
+                        </div>
                         {% endfor %}
+                        </div>
+                        
+                        {% if sheet.get('is_multiple') and not is_locked %}
+                        <button type="button" class="btn btn-copp btn-add-sheet-instance mt-2 mb-4 d-flex align-items-center gap-2" onclick="addSheetInstance(this)">
+                            <i class="bi bi-plus-circle"></i> Добавить еще "{{ sheet.sheet_title }}"
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -262,4 +359,48 @@
 </script>
 <script src="{{ url_for('static', filename='js/report_validation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/fill_report.js') }}"></script>
+<script>
+    // Добавление нового поля в dynamic-field-wrapper (поле-уровневый is_multiple)
+    function addDynamicField(btn, type, name, value = '') {
+        const wrapper = btn.closest('.dynamic-field-wrapper');
+        const newItem = document.createElement('div');
+        newItem.className = 'dynamic-field-item d-flex gap-2 mb-2 align-items-start';
+
+        let inputHtml = '';
+        if (type === 'text' || type === 'Текстовое') {
+            inputHtml = `<textarea class="form-control" data-multiple="true" name="${name}" rows="2">${value}</textarea>`;
+        } else if (type === 'select') {
+            const options = JSON.parse(btn.dataset.options || '[]');
+            let optionsHtml = `<option value="">-- Выберите значение --</option>`;
+            options.forEach(opt => {
+                optionsHtml += `<option value="${opt}">${opt}</option>`;
+            });
+            inputHtml = `<select class="form-select" data-multiple="true" name="${name}">${optionsHtml}</select>`;
+        } else {
+            inputHtml = `<input type="number" class="form-control" data-multiple="true" name="${name}" value="${value}" min="0" step="any">`;
+        }
+
+        newItem.innerHTML = `
+            ${inputHtml}
+            <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
+        `;
+        wrapper.insertBefore(newItem, btn);
+
+        // Инициализируем TomSelect если select
+        if (type === 'select' && window.initTomSelects) {
+            window.initTomSelects(newItem);
+        }
+
+        // Триггер для автосохранения
+        const form = wrapper.closest('form');
+        if (form) form.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function removeDynamicField(btn) {
+        const item = btn.closest('.dynamic-field-item');
+        const form = item.closest('form');
+        item.remove();
+        if (form) form.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+</script>
 {% endblock %}

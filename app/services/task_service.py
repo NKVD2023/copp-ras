@@ -1,13 +1,13 @@
 import threading
 import uuid
-from app import create_app, db
+from app import db
 from app.models import BackgroundTask, ReportTemplate, ReportSubmission
 from app.services.excel_service import ExcelService
 import os
 
 class TaskService:
     @staticmethod
-    def _generate_excel_thread(task_id, template_id, app):
+    def _generate_excel_thread(task_id, template_id, app, save_dir):
         # We need a new application context for the background thread
         with app.app_context():
             task = BackgroundTask.query.get(task_id)
@@ -21,8 +21,7 @@ class TaskService:
                 # Use ExcelService to generate output
                 output, filename = ExcelService.export_report(template, submissions)
                 
-                # Save to disk
-                save_dir = os.path.join(create_app().root_path, 'static', 'uploads', 'tasks')
+                # Save to disk (save_dir передаётся явно, чтобы избежать неправильного root_path в потоке)
                 os.makedirs(save_dir, exist_ok=True)
                 
                 # Prepend task_id to ensure uniqueness
@@ -60,9 +59,12 @@ class TaskService:
         from flask import current_app
         app = current_app._get_current_object()
         
+        # Вычисляем путь здесь, в контексте запроса, где root_path точно правильный
+        save_dir = os.path.join(app.root_path, 'static', 'uploads', 'tasks')
+        
         thread = threading.Thread(
             target=TaskService._generate_excel_thread,
-            args=(task_id, template_id, app)
+            args=(task_id, template_id, app, save_dir)
         )
         thread.start()
         
