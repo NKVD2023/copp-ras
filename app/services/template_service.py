@@ -9,6 +9,7 @@ class TemplateService:
         Вычисляет статистику по шаблонам (должники, распределение по статусам).
         Использует оптимизированные запросы (решает проблему N+1).
         """
+        needs_commit = False
         template_ids = [t.id for t in all_templates]
         if not template_ids:
             return {}, [], [], [], [], []
@@ -42,7 +43,7 @@ class TemplateService:
             # Автоматическое закрытие отчетов с истекшим сроком
             if not t.is_completed and t.is_published and t.deadline and datetime.date.today() > t.deadline:
                 t.is_completed = True
-                db.session.commit()
+                needs_commit = True
                 
             assigned_users = assigned_users_map.get(t.id, [])
             submitted_user_ids = submitted_user_ids_map.get(t.id, set())
@@ -67,6 +68,9 @@ class TemplateService:
                 else:
                     published_templates.append(t)
                     
+        if needs_commit:
+            db.session.commit()
+
         return debtors_map, pure_templates, published_templates, draft_templates, archived_templates, completed_templates
 
     @staticmethod
