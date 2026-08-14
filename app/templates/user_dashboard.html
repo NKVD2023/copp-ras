@@ -34,6 +34,12 @@
                     
                 </button>
             </li>
+            <li class="admin-nav-item">
+                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#statisticsTab" type="button">
+                    <i class="bi bi-bar-chart-line"></i>
+                    Статистика
+                </button>
+            </li>
             <li class="admin-nav-item ms-auto">
                 <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#profileTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/></svg>
@@ -49,6 +55,11 @@
 <div class="tab-content mt-4">
     <!-- Отчеты (Активные, Просроченные, Архив, Файлы) загружаются из reports_tabs.html -->
     {% include 'user_tabs/reports_tabs.html' %}
+    
+    <!-- Вкладка Статистики -->
+    <div class="tab-pane fade" id="statisticsTab" role="tabpanel">
+        {% include 'user_tabs/statistics_tab.html' %}
+    </div>
     
     <!-- Вкладка профиля -->
     <div class="tab-pane fade" id="profileTab" role="tabpanel">
@@ -70,12 +81,45 @@
             </div>
         </div>
     </div>
-        <div id="analyticsChartsContainer" class="row g-4">
-            <div class="col-12 text-muted text-center py-5" id="analyticsEmptyState">
-                Выберите отчет для отображения графиков
-            </div>
-        </div>
-    </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') === 'statisticsTab' || window.location.hash === '#statisticsTab') {
+            const statsTab = document.querySelector('[data-bs-target="#statisticsTab"]');
+            if (statsTab) {
+                const tab = new bootstrap.Tab(statsTab);
+                tab.show();
+            }
+        }
+        
+        // Show draft split buttons if draft exists
+        const currentUserId = "{{ current_user.id }}";
+        document.querySelectorAll('.action-buttons-container').forEach(container => {
+            const templateId = container.dataset.templateId;
+            const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
+            if (localStorage.getItem(draftKey)) {
+                const defaultBtn = container.querySelector('.btn-default-fill');
+                const splitBtns = container.querySelector('.btn-draft-split');
+                if (defaultBtn && splitBtns) {
+                    defaultBtn.classList.add('d-none');
+                    splitBtns.classList.remove('d-none');
+                    splitBtns.classList.add('d-flex');
+                }
+            }
+        });
+        
+        window.clearDraftAndStart = function(templateId, url) {
+            coppConfirm('Вы уверены, что хотите начать заполнение заново? Сохраненный черновик будет удален.', () => {
+                const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
+                localStorage.removeItem(draftKey);
+                window.location.href = url;
+            });
+        };
+    });
+</script>
 {% endblock %}

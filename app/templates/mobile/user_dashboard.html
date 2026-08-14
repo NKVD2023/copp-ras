@@ -168,18 +168,45 @@
 <!-- Analytics Section -->
 <div id="section-analytics" class="content-section" style="display: none;">
     <h5 class="fw-bold mb-3 text-dark">Моя статистика</h5>
+    
     <div class="card shadow-sm p-3 mb-4" style="border-radius: 12px; border-color: #edf2f7;">
         <label class="form-label small text-muted">Выберите отчет для анализа</label>
-        <select id="mobileAnalyticsReportSelect" class="form-select" onchange="fetchMobileAnalyticsData(this.value)">
-            <option value="">Загрузка отчетов...</option>
+        <select id="mobileAnalyticsReportSelect" class="form-select" onchange="if(this.value) window.location.href = '?short_name=' + encodeURIComponent(this.value) + '#analytics'">
+            <option value="" {% if not selected_short_name %}selected{% endif %}>Выберите отчет...</option>
+            {% for sn in stat_short_names %}
+                <option value="{{ sn }}" {% if selected_short_name == sn %}selected{% endif %}>{{ sn }}</option>
+            {% endfor %}
         </select>
     </div>
     
     <div id="mobileAnalyticsChartsContainer" class="d-flex flex-column gap-3">
-        <div class="text-muted text-center py-5" id="mobileAnalyticsEmptyState">
-            <i class="bi bi-bar-chart fs-1 mb-2 d-block text-secondary opacity-50"></i>
-            <p>Выберите отчет, чтобы увидеть графики</p>
-        </div>
+        {% if stat_schema %}
+            <div class="stats-table-scroll bg-white rounded-3 shadow-sm border p-0 overflow-auto">
+                <style>
+                    /* Стили для таблицы статистики в мобилке */
+                    .table-stats-custom { width: 100%; border-collapse: collapse; }
+                    .table-stats-custom thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; border-bottom: 2px solid var(--border-color, #dee2e6) !important; font-size: 0.8rem; color: #64748b; font-weight: 600; padding: 0.75rem; text-align: center; }
+                    .table-stats-custom thead th.stat-period-col { min-width: 140px; text-align: left; }
+                    .table-stats-custom tbody td { padding: 0.65rem; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9; text-align: center; }
+                    .table-stats-custom .stat-sticky-col { position: sticky; left: 0; background-color: #ffffff; z-index: 11; border-right: 2px solid var(--border-color, #dee2e6) !important; font-weight: 600; min-width: 140px; text-align: left; }
+                    .table-stats-custom thead th.stat-sticky-col { z-index: 12; background-color: #f8fafc; }
+                    .stat-delta-up { color: #16a34a; font-size: 0.7rem; font-weight: 700; margin-left: 2px; white-space: nowrap; }
+                    .stat-delta-down { color: #dc2626; font-size: 0.7rem; font-weight: 700; margin-left: 2px; white-space: nowrap; }
+                    .stat-delta-zero { color: #94a3b8; font-size: 0.7rem; margin-left: 2px; }
+                    .stat-no-data { color: #94a3b8; font-style: italic; font-size: 0.8rem; }
+                </style>
+                {% include 'admin_tabs/statistics/statistics_table_view.html' %}
+            </div>
+        {% elif selected_short_name %}
+            <div class="alert alert-warning rounded-4 shadow-sm border-0">
+                <i class="bi bi-exclamation-triangle me-2"></i> Отчетов данного типа не найдено.
+            </div>
+        {% else %}
+            <div class="text-muted text-center py-5" id="mobileAnalyticsEmptyState">
+                <i class="bi bi-bar-chart fs-1 mb-2 d-block text-secondary opacity-50"></i>
+                <p>Выберите отчет, чтобы увидеть данные</p>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -201,7 +228,6 @@
             document.getElementById('section-profile').style.display = 'block';
         } else if (hash.includes('analytics')) {
             document.getElementById('section-analytics').style.display = 'block';
-            loadMobileAnalytics();
         } else {
             document.getElementById('section-active').style.display = 'block';
         }
