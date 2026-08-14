@@ -183,7 +183,7 @@ def export_user_statistics():
     
     for i, item in enumerate(submissions_data):
         stat_schema["periods"].append({
-            "period": item["template"].title,
+            "period": item["template"].period or f"Период {item['template'].id}",
             "end_date": item["template"].deadline.strftime("%d.%m.%Y") if item["template"].deadline else "",
             "template_id": item["template"].id,
             "is_first": (i == 0)
