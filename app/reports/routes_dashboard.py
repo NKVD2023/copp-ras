@@ -155,7 +155,7 @@ def export_user_statistics():
     templates = ReportTemplate.query.filter_by(
         short_name=selected_short_name,
         is_published=True
-    ).order_date_asc().all()
+    ).order_by(ReportTemplate.id.asc()).all()
     
     assigned_templates = []
     for t in templates:
