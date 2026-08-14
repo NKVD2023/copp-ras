@@ -174,73 +174,80 @@
         <span class="text-muted small ms-1 d-none d-lg-inline">— анализ показателей учреждения за все периоды</span>
     </div>
 
-    <!-- Строка 2: единый toolbar -->
-    <form method="GET" action="{{ url_for('admin.dashboard') }}" class="stats-toolbar" style="overflow: visible;">
-        <input type="hidden" name="tab" value="statisticsTab">
+    <!-- Строка 2: фильтры + таблетки + экспорт -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
 
-        <!-- Учреждение -->
-        <div class="toolbar-select" style="max-width: 280px;">
-            <select name="user_id" id="user_id"
-                    class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
-                    style="font-size: 0.85rem;" required>
-                <option value="" disabled {% if not selected_user_id %}selected{% endif %}>Учреждение...</option>
-                {% for user in users %}
-                    <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>
-                        {% if user.description %}{{ user.description }}{% else %}{{ user.username }}{% endif %}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+        <!-- Форма: учреждение + тип отчёта + Показать -->
+        <form method="GET" action="{{ url_for('admin.dashboard') }}" class="d-flex align-items-center gap-2 flex-wrap" style="overflow: visible;">
+            <input type="hidden" name="tab" value="statisticsTab">
 
-        <!-- Тип отчёта -->
-        <div class="toolbar-select" style="max-width: 280px;">
-            <select name="short_name" id="short_name"
-                    class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
-                    style="font-size: 0.85rem;" required>
-                <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Тип отчёта...</option>
-                {% for sn in stat_short_names %}
-                    <option value="{{ sn }}" {% if selected_short_name == sn %}selected{% endif %}>{{ sn }}</option>
-                {% endfor %}
-            </select>
-        </div>
+            <div style="min-width: 200px; max-width: 270px;">
+                <select name="user_id" id="user_id"
+                        class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
+                        style="font-size: 0.85rem;" required>
+                    <option value="" disabled {% if not selected_user_id %}selected{% endif %}>Учреждение...</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>
+                            {% if user.description %}{{ user.description }}{% else %}{{ user.username }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <!-- Показать -->
-        <button type="submit" class="btn btn-copp btn-sm rounded-3 fw-semibold px-3 flex-shrink-0" style="height: 33px;">
-            <i class="bi bi-search me-1"></i> Показать
-        </button>
+            <div style="min-width: 180px; max-width: 270px;">
+                <select name="short_name" id="short_name"
+                        class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
+                        style="font-size: 0.85rem;" required>
+                    <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Тип отчёта...</option>
+                    {% for sn in stat_short_names %}
+                        <option value="{{ sn }}" {% if selected_short_name == sn %}selected{% endif %}>{{ sn }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-copp btn-sm rounded-pill fw-semibold px-3">
+                <i class="bi bi-search me-1"></i> Показать
+            </button>
+        </form>
 
         {% if stat_schema %}
-        <div class="toolbar-divider d-none d-md-block"></div>
+        <!-- Разделитель -->
+        <div style="width:1px; height:28px; background:#e2e8f0; flex-shrink:0;" class="d-none d-md-block"></div>
 
-        <!-- Переключатели вид -->
-        <div class="d-flex gap-1 flex-shrink-0">
-            <button class="btn-view active" id="table-view-tab"
-                    data-bs-toggle="tab" data-bs-target="#table-view"
-                    type="button" role="tab" aria-selected="true">
-                <i class="bi bi-table"></i>
-                <span class="d-none d-sm-inline">Таблица</span>
-            </button>
-            <button class="btn-view" id="dashboard-view-tab"
-                    data-bs-toggle="tab" data-bs-target="#dashboard-view"
-                    type="button" role="tab" aria-selected="false">
-                <i class="bi bi-bar-chart-line-fill"></i>
-                <span class="d-none d-sm-inline">Дашборд</span>
-            </button>
-        </div>
-
-        <div class="toolbar-divider d-none d-md-block"></div>
+        <!-- Таблетки-переключатели -->
+        <ul class="nav nav-pills p-1 rounded-pill flex-nowrap gap-1"
+            style="background:#f1f5f9;" id="statsViewToggle" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-pill px-3 py-1 fw-semibold"
+                        style="font-size:0.82rem;"
+                        id="table-view-tab"
+                        data-bs-toggle="tab" data-bs-target="#table-view"
+                        type="button" role="tab">
+                    <i class="bi bi-table me-1"></i>Таблица
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-3 py-1 fw-semibold"
+                        style="font-size:0.82rem;"
+                        id="dashboard-view-tab"
+                        data-bs-toggle="tab" data-bs-target="#dashboard-view"
+                        type="button" role="tab">
+                    <i class="bi bi-bar-chart-line-fill me-1"></i>Дашборд
+                </button>
+            </li>
+        </ul>
 
         <!-- Экспорт -->
         <a href="{{ url_for('admin.export_admin_statistics', user_id=selected_user_id, short_name=selected_short_name) }}"
-           class="btn-export" style="height: 33px;">
-            <i class="bi bi-file-earmark-excel"></i>
-            <span class="d-none d-sm-inline">Экспорт в Excel</span>
+           class="btn btn-sm fw-semibold rounded-pill px-3"
+           style="background:#16a34a; color:#fff; border:none; font-size:0.82rem; white-space:nowrap;">
+            <i class="bi bi-file-earmark-excel me-1"></i>Экспорт в Excel
         </a>
         {% endif %}
-    </form>
+
+    </div>
 
 </div>
-
 <!-- ОСНОВНОЙ КОНТЕЙНЕР ДЛЯ РЕЖИМОВ -->
 {% if stat_schema %}
 <div class="tab-content" id="statsViewContent">
