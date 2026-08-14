@@ -103,57 +103,132 @@
     .stat-delta-zero { color: #94a3b8; font-size: 0.75rem; margin-left: 3px; }
     .stat-no-data    { color: #94a3b8; font-style: italic; font-size: 0.82rem; }
     .stat-col-header { min-width: 200px; max-width: 380px; white-space: normal; word-wrap: break-word; line-height: 1.4; }
+
+    /* ---- Единый toolbar ---- */
+    .stats-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+    .stats-toolbar .toolbar-select {
+        flex: 1 1 220px;
+        min-width: 180px;
+        max-width: 360px;
+    }
+    .stats-toolbar .toolbar-divider {
+        width: 1px;
+        height: 30px;
+        background: #e2e8f0;
+        flex-shrink: 0;
+    }
+    .stats-toolbar .btn-view {
+        padding: 0.38rem 0.85rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1.5px solid #e2e8f0;
+        background: #f8fafc;
+        color: #64748b;
+        transition: all .15s;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        line-height: 1;
+    }
+    .stats-toolbar .btn-view:hover,
+    .stats-toolbar .btn-view.active {
+        background: #00334e;
+        border-color: #00334e;
+        color: #fff;
+    }
+    .stats-toolbar .btn-export {
+        padding: 0.38rem 1rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        border-radius: 8px;
+        background: #16a34a;
+        border: none;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: opacity .15s;
+        line-height: 1;
+    }
+    .stats-toolbar .btn-export:hover { opacity: 0.85; color: #fff; }
 </style>
 
-<!-- Шапка с заголовком и фильтрами -->
+<!-- ===== ШАПКА СТАТИСТИКИ ===== -->
 <div class="stats-filter-bar">
-    <div class="mb-3">
-        <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
-            Моя статистика
-            <span class="badge bg-warning text-dark fs-6" style="font-size: 0.75rem !important;">В тестовом режиме</span>
-        </h5>
-        <p class="text-muted small mb-0 mt-1">Анализ ваших показателей за все периоды</p>
-    </div>
-        
-    <!-- ПЕРЕКЛЮЧАТЕЛЬ (таблетки) и КНОПКА ЭКСПОРТА -->
-    <div class="d-flex justify-content-between mb-3">
-        {% if stat_schema %}
-        <ul class="nav nav-pills segmented-control bg-light p-1 rounded-pill flex-nowrap" id="statsViewToggle" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-pill px-4 py-2 fw-semibold" id="table-view-tab" data-bs-toggle="tab" data-bs-target="#table-view" type="button" role="tab">
-                    <i class="bi bi-table me-1"></i> Таблица
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill px-4 py-2 fw-semibold" id="dashboard-view-tab" data-bs-toggle="tab" data-bs-target="#dashboard-view" type="button" role="tab">
-                    <i class="bi bi-bar-chart-line-fill me-1"></i> Дашборд
-                </button>
-            </li>
-        </ul>
-        <a href="{{ url_for('reports.export_user_statistics', short_name=selected_short_name) }}" class="btn btn-success rounded-pill fw-semibold shadow-sm d-flex align-items-center gap-2" style="background-color: #16a34a; border-color: #16a34a;">
-            <i class="bi bi-file-earmark-excel"></i> Экспорт в Excel
-        </a>
-        {% endif %}
+
+    <!-- Строка 1: заголовок + подпись -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <h5 class="fw-bold mb-0">Моя статистика</h5>
+        <span class="badge bg-warning text-dark" style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">В тестовом режиме</span>
+        <span class="text-muted small ms-1 d-none d-md-inline">— анализ ваших показателей за все периоды</span>
     </div>
 
-    <form method="GET" action="{{ url_for('reports.dashboard') }}" class="row g-3 align-items-end" style="overflow: visible;">
+    <!-- Строка 2: единый toolbar (форма) -->
+    <form method="GET" action="{{ url_for('reports.dashboard') }}" class="stats-toolbar" style="overflow: visible;">
         <input type="hidden" name="tab" value="statisticsTab">
-        <div class="col-md-5">
-            <label for="short_name" class="form-label text-muted small fw-semibold mb-1">Тип отчета</label>
-            <select name="short_name" id="short_name" class="form-select border-0 bg-light" required>
-                <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Выберите тип отчета...</option>
+
+        <!-- Выбор типа отчёта -->
+        <div class="toolbar-select">
+            <select name="short_name" id="short_name"
+                    class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
+                    style="font-size: 0.85rem;" required>
+                <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Выберите тип отчёта...</option>
                 {% for sn in stat_short_names %}
                     <option value="{{ sn }}" {% if selected_short_name == sn %}selected{% endif %}>{{ sn }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-copp w-100 rounded-pill fw-bold shadow-sm">
-                <i class="bi bi-search me-1"></i> Показать
+
+        <!-- Кнопка Показать -->
+        <button type="submit" class="btn btn-copp btn-sm rounded-3 fw-semibold px-3 flex-shrink-0" style="height: 33px;">
+            <i class="bi bi-search me-1"></i> Показать
+        </button>
+
+        {% if stat_schema %}
+        <!-- Разделитель -->
+        <div class="toolbar-divider d-none d-md-block"></div>
+
+        <!-- Переключатели отображения -->
+        <div class="d-flex gap-1 flex-shrink-0">
+            <button class="btn-view active" id="table-view-tab"
+                    data-bs-toggle="tab" data-bs-target="#table-view"
+                    type="button" role="tab" aria-selected="true">
+                <i class="bi bi-table"></i>
+                <span class="d-none d-sm-inline">Таблица</span>
+            </button>
+            <button class="btn-view" id="dashboard-view-tab"
+                    data-bs-toggle="tab" data-bs-target="#dashboard-view"
+                    type="button" role="tab" aria-selected="false">
+                <i class="bi bi-bar-chart-line-fill"></i>
+                <span class="d-none d-sm-inline">Дашборд</span>
             </button>
         </div>
+
+        <!-- Разделитель -->
+        <div class="toolbar-divider d-none d-md-block"></div>
+
+        <!-- Экспорт -->
+        <a href="{{ url_for('reports.export_user_statistics', short_name=selected_short_name) }}"
+           class="btn-export" style="height: 33px;">
+            <i class="bi bi-file-earmark-excel"></i>
+            <span class="d-none d-sm-inline">Экспорт в Excel</span>
+        </a>
+        {% endif %}
     </form>
+
 </div>
+
 
 <!-- ОСНОВНОЙ КОНТЕЙНЕР ДЛЯ РЕЖИМОВ -->
 {% if stat_schema %}
