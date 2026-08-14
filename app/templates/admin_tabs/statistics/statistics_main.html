@@ -173,6 +173,40 @@
         background-color: #00334e !important;
         color: #fff !important;
     }
+
+    /* Tom Select — корп. стиль для статистики */
+    .stats-filter-bar .ts-wrapper.form-select,
+    .stats-filter-bar .ts-wrapper .ts-control {
+        border: none !important;
+        background: #f1f5f9 !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+        font-size: 0.85rem;
+        font-weight: 600;
+        min-height: 33px;
+        padding: 3px 8px;
+    }
+    .stats-filter-bar .ts-wrapper .ts-dropdown {
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 8px 24px rgba(0,51,78,.12) !important;
+        font-size: 0.85rem;
+        z-index: 9999;
+    }
+    .stats-filter-bar .ts-wrapper .ts-dropdown .option.selected,
+    .stats-filter-bar .ts-wrapper .ts-dropdown .option:hover,
+    .stats-filter-bar .ts-wrapper .ts-dropdown .active {
+        background: #00334e !important;
+        color: #fff !important;
+    }
+    .stats-filter-bar .ts-wrapper .ts-dropdown-content {
+        max-height: 260px;
+    }
+    .stats-filter-bar .ts-wrapper .ts-dropdown input {
+        font-size: 0.85rem;
+        padding: 6px 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
 </style>
 
 <!-- ===== ШАПКА СТАТИСТИКИ (ADMIN) ===== -->
@@ -192,8 +226,9 @@
         <form method="GET" action="{{ url_for('admin.dashboard') }}" class="d-flex align-items-center gap-2 flex-wrap" style="overflow: visible;">
             <input type="hidden" name="tab" value="statisticsTab">
 
-            <div style="min-width: 200px; max-width: 270px;">
-                <select name="user_id" id="user_id"
+            <div style="min-width: 200px; max-width: 300px; flex: 1 1 220px;">
+                <select name="user_id" id="admin-stat-user-id"
+                        name="user_id"
                         class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
                         style="font-size: 0.85rem;" required>
                     <option value="" disabled {% if not selected_user_id %}selected{% endif %}>Учреждение...</option>
@@ -205,8 +240,9 @@
                 </select>
             </div>
 
-            <div style="min-width: 180px; max-width: 270px;">
-                <select name="short_name" id="short_name"
+            <div style="min-width: 180px; max-width: 300px; flex: 1 1 200px;">
+                <select name="short_name" id="admin-stat-short-name"
+                        name="short_name"
                         class="form-select form-select-sm border-0 bg-light rounded-3 fw-semibold"
                         style="font-size: 0.85rem;" required>
                     <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Тип отчёта...</option>
@@ -284,3 +320,23 @@
     <p class="mt-3 mb-0">Выберите учреждение и тип отчета для просмотра динамики.</p>
 </div>
 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    ['admin-stat-user-id', 'admin-stat-short-name'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && !el.tomselect) {
+            new TomSelect(el, {
+                maxOptions: null,
+                allowEmptyOption: true,
+                plugins: [],
+                render: {
+                    no_results: function(data, escape) {
+                        return '<div class="no-results">Не найдено: ' + escape(data.input) + '</div>';
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
