@@ -141,3 +141,115 @@ def dashboard():
                            selected_short_name=selected_short_name,
                            stat_schema=stat_schema,
                            current_date=date.today())
+
+@reports_bp.route('/export_statistics', methods=['GET'])
+@login_required
+def export_user_statistics():
+    selected_short_name = request.args.get('short_name')
+    if not selected_short_name:
+        return redirect(url_for('reports.dashboard', tab='statisticsTab'))
+        
+    user = current_user
+    
+    # 1) Находим все опубликованные отчёты данного типа, назначенные этому пользователю
+    templates = ReportTemplate.query.filter_by(
+        short_name=selected_short_name,
+        is_published=True
+    ).order_date_asc().all()
+    
+    assigned_templates = []
+    for t in templates:
+        if any(assignee.id == user.id for assignee in t.assigned_users):
+            assigned_templates.append(t)
+            
+    if not assigned_templates:
+        return redirect(url_for('reports.dashboard', tab='statisticsTab'))
+        
+    # 2) Собираем submission_data
+    submissions_data = []
+    for t in assigned_templates:
+        sub = ReportSubmission.query.filter_by(template_id=t.id, user_id=user.id).first()
+        submissions_data.append({
+            "template": t,
+            "submission": sub
+        })
+        
+    # 3) Строим stat_schema
+    latest_template = assigned_templates[-1]
+    stat_schema = {
+        "periods": [],
+        "fields": []
+    }
+    
+    for i, item in enumerate(submissions_data):
+        stat_schema["periods"].append({
+            "period": item["template"].title,
+            "end_date": item["template"].deadline.strftime("%d.%m.%Y") if item["template"].deadline else "",
+            "template_id": item["template"].id,
+            "is_first": (i == 0)
+        })
+        
+    for field_key, field_val in latest_template.schema_data.items():
+        if field_val.get("disabled", False):
+            continue
+            
+        field_type = field_val.get("type", "string")
+        if field_type in ["file", "comment"]:
+            continue
+            
+        row_data = {
+            "name": field_val.get("label", field_key),
+            "values": []
+        }
+        
+        prev_value = None
+        for i, item in enumerate(submissions_data):
+            sub = item["submission"]
+            val = None
+            has_data = False
+            
+            if sub and sub.data and field_key in sub.data:
+                val = sub.data[field_key]
+                has_data = True
+                if val == "":
+                    val = None
+                    has_data = False
+            
+            # Приведение к числу
+            current_num = None
+            if has_data and field_type in ["number", "float"]:
+                try:
+                    current_num = float(val) if "." in str(val) else int(val)
+                except (ValueError, TypeError):
+                    pass
+            
+            delta = 0
+            status = "zero"
+            if current_num is not None and prev_value is not None:
+                delta = current_num - prev_value
+                if delta > 0:
+                    status = "up"
+                elif delta < 0:
+                    status = "down"
+            
+            row_data["values"].append({
+                "value": val if has_data else "",
+                "has_data": has_data,
+                "delta": delta,
+                "status": status,
+                "type": field_type
+            })
+            
+            if current_num is not None:
+                prev_value = current_num
+                
+        stat_schema["fields"].append(row_data)
+        
+    output, filename = ExcelService.export_statistics(stat_schema, selected_short_name, user_title=None)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
