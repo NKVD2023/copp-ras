@@ -117,8 +117,6 @@ class ExcelService:
         for p_idx in period_order:
             period_info = periods[p_idx]
             period_label = period_info["period"]
-            if period_info.get("end_date"):
-                period_label += f"\nпо {period_info['end_date']}"
 
             # 1. Вычисляем max_len
             max_len = 1

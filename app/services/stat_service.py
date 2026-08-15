@@ -65,9 +65,7 @@ class StatService:
                     continue
 
                 label = field.get("label", field_name)
-                # Добавляем префикс листа, если листов несколько
-                if len(schema) > 1 and sheet_title:
-                    label = f"{sheet_title} / {label}"
+                # Убрали добавление префикса листа по запросу пользователя
 
                 row_data = {
                     "name": label,
