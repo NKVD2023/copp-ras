@@ -426,6 +426,7 @@
 
     function updateFieldType(sIdx, fIdx, newType) {
         reportStructure[sIdx].fields[fIdx].type = newType;
+        renderStructure();
     }
 
     function updateFieldRequired(sIdx, fIdx, isRequired) {
@@ -458,7 +459,7 @@
         const newField = {
             id: 'temp_' + Date.now(),
             label: 'Новое поле',
-            type: 'text',
+            type: 'number',
             required: false,
             isGroup: false,
             level: newLvl
@@ -564,11 +565,10 @@
                 parentStack.push({idx: i, lvl: lvl});
             }
             
-            // Если у поля есть дети (благодаря стрелкам), автоматически делаем его группой
+            // Если у поля есть дети (благодаря стрелкам), отмечаем его для стилизации
             for (let i = 0; i < sheet.fields.length; i++) {
                 if (childrenCount[i] > 0) {
                     sheet.fields[i].isGroup = true;
-                    sheet.fields[i].type = 'group';
                 } else if (sheet.fields[i].type === 'group') {
                     sheet.fields[i].isGroup = true;
                 } else {
@@ -605,7 +605,7 @@
                             const validateSum = f.validateSum !== false;
                             
                             // Показывать ли подсказку? (если больше 2 детей и проверка включена)
-                            const hasManyChildren = (childrenCount[fIdx] > 2) && validateSum && !f.isGroup;
+                            const hasManyChildren = (childrenCount[fIdx] > 2) && validateSum && (f.type !== 'group');
 
                             let controlsHtml = '';
                             if (f.type === 'select') {
