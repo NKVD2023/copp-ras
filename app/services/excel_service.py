@@ -355,11 +355,20 @@ class ExcelService:
                         field_key = f.get('name') or f.get('id')
                         val = sub.data.get(field_key)
                         if val:
-                            try:
-                                col_total += float(val)
-                                has_data = True
-                            except ValueError:
-                                pass
+                            if isinstance(val, list):
+                                for v in val:
+                                    if v:
+                                        try:
+                                            col_total += float(v)
+                                            has_data = True
+                                        except (ValueError, TypeError):
+                                            pass
+                            else:
+                                try:
+                                    col_total += float(val)
+                                    has_data = True
+                                except (ValueError, TypeError):
+                                    pass
                     total_row.append(col_total if has_data else 0)
                 else:
                     total_row.append('-')

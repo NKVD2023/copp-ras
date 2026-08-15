@@ -332,8 +332,17 @@
                                     {% for sub in submissions %}
                                     {% set val = sub.data.get(field.name) %}
                                     {% if val is not none and val != '' %}
-                                    {% set ns.total = ns.total + val|float(0) %}
-                                    {% set ns.has_data = true %}
+                                        {% if val is iterable and val is not string %}
+                                            {% for v in val %}
+                                                {% if v is not none and v != '' %}
+                                                    {% set ns.total = ns.total + v|float(0) %}
+                                                    {% set ns.has_data = true %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            {% set ns.total = ns.total + val|float(0) %}
+                                            {% set ns.has_data = true %}
+                                        {% endif %}
                                     {% endif %}
                                     {% endfor %}
                                     {{ ns.total if ns.has_data else '0' }}

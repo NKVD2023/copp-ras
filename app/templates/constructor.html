@@ -266,6 +266,16 @@
         // Меняем название
         newSheet.sheet_title = newSheet.sheet_title ? newSheet.sheet_title + ' (Копия)' : 'Новый лист (Копия)';
         
+        // Генерируем новые ID для полей, чтобы они не конфликтовали с оригинальным листом
+        let timestamp = Date.now();
+        if (newSheet.fields) {
+            newSheet.fields.forEach((f, idx) => {
+                const newFieldName = `s${sIdx + 1}_c${(timestamp + idx).toString().slice(-6)}`;
+                f.name = newFieldName;
+                f.id = newFieldName;
+            });
+        }
+        
         // Вставляем после текущего листа
         reportStructure.splice(sIdx + 1, 0, newSheet);
         renderStructure();
