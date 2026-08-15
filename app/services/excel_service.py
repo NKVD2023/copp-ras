@@ -230,14 +230,15 @@ class ExcelService:
                         val = p_data['values'].get(f_id) if p_data["has_submission"] else None
                         if not isinstance(val, list):
                             ws.merge_cells(start_row=start_merge_row, start_column=2+j, end_row=current_row-1, end_column=2+j)
-                            cell.value = 0
-                    else:
-                        cell.value = "-"
-                
                 current_row += 1
 
-        # Авто-размер ячеек
-        ExcelService._autosize_excel(ws)
+            ws.column_dimensions['A'].width = 35
+            for col_idx in range(2, max_col + 1):
+                from openpyxl.utils import get_column_letter
+                ws.column_dimensions[get_column_letter(col_idx)].width = 20
+
+            # Авто-размер ячеек
+            ExcelService._autosize_excel(ws)
 
         output = BytesIO()
         wb.save(output)
@@ -530,7 +531,9 @@ class ExcelService:
             
             if col_letter:
                 adjusted_width = min(max(max_length + 2, min_col_width), max_col_width)
-                ws.column_dimensions[col_letter].width = adjusted_width
+                current_width = ws.column_dimensions[col_letter].width
+                if current_width is None or adjusted_width > current_width:
+                    ws.column_dimensions[col_letter].width = adjusted_width
                 
         # Авто-высота строк
         for row in ws.rows:
