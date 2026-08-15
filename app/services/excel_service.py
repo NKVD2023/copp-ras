@@ -113,46 +113,144 @@ class ExcelService:
             cell.border    = thin_border
 
         # ---- Строки 3+: периоды (от новых к старым) ----
-        for row_offset, p_idx in enumerate(period_order):
-            row_num     = 3 + row_offset
+        current_row = 3
+        for p_idx in period_order:
             period_info = periods[p_idx]
-
             period_label = period_info["period"]
             if period_info.get("end_date"):
                 period_label += f"\nпо {period_info['end_date']}"
 
-            period_cell           = ws.cell(row=row_num, column=1, value=period_label)
-            period_cell.font      = period_font
-            period_cell.fill      = period_fill
-            period_cell.alignment = align_center
-            period_cell.border    = thin_border
-
-            for j, field in enumerate(fields):
+            # 1. Вычисляем max_len
+            max_len = 1
+            has_submission = False
+            for field in fields:
                 val_data = field["values"][p_idx]
-                cell     = ws.cell(row=row_num, column=2 + j)
-
                 if val_data["has_data"]:
+                    has_submission = True
                     val = val_data["value"]
-                    if val_data.get("type") in ["number", "float"] and val != "":
-                        try:
-                            val = float(val) if "." in str(val) else int(val)
-                        except (ValueError, TypeError):
-                            pass
-                    cell.value = val
+                    if isinstance(val, list):
+                        max_len = max(max_len, len(val))
 
-                    status = val_data.get("status", "zero")
-                    if status == "up":
-                        cell.font = Font(color=COLOR_UP,   bold=True, name='Arial', size=11)
-                    elif status == "down":
-                        cell.font = Font(color=COLOR_DOWN, bold=True, name='Arial', size=11)
-                    else:
-                        cell.font = data_font
+            start_merge_row = current_row
+
+            # 2. Генерируем строки
+            for i in range(max_len):
+                if i == 0:
+                    period_cell           = ws.cell(row=current_row, column=1, value=period_label)
+                    period_cell.font      = period_font
+                    period_cell.fill      = period_fill
+                    period_cell.alignment = align_center
+                    period_cell.border    = thin_border
                 else:
-                    cell.value = "Нет данных"
-                    cell.font  = Font(color=COLOR_EMPTY, italic=True, name='Arial', size=11)
+                    # Пустая ячейка, будет объединена
+                    period_cell           = ws.cell(row=current_row, column=1)
+                    period_cell.border    = thin_border
 
-                cell.alignment = align_center
-                cell.border    = thin_border
+                for j, field in enumerate(fields):
+                    val_data = field["values"][p_idx]
+                    cell     = ws.cell(row=current_row, column=2 + j)
+
+                    if val_data["has_data"]:
+                        val = val_data["value"]
+                        cell_val = "-"
+                        if isinstance(val, list):
+                            if i < len(val):
+                                cell_val = val[i]
+                        else:
+                            if i == 0:
+                                cell_val = val
+                            else:
+                                cell_val = "" # Будет объединена
+                        
+                        if cell_val not in ["", None, "-"]:
+                            if val_data.get("type") in ["number", "float"] or (isinstance(cell_val, (int, float, str)) and str(cell_val).replace('.', '', 1).replace(',', '', 1).replace('-', '', 1).isdigit()):
+                                try:
+                                    cell_val = float(str(cell_val).replace(',', '.')) if "." in str(cell_val) or "," in str(cell_val) else int(cell_val)
+                                except (ValueError, TypeError):
+                                    pass
+
+                        cell.value = cell_val if cell_val != "" else None
+                        
+                        if i == 0:
+                            status = val_data.get("status", "zero")
+                            if status == "up":
+                                cell.font = Font(color=COLOR_UP,   bold=True, name='Arial', size=11)
+                            elif status == "down":
+                                cell.font = Font(color=COLOR_DOWN, bold=True, name='Arial', size=11)
+                            else:
+                                cell.font = data_font
+                        else:
+                            cell.font = data_font
+                    else:
+                        if i == 0:
+                            cell.value = "Нет данных"
+                            cell.font  = Font(color=COLOR_EMPTY, italic=True, name='Arial', size=11)
+                        else:
+                            cell.value = None
+
+                    cell.alignment = align_center
+                    cell.border    = thin_border
+                
+                current_row += 1
+            
+            # 3. Объединение ячеек для периода и скалярных полей
+            if max_len > 1:
+                ws.merge_cells(start_row=start_merge_row, start_column=1, end_row=current_row-1, end_column=1)
+                for j, field in enumerate(fields):
+                    val_data = field["values"][p_idx]
+                    if val_data["has_data"]:
+                        val = val_data["value"]
+                        if not isinstance(val, list):
+                            ws.merge_cells(start_row=start_merge_row, start_column=2+j, end_row=current_row-1, end_column=2+j)
+                    else:
+                        ws.merge_cells(start_row=start_merge_row, start_column=2+j, end_row=current_row-1, end_column=2+j)
+                
+                # 4. Строка "Итого"
+                total_fill_style = PatternFill("solid", fgColor="F8F9FA")
+                total_font_style = Font(name='Arial', size=11, bold=True)
+                
+                ws.cell(row=current_row, column=1, value="Итого").font = total_font_style
+                ws.cell(row=current_row, column=1).fill = total_fill_style
+                ws.cell(row=current_row, column=1).alignment = Alignment(horizontal="left", vertical="center")
+                ws.cell(row=current_row, column=1).border = thin_border
+                
+                for j, field in enumerate(fields):
+                    val_data = field["values"][p_idx]
+                    cell = ws.cell(row=current_row, column=2 + j)
+                    cell.fill = total_fill_style
+                    cell.font = total_font_style
+                    cell.alignment = align_center
+                    cell.border = thin_border
+                    
+                    if val_data["has_data"] and val_data.get("type") in ["number", "float"]:
+                        val = val_data["value"]
+                        total = 0.0
+                        has_total = False
+                        if isinstance(val, list):
+                            for v in val:
+                                if v is not None and str(v).strip() != "":
+                                    try:
+                                        v_clean = str(v).replace(',', '.')
+                                        total += float(v_clean)
+                                        has_total = True
+                                    except ValueError:
+                                        pass
+                        elif val is not None and str(val).strip() != "":
+                            try:
+                                v_clean = str(val).replace(',', '.')
+                                total += float(v_clean)
+                                has_total = True
+                            except ValueError:
+                                pass
+                        
+                        if has_total:
+                            cell.value = total if total % 1 != 0 else int(total)
+                        else:
+                            cell.value = 0
+                    else:
+                        cell.value = "-"
+                
+                current_row += 1
 
         # ---- Авто-размер колонок по содержимому ----
         col_widths = {1: len("Период") + 4}
