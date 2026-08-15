@@ -97,11 +97,14 @@
             /* Убирает рамки и отступы между ячейками */
         }
 
-        .table-custom thead th {
+        .table-custom thead {
             position: sticky;
             top: 0;
+            z-index: 20;
+        }
+
+        .table-custom thead th {
             background-color: #f8fafc;
-            z-index: 10;
             border-bottom: 2px solid var(--border-color) !important;
             border-top: 1px solid var(--border-color);
         }
@@ -120,13 +123,13 @@
             position: sticky;
             left: 0;
             background-color: #ffffff;
-            z-index: 11;
+            z-index: 15;
             border-right: 2px solid var(--border-color) !important;
         }
 
         .table-custom thead th.sticky-col,
         .table-custom tfoot td.sticky-col {
-            z-index: 12;
+            z-index: 30;
             background-color: #f8fafc;
         }
 
@@ -268,18 +271,28 @@
                         </thead>
                         <tbody>
                             {% for sub in submissions %}
-                            {% set ns = namespace(max_len=1) %}
+                            {% set ns = namespace(max_len=1, has_data=false) %}
                             {% for field in sheet.leaf_fields %}
                                 {% set val = sub.data.get(field.name) %}
-                                {% if val is iterable and val is not string %}
-                                    {% if val|length > ns.max_len %}
-                                        {% set ns.max_len = val|length %}
+                                {% if val is not none %}
+                                    {% if val is iterable and val is not string %}
+                                        {% for v in val %}
+                                            {% if v is not none and v|string|trim != '' %}
+                                                {% set ns.has_data = true %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if val|length > ns.max_len %}
+                                            {% set ns.max_len = val|length %}
+                                        {% endif %}
+                                    {% elif val|string|trim != '' %}
+                                        {% set ns.has_data = true %}
                                     {% endif %}
                                 {% endif %}
                             {% endfor %}
 
+                            {% if ns.has_data %}
                             {% for i in range(ns.max_len) %}
-                            <tr>
+                            <tr data-org-name="{{ (sub.user.description or sub.user.username)|lower }}">
                                 {% if i == 0 %}
                                 <td class="p-3 fw-bold sticky-col align-middle" rowspan="{{ ns.max_len }}">{{ sub.user.description }}</td>
                                 {% endif %}
@@ -315,6 +328,38 @@
                                 {% endfor %}
                             </tr>
                             {% endfor %}
+                            
+                            {% if ns.max_len > 1 %}
+                            <tr class="fw-bold" data-org-name="{{ (sub.user.description or sub.user.username)|lower }}">
+                                <td class="p-3 sticky-col align-middle text-start" style="background-color: #f8f9fa !important;">Итого по организации</td>
+                                {% for field in sheet.leaf_fields %}
+                                    {% set f_type = field.get('type', '')|string|lower %}
+                                    {% if f_type in ['number', 'числовое'] %}
+                                        {% set ns_sub = namespace(total=0.0, has_data=false) %}
+                                        {% set val = sub.data.get(field.name) %}
+                                        {% if val is not none and val != '' %}
+                                            {% if val is iterable and val is not string %}
+                                                {% for v in val %}
+                                                    {% if v is not none and v != '' %}
+                                                        {% set ns_sub.total = ns_sub.total + v|float(0) %}
+                                                        {% set ns_sub.has_data = true %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                {% set ns_sub.total = ns_sub.total + val|float(0) %}
+                                                {% set ns_sub.has_data = true %}
+                                            {% endif %}
+                                        {% endif %}
+                                        <td class="p-3 align-middle text-center" style="background-color: #f8f9fa !important;">
+                                            {{ ns_sub.total if ns_sub.has_data else '0' }}
+                                        </td>
+                                    {% else %}
+                                        <td class="p-3 align-middle text-center" style="background-color: #f8f9fa !important;">-</td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endif %}
+                            {% endif %}
                             {% else %}
                             <tr>
                                 <td colspan="{{ sheet.leaf_fields|length + 1 }}"
@@ -658,9 +703,8 @@
                     const rows = document.querySelectorAll('.table-custom tbody tr');
                     
                     rows.forEach(row => {
-                        const orgCell = row.querySelector('td:first-child');
-                        if (orgCell) {
-                            const orgName = orgCell.textContent.toLowerCase();
+                        const orgName = row.getAttribute('data-org-name');
+                        if (orgName !== null) {
                             if (orgName.includes(searchTerm)) {
                                 row.style.display = '';
                             } else {

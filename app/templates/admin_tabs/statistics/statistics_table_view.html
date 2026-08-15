@@ -42,34 +42,100 @@
                         </thead>
                         <tbody>
                             {% for p_data in sheet.periods_data %}
-                                <tr>
-                                    <td class="stat-sticky-col">{{ p_data.period }}</td>
+                                {% set ns = namespace(max_len=1) %}
+                                {% if p_data.has_submission %}
                                     {% for field in sheet.leaf_fields %}
                                         {% set f_id = (field.get('name') or field.get('id', ''))|string %}
-                                        <td class="text-center">
-                                            {% if p_data.has_submission %}
-                                                {% set val = p_data['values'].get(f_id, '') %}
-                                                {% if val == '' or val is none %}
-                                                    <span class="text-muted">-</span>
+                                        {% set val = p_data['values'].get(f_id, '') %}
+                                        {% if val is iterable and val is not string %}
+                                            {% if val|length > ns.max_len %}
+                                                {% set ns.max_len = val|length %}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+
+                                {% for i in range(ns.max_len) %}
+                                <tr>
+                                    {% if i == 0 %}
+                                    <td class="stat-sticky-col align-middle" rowspan="{{ ns.max_len }}">{{ p_data.period }}</td>
+                                    {% endif %}
+                                    {% for field in sheet.leaf_fields %}
+                                        {% set f_id = (field.get('name') or field.get('id', ''))|string %}
+                                        {% set val = p_data['values'].get(f_id, '') if p_data.has_submission else '' %}
+                                        
+                                        {% if val is iterable and val is not string %}
+                                            <td class="text-center align-middle">
+                                                {% if p_data.has_submission %}
+                                                    {% set cell_val = val[i] if i < val|length else '' %}
+                                                    {% if cell_val == '' or cell_val is none %}
+                                                        <span class="text-muted">-</span>
+                                                    {% else %}
+                                                        <span>{{ cell_val }}</span>
+                                                    {% endif %}
                                                 {% else %}
-                                                    <span>{{ val }}</span>
-                                                    {% if field.get('type') == 'number' and p_data.deltas is defined and f_id in p_data.deltas %}
-                                                        {% set delta = p_data.deltas[f_id] %}
-                                                        {% if delta > 0 %}
-                                                            <span class="stat-delta-up"><i class="bi bi-arrow-up-short"></i>+{{ delta|round(2)|string|replace('.0', '') }}</span>
-                                                        {% elif delta < 0 %}
-                                                            <span class="stat-delta-down"><i class="bi bi-arrow-down-short"></i>{{ delta|round(2)|string|replace('.0', '') }}</span>
-                                                        {% else %}
-                                                            <span class="stat-delta-zero">(0)</span>
+                                                    <span class="stat-no-data">Данные не предоставлены</span>
+                                                {% endif %}
+                                            </td>
+                                        {% else %}
+                                            {% if i == 0 %}
+                                            <td class="text-center align-middle" rowspan="{{ ns.max_len }}">
+                                                {% if p_data.has_submission %}
+                                                    {% if val == '' or val is none %}
+                                                        <span class="text-muted">-</span>
+                                                    {% else %}
+                                                        <span>{{ val }}</span>
+                                                        {% if field.get('type') == 'number' and p_data.deltas is defined and f_id in p_data.deltas %}
+                                                            {% set delta = p_data.deltas[f_id] %}
+                                                            {% if delta > 0 %}
+                                                                <span class="stat-delta-up"><i class="bi bi-arrow-up-short"></i>+{{ delta|round(2)|string|replace('.0', '') }}</span>
+                                                            {% elif delta < 0 %}
+                                                                <span class="stat-delta-down"><i class="bi bi-arrow-down-short"></i>{{ delta|round(2)|string|replace('.0', '') }}</span>
+                                                            {% else %}
+                                                                <span class="stat-delta-zero">(0)</span>
+                                                            {% endif %}
                                                         {% endif %}
                                                     {% endif %}
+                                                {% else %}
+                                                    <span class="stat-no-data">Данные не предоставлены</span>
                                                 {% endif %}
+                                            </td>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+
+                                {% if ns.max_len > 1 %}
+                                <tr class="fw-bold">
+                                    <td class="stat-sticky-col text-start align-middle" style="background-color: #f8f9fa !important;">Итого</td>
+                                    {% for field in sheet.leaf_fields %}
+                                        {% set f_id = (field.get('name') or field.get('id', ''))|string %}
+                                        <td class="text-center align-middle" style="background-color: #f8f9fa !important;">
+                                            {% set f_type = field.get('type', '')|string|lower %}
+                                            {% if f_type in ['number', 'числовое'] and p_data.has_submission %}
+                                                {% set ns_sub = namespace(total=0.0, has_data=false) %}
+                                                {% set val = p_data['values'].get(f_id, '') %}
+                                                {% if val is iterable and val is not string %}
+                                                    {% for v in val %}
+                                                        {% if v is not none and v|string|trim != '' %}
+                                                            {% set ns_sub.total = ns_sub.total + v|float(0) %}
+                                                            {% set ns_sub.has_data = true %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% elif val is not none and val|string|trim != '' %}
+                                                    {% set ns_sub.total = ns_sub.total + val|float(0) %}
+                                                    {% set ns_sub.has_data = true %}
+                                                {% endif %}
+                                                
+                                                {{ ns_sub.total if ns_sub.has_data else '0' }}
                                             {% else %}
-                                                <span class="stat-no-data">Данные не предоставлены</span>
+                                                -
                                             {% endif %}
                                         </td>
                                     {% endfor %}
                                 </tr>
+                                {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>

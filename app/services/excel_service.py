@@ -309,40 +309,111 @@ class ExcelService:
             
             for sub in submissions:
                 org_name = sub.user.description if sub.user.description else sub.user.username
-                row_data = [org_name]
                 
-                # Идем только по leaf_fields (те, которые реально заполнялись)
+                # 1. Determine if has_data and calculate max_len
+                has_data = False
+                max_len = 1
                 for f in leaf_fields:
-                    # Поддержка старых имен 'name' или 'id'
                     field_key = f.get('name') or f.get('id')
-                    
-                    val = sub.data.get(field_key, '-')
-                    
-                    # Если значение является списком (например, для динамических полей), объединяем его в строку
-                    if isinstance(val, list):
-                        val = "\n".join([str(v) for v in val if v is not None and str(v).strip() != ''])
-                        if val == "":
-                            val = "-"
-                    
-                    # Учет старых типов и новых
-                    f_type = str(f.get('type', '')).lower()
-                    if f_type in ['number', 'числовое'] and val not in ['-', '', None]:
-                        try:
-                            val = float(val)
-                        except (ValueError, TypeError):
-                            pass
-                    row_data.append(val)
-
-                ws.append(row_data)
-                ws.row_dimensions[current_row].height = 40 
-
-                for col_idx, _ in enumerate(row_data, 1):
-                    cell = ws.cell(row=current_row, column=col_idx)
-                    cell.font = data_font
-                    cell.border = thin_border
-                    cell.alignment = align_left if col_idx == 1 else align_center
+                    val = sub.data.get(field_key)
+                    if val is not None:
+                        if isinstance(val, list):
+                            for v in val:
+                                if v is not None and str(v).strip() != "":
+                                    has_data = True
+                            max_len = max(max_len, len(val))
+                        elif str(val).strip() != "":
+                            has_data = True
                 
-                current_row += 1
+                if not has_data:
+                    continue
+                
+                start_merge_row = current_row
+                sub_totals = {f.get('name') or f.get('id'): 0.0 for f in leaf_fields if str(f.get('type', '')).lower() in ['number', 'числовое']}
+                has_subtotals = {f.get('name') or f.get('id'): False for f in leaf_fields if str(f.get('type', '')).lower() in ['number', 'числовое']}
+
+                # 2. Generate max_len rows
+                for i in range(max_len):
+                    row_data = [org_name if i == 0 else ""]
+                    
+                    for f in leaf_fields:
+                        field_key = f.get('name') or f.get('id')
+                        val = sub.data.get(field_key)
+                        
+                        f_type = str(f.get('type', '')).lower()
+                        is_numeric = f_type in ['number', 'числовое']
+                        
+                        cell_val = "-"
+                        if isinstance(val, list):
+                            if i < len(val):
+                                cell_val = val[i]
+                        else:
+                            if i == 0:
+                                cell_val = val
+                            else:
+                                cell_val = ""
+                                
+                        if cell_val in [None, '', []]:
+                            cell_val = "-"
+                            
+                        if is_numeric and cell_val != "-":
+                            try:
+                                cell_num = float(cell_val)
+                                cell_val = cell_num
+                                sub_totals[field_key] += cell_num
+                                has_subtotals[field_key] = True
+                            except (ValueError, TypeError):
+                                pass
+                                
+                        row_data.append(cell_val)
+
+                    ws.append(row_data)
+                    
+                    for col_idx, _ in enumerate(row_data, 1):
+                        cell = ws.cell(row=current_row, column=col_idx)
+                        cell.font = data_font
+                        cell.border = thin_border
+                        cell.alignment = align_left if col_idx == 1 else align_center
+                    
+                    current_row += 1
+                
+                # 3. Merge vertical cells for scalars and org name
+                if max_len > 1:
+                    ws.merge_cells(start_row=start_merge_row, start_column=1, end_row=start_merge_row + max_len - 1, end_column=1)
+                    
+                    col_idx = 2
+                    for f in leaf_fields:
+                        field_key = f.get('name') or f.get('id')
+                        val = sub.data.get(field_key)
+                        if not isinstance(val, list):
+                            ws.merge_cells(start_row=start_merge_row, start_column=col_idx, end_row=start_merge_row + max_len - 1, end_column=col_idx)
+                        col_idx += 1
+                        
+                    # 4. Add subtotal row
+                    subtotal_row = ['Итого по организации']
+                    for f in leaf_fields:
+                        field_key = f.get('name') or f.get('id')
+                        f_type = str(f.get('type', '')).lower()
+                        if f_type in ['number', 'числовое']:
+                            if has_subtotals[field_key]:
+                                subtotal_row.append(sub_totals[field_key])
+                            else:
+                                subtotal_row.append(0)
+                        else:
+                            subtotal_row.append('-')
+                            
+                    ws.append(subtotal_row)
+                    
+                    subtotal_font = Font(name='Arial', size=10, bold=True)
+                    for col_idx, _ in enumerate(subtotal_row, 1):
+                        cell = ws.cell(row=current_row, column=col_idx)
+                        cell.font = subtotal_font
+                        cell.border = thin_border
+                        cell.alignment = align_left if col_idx == 1 else align_center
+                        # Highlight row with light gray background
+                        cell.fill = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
+                            
+                    current_row += 1
 
             # 4. ИТОГО
             total_row = ['Итого']
