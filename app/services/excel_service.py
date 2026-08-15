@@ -551,6 +551,8 @@ class ExcelService:
             if not row:
                 continue
             max_lines = 1
+            is_header = (row[0].row <= 2) # Добавим отступ для шапки
+            
             for cell in row:
                 if cell.value:
                     try:
@@ -558,10 +560,26 @@ class ExcelService:
                         col_width = ws.column_dimensions[col_letter].width
                         if not col_width:
                             col_width = min_col_width
+                        
+                        # Эффективная ширина символов (с учетом переносов слов и жирного шрифта)
+                        effective_width = max(5, int(col_width) * 0.8)
+                        
                         lines = str(cell.value).split("\n")
-                        total_lines_for_cell = sum(max(1, -(-len(line) // int(col_width))) for line in lines)
+                        total_lines_for_cell = 0
+                        for line in lines:
+                            if len(line) == 0:
+                                total_lines_for_cell += 1
+                            else:
+                                total_lines_for_cell += -(-len(line) // int(effective_width))
+                                
                         if total_lines_for_cell > max_lines:
                             max_lines = total_lines_for_cell
                     except:
                         pass
-            ws.row_dimensions[row[0].row].height = max_lines * default_row_height + 5
+                        
+            # Если это первая строка (объединенная), она обычно длинная, но занимает много колонок
+            if row[0].row == 1:
+                ws.row_dimensions[row[0].row].height = 25
+            else:
+                padding = 15 if is_header else 5
+                ws.row_dimensions[row[0].row].height = max_lines * default_row_height + padding
