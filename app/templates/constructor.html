@@ -136,7 +136,7 @@
             <div class="d-flex gap-2">
                 <input type="text" id="newSheetTitle" class="form-control form-control-sm w-auto"
                     placeholder="Название листа">
-                <button onclick="addSheet()" class="btn btn-sm btn-outline-dark px-3">Добавить лист</button>
+                <button type="button" onclick="addSheet()" class="btn btn-sm btn-outline-dark px-3">Добавить лист</button>
             </div>
         </div>
 
@@ -296,6 +296,10 @@
             hintInput.style.opacity = '1';
             labelInput.placeholder = 'Заголовок столбца';
         }
+    }
+
+    function updateSheetMultiple(sIdx, checked) {
+        reportStructure[sIdx].is_multiple = checked;
     }
 
     function changeLevel(sIdx, fIdx, delta) {
@@ -550,6 +554,18 @@
                 parentStack.push({idx: i, lvl: lvl});
             }
             
+            // Если у поля есть дети (благодаря стрелкам), автоматически делаем его группой
+            for (let i = 0; i < sheet.fields.length; i++) {
+                if (childrenCount[i] > 0) {
+                    sheet.fields[i].isGroup = true;
+                    sheet.fields[i].type = 'group';
+                } else if (sheet.fields[i].type === 'group') {
+                    sheet.fields[i].isGroup = true;
+                } else {
+                    sheet.fields[i].isGroup = false;
+                }
+            }
+            
             return `
             <div class="card mb-4 border-primary-subtle shadow-sm">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3 gap-3">
@@ -557,11 +573,15 @@
                         <span class="fw-bold text-primary-copp text-nowrap">Лист:</span>
                         <input type="text" class="form-control form-control-sm border-light-subtle fw-bold text-primary-copp" value="${String(sheet.sheet_title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&quot;/g, '&quot;')}" oninput="updateSheetTitle(${sIdx}, this.value)">
                     </div>
+                    <div class="d-flex align-items-center form-check form-switch mb-0 ms-3 me-3 border-end pe-4">
+                        <input class="form-check-input" type="checkbox" id="sheet-mult-${sIdx}" ${sheet.is_multiple ? 'checked' : ''} onchange="updateSheetMultiple(${sIdx}, this.checked)">
+                        <label class="form-check-label small text-primary fw-bold ms-2" for="sheet-mult-${sIdx}" style="cursor: pointer;">Многократное заполнение листа</label>
+                    </div>
                     <div class="d-flex align-items-center">
-                        <button onclick="copySheet(${sIdx})" class="btn btn-sm btn-outline-secondary px-3 border-0 flex-shrink-0 me-2" title="Копировать лист">
+                        <button type="button" onclick="copySheet(${sIdx})" class="btn btn-sm btn-outline-secondary px-3 border-0 flex-shrink-0 me-2" title="Копировать лист">
                             <i class="bi bi-copy"></i> Копировать
                         </button>
-                        <button onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0 flex-shrink-0">Удалить лист</button>
+                        <button type="button" onclick="removeSheet(${sIdx})" class="btn btn-sm btn-outline-danger px-3 border-0 flex-shrink-0">Удалить лист</button>
                     </div>
                 </div>
                 <div class="card-body p-4">
@@ -578,9 +598,7 @@
                             const hasManyChildren = (childrenCount[fIdx] > 2) && validateSum && !f.isGroup;
 
                             let controlsHtml = '';
-                            if (f.isGroup) {
-                                controlsHtml = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Режим Группы</span><div class="flex-grow-1"></div>`;
-                            } else if (f.type === 'select') {
+                            if (f.type === 'select') {
                                 controlsHtml = `
                                     <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-list-ul me-1"></i>${f.dictionary_name || 'Шаблон списка'}</span>
                                 <div class="form-check mb-0 ms-2">
@@ -591,19 +609,22 @@
                                     <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>`;
                             } else {
-                                controlsHtml = `<select class="form-select form-select-sm w-auto text-muted" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
+                                let extraCheckbox = '';
+                                
+                                controlsHtml = `<select class="form-select form-select-sm text-muted" style="width: 140px;" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
                                     <option value="number" ${f.type === 'number' || f.type === 'Числовое' ? 'selected' : ''}>Числовое</option>
                                     <option value="text" ${f.type === 'text' || f.type === 'Текстовое' ? 'selected' : ''}>Текстовое</option>
                                 </select>
-                                <div class="form-check mb-0 ms-2">
+                                <div class="form-check mb-0 ms-2" ${f.type === 'group' ? 'style="display:none;"' : ''}>
                                     <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
-                                <div class="form-check mb-0 border-start ps-3" style="display: ${f.type === 'text' ? 'none' : 'block'}">
+                                <div class="form-check mb-0 border-start ps-3" style="display: ${f.type === 'text' || f.type === 'group' ? 'none' : 'block'}">
                                     <input class="form-check-input" type="checkbox" id="valsum-${sIdx}-${fIdx}" ${validateSum ? 'checked' : ''} onchange="updateFieldValidateSum(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="valsum-${sIdx}-${fIdx}">Строгая проверка суммы</label>
                                 </div>
-                                <div class="flex-grow-1" style="min-width: 200px;">
+                                ${extraCheckbox}
+                                <div class="flex-grow-1" style="min-width: 200px; ${f.type === 'group' ? 'display:none;' : ''}">
                                     <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>`;
                             }
@@ -668,15 +689,12 @@
                                 </div>
                             </div>
                             
-                            <div class="form-check mb-0 ms-4 border-start ps-4">
-                                <input class="form-check-input" type="checkbox" id="groupMode-${sIdx}" onchange="toggleGroupMode(${sIdx})">
-                                <label class="form-check-label small fw-bold text-primary" for="groupMode-${sIdx}">Режим Группировки</label>
-                            </div>
+
                         </div>
 
                         <div class="d-flex align-items-start gap-2 mt-1">
                             <textarea id="hint-${sIdx}" class="form-control form-control-sm flex-grow-1 constructor-textarea" rows="2" placeholder="Подсказка (необязательно)"></textarea>
-                            <button onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-copp px-4 flex-shrink-0 mt-1 shadow-sm">Добавить</button>
+                            <button type="button" onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-copp px-4 flex-shrink-0 mt-1 shadow-sm">Добавить</button>
                         </div>
                     </div>
                 </div>

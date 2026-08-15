@@ -32,7 +32,7 @@
 
         for (const key of new Set(formData.keys())) {
             if (multipleNames.has(key)) {
-                dataObj[key] = formData.getAll(key).filter(v => v.trim() !== '');
+                dataObj[key] = formData.getAll(key);
             } else {
                 dataObj[key] = formData.get(key);
             }
@@ -297,31 +297,7 @@
     // ДИНАМИЧЕСКИЕ ПОЛЯ
     // =========================================================================
 
-    window.addDynamicField = function (btn, type, name) {
-        const wrapper = btn.closest('.dynamic-field-wrapper');
-        const item    = document.createElement('div');
-        item.className = 'dynamic-field-item d-flex gap-2 mb-2 align-items-start';
 
-        let inputHtml = '';
-        if (type === 'text' || type === 'Текстовое') {
-            inputHtml = `<textarea class="form-control" data-multiple="true" name="${name}" rows="2"></textarea>`;
-        } else if (type === 'select') {
-            const options = JSON.parse(btn.dataset.options || '[]');
-            let opts = '<option value="">-- Выберите значение --</option>';
-            options.forEach(opt => { opts += `<option value="${opt}">${opt}</option>`; });
-            inputHtml = `<select class="form-select" data-multiple="true" name="${name}">${opts}</select>`;
-        } else {
-            inputHtml = `<input type="number" class="form-control" data-multiple="true" name="${name}" value="" min="0" step="any">`;
-        }
-
-        item.innerHTML = inputHtml + `<button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>`;
-        wrapper.insertBefore(item, btn);
-        if (window.initTomSelects) window.initTomSelects(item);
-    };
-
-    window.removeDynamicField = function (btn) {
-        btn.closest('.dynamic-field-item').remove();
-    };
 
     // =========================================================================
     // ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
@@ -378,3 +354,109 @@
     });
 
 })();
+
+
+    // =========================================================================
+    // ДИНАМИЧЕСКИЕ ГРУППЫ (Repeater Groups)
+    // =========================================================================
+
+    window.addSheetInstance = function(btn) {
+        if (window.FILL_CONFIG && window.FILL_CONFIG.isLocked) return;
+        
+        const wrapper = btn.closest('.sheet-content-wrapper');
+        const container = wrapper.querySelector('.sheet-instances-container');
+        const items = container.querySelectorAll('.sheet-instance');
+        if (items.length === 0) return;
+        
+        const firstItem = items[0];
+        const sheetTitle = wrapper.querySelector('.btn-add-sheet-instance')
+                            ?.textContent?.replace(/Добавить еще\s*["«]?|["»]?/gi, '').trim()
+                            || 'Специальность';
+        const newIdx = items.length + 1; // 1-based, следующий номер
+        
+        // 1. Сохраняем текущие значения всех select в первом блоке ПЕРЕД уничтожением TomSelect
+        const savedValues = new Map();
+        firstItem.querySelectorAll('select').forEach(sel => {
+            savedValues.set(sel.name || sel.id, Array.from(sel.selectedOptions).map(o => o.value));
+            if (sel.tomselect) sel.tomselect.destroy();
+        });
+        // Также сохраняем значения обычных input/textarea
+        firstItem.querySelectorAll('input, textarea').forEach(inp => {
+            savedValues.set(inp.name || inp.id, inp.value);
+        });
+        
+        // 2. Клонируем чистый DOM (TomSelect уже уничтожен — клон получает чистый <select> с option selected)
+        const newItem = firstItem.cloneNode(true);
+        
+        // 3. Восстанавливаем TomSelect в оригинальном блоке и восстанавливаем значения
+        if (window.initTomSelects) window.initTomSelects(firstItem);
+        firstItem.querySelectorAll('select').forEach(sel => {
+            const key = sel.name || sel.id;
+            const vals = savedValues.get(key);
+            if (vals && sel.tomselect) {
+                sel.tomselect.setValue(vals.length === 1 ? vals[0] : vals);
+            }
+        });
+        firstItem.querySelectorAll('input, textarea').forEach(inp => {
+            const key = inp.name || inp.id;
+            if (savedValues.has(key)) inp.value = savedValues.get(key);
+        });
+        
+        // 4. Очищаем значения КЛОНА (не оригинала!)
+        newItem.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+            else input.value = '';
+        });
+        
+        // 5. Убираем мусорный .ts-wrapper от TomSelect в клоне
+        newItem.querySelectorAll('.ts-wrapper').forEach(w => w.remove());
+        
+        // 6. Убираем скрытую кнопку удаления (она только в первом блоке)
+        const hiddenRemoveBtn = newItem.querySelector('.remove-sheet-instance');
+        if (hiddenRemoveBtn) hiddenRemoveBtn.remove();
+        
+        // 7. Убираем старый разделитель если клонировался из первого блока
+        newItem.querySelectorAll('.sheet-instance-divider').forEach(d => d.remove());
+        
+        // 8. Обновляем индекс
+        newItem.dataset.instIdx = items.length;
+        
+        // 9. Создаём корпоративный разделитель
+        const divider = document.createElement('div');
+        divider.className = 'sheet-instance-divider';
+        divider.innerHTML = `
+            <span class="divider-num">${newIdx}</span>
+            <span class="divider-label">${sheetTitle}</span>
+            <span class="divider-line"></span>
+            <button type="button" class="btn btn-outline-danger btn-sm remove-sheet-instance" onclick="removeSheetInstance(this)">
+                <i class="bi bi-trash"></i> Удалить блок
+            </button>`;
+        newItem.insertBefore(divider, newItem.firstChild);
+        
+        // 10. Вставляем в контейнер
+        container.appendChild(newItem);
+        
+        // 11. Инициализируем TomSelect в новом блоке (значения уже пустые)
+        if (window.initTomSelects) window.initTomSelects(newItem);
+        
+        if (btn.closest('form')) btn.closest('form').dispatchEvent(new Event('change', {bubbles: true}));
+        
+        // Скролл к новому блоку
+        setTimeout(() => newItem.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    };
+
+    window.removeSheetInstance = function(btn) {
+        if (window.FILL_CONFIG && window.FILL_CONFIG.isLocked) return;
+        
+        const container = btn.closest('.sheet-instances-container');
+        const item = btn.closest('.sheet-instance');
+        item.remove();
+        
+        // Пересчитываем нумерацию
+        const items = container.querySelectorAll('.sheet-instance');
+        items.forEach((it, index) => {
+            it.dataset.instIdx = index;
+        });
+        
+        if (btn.closest('form')) btn.closest('form').dispatchEvent(new Event('change', {bubbles: true}));
+    };

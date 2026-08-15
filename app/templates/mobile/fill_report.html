@@ -46,79 +46,131 @@
         <div class="mobile-card shadow-none border-0">
             <h6 class="fw-bold text-primary mb-3">{{ sheet.sheet_title }}</h6>
             
-            {% for field in sheet.fields %}
-            {% set lvl = field.level|default(0)|int %}
-            {% set is_active = field.get('is_active', True) %}
-            {% set effective_locked = is_locked or not is_active %}
-            
-            {% if is_active %}
-            {% if lvl == 0 and not loop.first %}
-                <hr style="border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1;">
+            {% set ns = namespace(max_len=1) %}
+            {% if sheet.get('is_multiple') and submission %}
+                {% for field in sheet.fields %}
+                    {% set val = submission.data.get(field.name) %}
+                    {% if val is iterable and val is not string %}
+                        {% if val|length > ns.max_len %}
+                            {% set ns.max_len = val|length %}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
             {% endif %}
-            <div class="mb-4 {% if lvl > 0 %}ps-4 position-relative border-start border-2{% endif %}" {% if lvl > 0 %}style="border-color: rgba(0, 51, 78, 0.1) !important;"{% endif %}>
-                {% if lvl > 0 %}
-                <!-- Tree branch horizontal line -->
-                <div style="position: absolute; left: 0; top: 0.85rem; width: 0.75rem; height: 2px; background-color: rgba(0, 51, 78, 0.1);"></div>
-                {% endif %}
-                <label class="form-label small d-flex align-items-center gap-1 flex-wrap">
-                    {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
-                </label>
-                
-                {% if field.is_multiple %}
-                    {% set raw_val = submission.data.get(field.name) if submission else None %}
-                    {% set field_values = raw_val if raw_val is not none and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val is not none else ['']) %}
-                    
-                    <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
-                        {% for v in field_values %}
-                        <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
-                            {% if field.type == 'text' or field.type == 'Текстовое' %}
-                                <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>{{ v }}</textarea>
-                            {% elif field.type == 'select' %}
-                                <select class="form-select" data-multiple="true" name="{{ field.name }}" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
-                                    <option value="">-- Выберите значение --</option>
-                                    {% for opt in field.options %}
-                                    <option value="{{ opt }}" {% if v == opt %}selected{% endif %}>{{ opt }}</option>
-                                    {% endfor %}
-                                </select>
-                            {% else %}
-                                <input type="number" class="form-control" data-multiple="true" name="{{ field.name }}"
-                                    value="{{ v }}" min="0" step="any" inputmode="decimal" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
-                            {% endif %}
-                            {% if not effective_locked %}
-                            <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        {% if not effective_locked %}
-                        <button type="button" class="btn-add-dynamic-mobile" 
-                                data-options="{% if field.type == 'select' %}{{ field.options | tojson | forceescape }}{% else %}[]{% endif %}"
-                                onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
-                            + Добавить еще
-                        </button>
+            
+            <div class="sheet-instances-container">
+            {% for sheet_inst_idx in range(ns.max_len) %}
+            <div class="sheet-instance position-relative" data-inst-idx="{{ sheet_inst_idx }}">
+                {% if not loop.first %}
+                    <div class="sheet-instance-divider my-4 position-relative text-center">
+                        <hr class="border-secondary opacity-25">
+                        <span class="position-absolute top-50 start-50 translate-middle bg-white px-2 small text-muted fw-bold">
+                            Блок {{ sheet_inst_idx + 1 }}
+                        </span>
+                        {% if sheet.get('is_multiple') and not is_locked %}
+                            <div class="mt-2 text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-sheet-instance" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
+                            </div>
                         {% endif %}
                     </div>
-                {% else %}
-                    {% if field.type == 'text' or field.type == 'Текстовое' %}
-                        <textarea class="form-control" name="{{ field.name }}" rows="3" {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>{{ submission.data.get(field.name) or '' if submission else '' }}</textarea>
-                    {% elif field.type == 'select' %}
-                        <select class="form-select" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
-                            <option value="">-- Выберите значение --</option>
-                            {% for opt in field.options %}
-                            <option value="{{ opt }}" {% if submission and submission.data.get(field.name) == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    {% else %}
-                        <input type="number" class="form-control" name="{{ field.name }}"
-                            value="{{ submission.data.get(field.name) or '' if submission else '' }}" min="0" step="any" inputmode="decimal" {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
-                    {% endif %}
                 {% endif %}
+                {% if loop.first and sheet.get('is_multiple') and not is_locked %}
+                    <div class="text-end mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-sheet-instance" style="display:none;" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
+                    </div>
+                {% endif %}
+
+                {% for field in sheet.fields %}
+                {% set lvl = field.level|default(0)|int %}
+                {% set is_active = field.get('is_active', True) %}
+                {% set effective_locked = is_locked or not is_active %}
+                {% set sheet_is_multiple = sheet.get('is_multiple', False) %}
                 
-                {% if field.hint and not effective_locked %}
-                <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle"></i> {{ field.hint }}</div>
+                {% if is_active %}
+                {% if lvl == 0 and not loop.first %}
+                    <hr style="border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1;">
                 {% endif %}
+                <div class="mb-4 {% if lvl > 0 %}ps-4 position-relative border-start border-2{% endif %}" {% if lvl > 0 %}style="border-color: rgba(0, 51, 78, 0.1) !important;"{% endif %}>
+                    {% if lvl > 0 %}
+                    <!-- Tree branch horizontal line -->
+                    <div style="position: absolute; left: 0; top: 0.85rem; width: 0.75rem; height: 2px; background-color: rgba(0, 51, 78, 0.1);"></div>
+                    {% endif %}
+                    <label class="form-label small d-flex align-items-center gap-1 flex-wrap">
+                        {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    
+                    {% if field.is_multiple and not sheet_is_multiple %}
+                        {% set raw_val = submission.data.get(field.name) if submission else None %}
+                        {% set field_values = raw_val if raw_val is not none and raw_val is iterable and raw_val is not string else ([raw_val] if raw_val is not none else ['']) %}
+                        
+                        <div class="dynamic-field-wrapper" data-name="{{ field.name }}">
+                            {% for v in field_values %}
+                            <div class="dynamic-field-item d-flex gap-2 mb-2 align-items-start">
+                                {% if field.type == 'text' or field.type == 'Текстовое' %}
+                                    <textarea class="form-control" data-multiple="true" name="{{ field.name }}" rows="2" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>{{ v }}</textarea>
+                                {% elif field.type == 'select' %}
+                                    <select class="form-select" data-multiple="true" name="{{ field.name }}" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
+                                        <option value="">-- Выберите значение --</option>
+                                        {% for opt in field.options %}
+                                        <option value="{{ opt }}" {% if v == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="number" class="form-control" data-multiple="true" name="{{ field.name }}"
+                                        value="{{ v }}" min="0" step="any" inputmode="decimal" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
+                                {% endif %}
+                                {% if not effective_locked %}
+                                <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            {% if not effective_locked %}
+                            <button type="button" class="btn-add-dynamic-mobile" 
+                                    data-options="{% if field.type == 'select' %}{{ field.options | tojson | forceescape }}{% else %}[]{% endif %}"
+                                    onclick="addDynamicField(this, '{{ field.type }}', '{{ field.name }}')">
+                                + Добавить еще
+                            </button>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        {% set single_val = submission.data.get(field.name, '') if submission else '' %}
+                        {% if sheet_is_multiple and single_val is iterable and single_val is not string %}
+                            {% set single_val = single_val[sheet_inst_idx] if sheet_inst_idx < single_val|length else '' %}
+                        {% elif single_val is iterable and single_val is not string and single_val is not mapping %}
+                            {% set single_val = single_val[0] if single_val|length > 0 else '' %}
+                        {% endif %}
+                        {% set is_mult_attr = 'data-multiple="true"' if sheet_is_multiple else '' %}
+                        
+                        {% if field.type == 'text' or field.type == 'Текстовое' %}
+                            <textarea class="form-control" name="{{ field.name }}" rows="3" {{ is_mult_attr|safe }} {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>{{ single_val }}</textarea>
+                        {% elif field.type == 'select' %}
+                            <select class="form-select" name="{{ field.name }}" {{ is_mult_attr|safe }} {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
+                                <option value="">-- Выберите значение --</option>
+                                {% for opt in field.options %}
+                                <option value="{{ opt }}" {% if single_val == opt %}selected{% endif %}>{{ opt }}</option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <input type="number" class="form-control" name="{{ field.name }}" {{ is_mult_attr|safe }}
+                                value="{{ single_val }}" min="0" step="any" inputmode="decimal" {% if field.required %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if field.hint and not effective_locked %}
+                    <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle"></i> {{ field.hint }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
             </div>
-            {% endif %}
             {% endfor %}
+            </div>
+            
+            {% if sheet.get('is_multiple') and not is_locked %}
+            <button type="button" class="btn btn-outline-primary w-100 mt-3 mb-4 d-flex align-items-center justify-content-center gap-2 btn-add-sheet-instance" style="border-style: dashed; border-color: #00334e; color: #00334e;" onclick="addSheetInstance(this)">
+                <i class="bi bi-plus-circle"></i> Добавить еще "{{ sheet.sheet_title }}"
+            </button>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
@@ -287,16 +339,16 @@
         const formData = new FormData(form);
         const data = {};
         
-        document.querySelectorAll('.dynamic-field-wrapper').forEach(wrapper => {
-            const fieldName = wrapper.getAttribute('data-name');
-            const inputs = wrapper.querySelectorAll('[data-multiple="true"]');
-            const values = Array.from(inputs).map(input => input.value);
-            data[fieldName] = values;
-        });
+        const multipleInputs = Array.from(form.querySelectorAll('[data-multiple="true"]'));
+        const multipleNames = new Set(multipleInputs.map(el => el.name));
 
-        for (const [key, value] of formData.entries()) {
-            if (key !== 'csrf_token' && !document.querySelector(`.dynamic-field-wrapper[data-name="${key}"]`)) {
-                data[key] = value;
+        for (const key of new Set(formData.keys())) {
+            if (key === 'csrf_token') continue;
+            
+            if (multipleNames.has(key)) {
+                data[key] = formData.getAll(key);
+            } else {
+                data[key] = formData.get(key);
             }
         }
         return data;
@@ -308,7 +360,6 @@
             
             if (wrapper && Array.isArray(value)) {
                 const inputs = wrapper.querySelectorAll('[data-multiple="true"]');
-                // Remove extra fields if existing inputs > value.length
                 while (inputs.length > value.length && inputs.length > 1) {
                     inputs[inputs.length - 1].closest('.dynamic-field-item').remove();
                 }
@@ -316,16 +367,56 @@
                 for (let i = 0; i < value.length; i++) {
                     const currentInputs = wrapper.querySelectorAll('[data-multiple="true"]');
                     if (i < currentInputs.length) {
-                        currentInputs[i].value = value[i];
+                        if (currentInputs[i].tomselect) {
+                            currentInputs[i].tomselect.setValue(value[i]);
+                        } else {
+                            currentInputs[i].value = value[i];
+                        }
                     } else {
                         const type = currentInputs[0].tagName.toLowerCase() === 'textarea' ? 'text' : currentInputs[0].type;
                         addDynamicField(wrapper.querySelector('.btn-add-dynamic-mobile'), type, key, value[i]);
                     }
                 }
             } else {
-                const field = form.elements[key];
-                if (field && !field.hasAttribute('data-multiple')) {
-                    field.value = value;
+                let fields = form.querySelectorAll(`[name="${key}"]`);
+                if (fields.length === 0) continue;
+                
+                // If it's an array and the field is marked as multiple (sheet-level)
+                if (Array.isArray(value) && fields[0].hasAttribute('data-multiple')) {
+                    // Try to find the add block button
+                    const blockContainer = fields[0].closest('.sheet-instances-container');
+                    const wrapperCard = fields[0].closest('.mobile-card');
+                    const addBtn = wrapperCard ? wrapperCard.querySelector('.btn-add-sheet-instance') : null;
+                    
+                    // Add instances if needed
+                    if (blockContainer && addBtn) {
+                        while (blockContainer.querySelectorAll('.sheet-instance').length < value.length) {
+                            addSheetInstance(addBtn);
+                        }
+                        // Refresh fields list after adding
+                        fields = form.querySelectorAll(`[name="${key}"]`);
+                    }
+                    
+                    // Set values
+                    for (let i = 0; i < value.length; i++) {
+                        if (i < fields.length) {
+                            if (fields[i].tomselect) {
+                                fields[i].tomselect.setValue(value[i]);
+                            } else {
+                                fields[i].value = value[i];
+                            }
+                        }
+                    }
+                } else {
+                    const field = fields[0];
+                    if (field) {
+                        const valToSet = Array.isArray(value) ? value[0] : value;
+                        if (field.tomselect) {
+                            field.tomselect.setValue(valToSet);
+                        } else {
+                            field.value = valToSet;
+                        }
+                    }
                 }
             }
         }
@@ -432,10 +523,113 @@
             <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
         `;
         wrapper.insertBefore(newItem, btn);
+        
+        if (type === 'select' && window.initTomSelects) {
+            window.initTomSelects(newItem);
+        }
+        if (btn.closest('form')) btn.closest('form').dispatchEvent(new Event('change', {bubbles: true}));
     }
 
     function removeDynamicField(btn) {
         btn.closest('.dynamic-field-item').remove();
+        if (btn.closest('form')) btn.closest('form').dispatchEvent(new Event('change', {bubbles: true}));
+    }
+    
+    function addSheetInstance(btn) {
+        {% if is_locked %}return;{% endif %}
+        
+        const wrapper = btn.closest('.mobile-card');
+        const container = wrapper.querySelector('.sheet-instances-container');
+        const items = container.querySelectorAll('.sheet-instance');
+        if (items.length === 0) return;
+        
+        const firstItem = items[0];
+        const sheetTitle = btn.textContent.replace(/Добавить еще\s*["«]?|["»]?/gi, '').trim() || 'Специальность';
+        const newIdx = items.length + 1;
+        
+        const savedValues = new Map();
+        firstItem.querySelectorAll('select').forEach(sel => {
+            savedValues.set(sel.name || sel.id, Array.from(sel.selectedOptions).map(o => o.value));
+            if (sel.tomselect) sel.tomselect.destroy();
+        });
+        firstItem.querySelectorAll('input, textarea').forEach(inp => {
+            savedValues.set(inp.name || inp.id, inp.value);
+        });
+        
+        const newItem = firstItem.cloneNode(true);
+        
+        if (window.initTomSelects) window.initTomSelects(firstItem);
+        firstItem.querySelectorAll('select').forEach(sel => {
+            const key = sel.name || sel.id;
+            const vals = savedValues.get(key);
+            if (vals && sel.tomselect) {
+                sel.tomselect.setValue(vals.length === 1 ? vals[0] : vals);
+            }
+        });
+        firstItem.querySelectorAll('input, textarea').forEach(inp => {
+            const key = inp.name || inp.id;
+            if (savedValues.has(key)) inp.value = savedValues.get(key);
+        });
+        
+        newItem.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+            else input.value = '';
+        });
+        
+        newItem.querySelectorAll('.ts-wrapper').forEach(w => w.remove());
+        
+        const hiddenRemoveBtn = newItem.querySelector('.remove-sheet-instance');
+        if (hiddenRemoveBtn) hiddenRemoveBtn.remove();
+        newItem.querySelectorAll('.sheet-instance-divider').forEach(d => d.remove());
+        
+        newItem.dataset.instIdx = items.length;
+        
+        const divider = document.createElement('div');
+        divider.className = 'sheet-instance-divider my-4 position-relative text-center';
+        divider.innerHTML = `
+            <hr class="border-secondary opacity-25">
+            <span class="position-absolute top-50 start-50 translate-middle bg-white px-2 small text-muted fw-bold">Блок ${newIdx}</span>
+            <div class="mt-2 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
+            </div>
+        `;
+        newItem.insertBefore(divider, newItem.firstChild);
+        container.appendChild(newItem);
+        
+        if (window.initTomSelects) window.initTomSelects(newItem);
+        if (btn.closest('form')) btn.closest('form').dispatchEvent(new Event('change', {bubbles: true}));
+        
+        setTimeout(() => newItem.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+
+    function removeSheetInstance(btn) {
+        {% if is_locked %}return;{% endif %}
+        const item = btn.closest('.sheet-instance');
+        if (!item) return;
+        
+        Swal.fire({
+            title: 'Удалить этот блок?',
+            text: "Все введенные в нем данные будут потеряны",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Удалить',
+            cancelButtonText: 'Отмена'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const container = item.closest('.sheet-instances-container');
+                item.remove();
+                
+                // Re-index remaining instances
+                const remaining = container.querySelectorAll('.sheet-instance');
+                remaining.forEach((inst, idx) => {
+                    inst.dataset.instIdx = idx;
+                    const numSpan = inst.querySelector('.sheet-instance-divider span');
+                    if (numSpan) numSpan.textContent = `Блок ${idx + 1}`;
+                });
+            }
+        });
     }
     
     // Загрузка предыдущих данных

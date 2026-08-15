@@ -268,37 +268,53 @@
                         </thead>
                         <tbody>
                             {% for sub in submissions %}
+                            {% set ns = namespace(max_len=1) %}
+                            {% for field in sheet.leaf_fields %}
+                                {% set val = sub.data.get(field.name) %}
+                                {% if val is iterable and val is not string %}
+                                    {% if val|length > ns.max_len %}
+                                        {% set ns.max_len = val|length %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+
+                            {% for i in range(ns.max_len) %}
                             <tr>
-                                <td class="p-3 fw-bold sticky-col">{{ sub.user.description }}</td>
+                                {% if i == 0 %}
+                                <td class="p-3 fw-bold sticky-col align-middle" rowspan="{{ ns.max_len }}">{{ sub.user.description }}</td>
+                                {% endif %}
+                                
                                 {% for field in sheet.leaf_fields %}
                                 {% set is_active = field.get('is_active', True) %}
                                 {% set val = sub.data.get(field.name, '') %}
                                 {% if not is_active and (val is none or val == '' or val == []) %}
                                     {% set val = 'Сбор завершен' %}
                                 {% endif %}
-                                <td class="p-0 align-top text-center {% if not is_active %}bg-light text-muted{% else %}text-dark{% endif %}" title="{% if is_active %}Кликните для редактирования{% else %}Сбор данных завершен{% endif %}">
-                                    {% if val is iterable and val is not string %}
-                                        {% for v in val %}
-                                        <div class="p-3 {% if not loop.last %}border-bottom{% endif %}" 
+                                
+                                {% if val is iterable and val is not string %}
+                                    <td class="p-0 align-top text-center {% if not is_active %}bg-light text-muted{% else %}text-dark{% endif %}" title="{% if is_active %}Кликните для редактирования{% else %}Сбор данных завершен{% endif %}">
+                                        {% set cell_val = val[i] if i < val|length else '' %}
+                                        <div class="p-3" 
                                              contenteditable="{% if is_active %}true{% else %}false{% endif %}" 
                                              data-user-id="{{ sub.user.id }}"
                                              data-field-name="{{ field.name }}"
                                              data-is-multiple="true"
-                                             data-index="{{ loop.index0 }}">{{ v }}</div>
-                                        {% endfor %}
-                                        {% if val|length == 0 %}
-                                        <div class="p-3" contenteditable="{% if is_active %}true{% else %}false{% endif %}" data-user-id="{{ sub.user.id }}" data-field-name="{{ field.name }}" data-is-multiple="true" data-index="0">{{ val if not is_active else '' }}</div>
-                                        {% endif %}
-                                    {% else %}
+                                             data-index="{{ i }}">{{ cell_val }}</div>
+                                    </td>
+                                {% else %}
+                                    {% if i == 0 %}
+                                    <td class="p-0 align-middle text-center {% if not is_active %}bg-light text-muted{% else %}text-dark{% endif %}" title="{% if is_active %}Кликните для редактирования{% else %}Сбор данных завершен{% endif %}" rowspan="{{ ns.max_len }}">
                                         <div class="p-3" 
                                              contenteditable="{% if is_active %}true{% else %}false{% endif %}" 
                                              data-user-id="{{ sub.user.id }}"
                                              data-field-name="{{ field.name }}"
                                              data-is-multiple="false">{{ val }}</div>
+                                    </td>
                                     {% endif %}
-                                </td>
+                                {% endif %}
                                 {% endfor %}
                             </tr>
+                            {% endfor %}
                             {% else %}
                             <tr>
                                 <td colspan="{{ sheet.leaf_fields|length + 1 }}"
