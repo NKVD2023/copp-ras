@@ -266,12 +266,34 @@
                 if (data.status === 'success') {
                     const form = document.getElementById('reportForm');
                     for (const [name, value] of Object.entries(data.data)) {
-                        const field = form.elements[name];
-                        if (!field) continue;
-                        if (field.tomselect) {
-                            field.tomselect.setValue(value);
+                        if (Array.isArray(value)) {
+                            const wrapper = document.querySelector(`.dynamic-field-wrapper[data-name="${name}"]`);
+                            if (wrapper) {
+                                const items = wrapper.querySelectorAll('.dynamic-field-item');
+                                if (items.length > 0) {
+                                    const firstInput = items[0].querySelector('[name]');
+                                    if (firstInput) {
+                                        firstInput.value = value[0] || '';
+                                        const addBtn = wrapper.querySelector('.btn-add-dynamic');
+                                        if (addBtn && value.length > 1) {
+                                            let type = 'number';
+                                            if (firstInput.tagName === 'TEXTAREA') type = 'text';
+                                            else if (firstInput.tagName === 'SELECT') type = 'select';
+                                            for (let i = 1; i < value.length; i++) {
+                                                if (window.addDynamicField) window.addDynamicField(addBtn, type, name, value[i]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         } else {
-                            field.value = value;
+                            const field = form.elements[name];
+                            if (!field) continue;
+                            if (field.tomselect) {
+                                field.tomselect.setValue(value);
+                            } else {
+                                field.value = value;
+                            }
                         }
                     }
                     localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(getFormDataObj(form)));
@@ -330,10 +352,38 @@
                     let restored = false;
                     for (const [name, value] of Object.entries(data)) {
                         if (name === 'csrf_token') continue;
-                        const field = form.elements[name];
-                        if (field && (!field.value || field.value === '')) {
-                            field.value = value;
-                            restored = true;
+                        
+                        if (Array.isArray(value)) {
+                            const wrapper = document.querySelector(`.dynamic-field-wrapper[data-name="${name}"]`);
+                            if (wrapper) {
+                                const items = wrapper.querySelectorAll('.dynamic-field-item');
+                                if (items.length > 0) {
+                                    const firstInput = items[0].querySelector('[name]');
+                                    if (firstInput && (!firstInput.value || firstInput.value === '')) {
+                                        firstInput.value = value[0] || '';
+                                        restored = true;
+                                        
+                                        const addBtn = wrapper.querySelector('.btn-add-dynamic');
+                                        if (addBtn && value.length > 1) {
+                                            let type = 'number';
+                                            if (firstInput.tagName === 'TEXTAREA') type = 'text';
+                                            else if (firstInput.tagName === 'SELECT') type = 'select';
+                                            
+                                            for (let i = 1; i < value.length; i++) {
+                                                if (window.addDynamicField) {
+                                                    window.addDynamicField(addBtn, type, name, value[i]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            const field = form.elements[name];
+                            if (field && (!field.value || field.value === '')) {
+                                field.value = value;
+                                restored = true;
+                            }
                         }
                     }
                     if (restored) {
