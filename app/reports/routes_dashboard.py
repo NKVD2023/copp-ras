@@ -83,54 +83,12 @@ def dashboard():
     
     stat_schema = None
     if selected_short_name:
-        from app.utils import build_table_headers
         matched_templates = ReportTemplate.query.filter_by(short_name=selected_short_name, is_template=False, is_published=True).order_by(ReportTemplate.id.desc()).all()
         # Оставляем только те, что назначены текущему пользователю
         matched_templates = [t for t in matched_templates if t in assigned]
         
-        if matched_templates:
-            latest_template = matched_templates[0]
-            import copy
-            stat_schema = copy.deepcopy(latest_template.schema)
-            for sheet in stat_schema:
-                fields = sheet.get('fields', [])
-                header_rows, leaf_fields = build_table_headers(fields)
-                sheet['header_rows'] = header_rows
-                sheet['leaf_fields'] = leaf_fields
-                sheet['periods_data'] = []
-                
-            for template in matched_templates:
-                submission = ReportSubmission.query.filter_by(template_id=template.id, user_id=current_user.id).first()
-                period_name = template.period or f"Период {template.id}"
-                
-                for sheet in stat_schema:
-                    sheet_data = {
-                        'period': period_name,
-                        'template_id': template.id,
-                        'has_submission': submission is not None,
-                        'values': submission.data if submission else {}
-                    }
-                    sheet['periods_data'].append(sheet_data)
-                    
-            for sheet in stat_schema:
-                periods_data = sheet['periods_data']
-                for i in range(len(periods_data) - 1):
-                    curr = periods_data[i]
-                    prev = periods_data[i+1]
-                    if curr['has_submission'] and prev['has_submission']:
-                        curr['deltas'] = {}
-                        for field in sheet['leaf_fields']:
-                            f_id = str(field.get('name') or field.get('id', ''))
-                            if not f_id: continue
-                            if field.get('type') == 'number':
-                                cv_raw = curr['values'].get(f_id)
-                                pv_raw = prev['values'].get(f_id)
-                                try:
-                                    cv = float(cv_raw) if cv_raw not in [None, ""] else 0.0
-                                    pv = float(pv_raw) if pv_raw not in [None, ""] else 0.0
-                                    curr['deltas'][f_id] = cv - pv
-                                except (ValueError, TypeError):
-                                    pass
+        from app.services.stat_service import StatService
+        stat_schema = StatService.build_unified_stat_schema(matched_templates, current_user.id)
                                     
     template_name = 'mobile/user_dashboard.html' if is_mobile(request) else 'user_dashboard.html'
     return render_template(template_name, 
@@ -157,7 +115,7 @@ def export_user_statistics():
         short_name=selected_short_name,
         is_published=True,
         is_template=False
-    ).order_by(ReportTemplate.id.asc()).all()
+    ).order_by(ReportTemplate.id.desc()).all()
 
     assigned_templates = [
         t for t in templates
@@ -168,7 +126,7 @@ def export_user_statistics():
         return redirect(url_for('reports.dashboard', tab='statisticsTab'))
 
     from app.services.stat_service import StatService
-    stat_schema = StatService.build_stat_schema_for_export(assigned_templates, user.id)
+    stat_schema = StatService.build_unified_stat_schema(assigned_templates, user.id)
 
     if not stat_schema:
         return redirect(url_for('reports.dashboard', tab='statisticsTab'))

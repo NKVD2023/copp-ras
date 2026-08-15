@@ -49,7 +49,7 @@ class ExcelService:
         """
         Формирует Excel файл со сводной статистикой.
         Макет: периоды вертикально (от новых к старым), поля горизонтально.
-        :param stat_schema: Словарь с периодами и полями (с дельтами).
+        :param stat_schema: Список листов (как в веб-дашборде)
         :param short_name: Тип отчета.
         :param user_title: Имя учреждения (для админа) или None (для пользователя).
         :return: (output: BytesIO, filename: str)
@@ -59,191 +59,177 @@ class ExcelService:
         COLOR_DOWN  = "DC2626"
         COLOR_EMPTY = "94A3B8"
 
+        title_font = Font(bold=True, size=16, color="000000", name='Arial')
         header_font = Font(bold=True, color="FFFFFF", name='Arial', size=11)
         header_fill = PatternFill(start_color=CORP_COLOR, end_color=CORP_COLOR, fill_type="solid")
         period_font = Font(bold=True, color="1E293B", name='Arial', size=11)
         period_fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
         data_font   = Font(name='Arial', size=11)
+        
         thin_border = Border(
-            left=Side(style='thin',   color='BFBFBF'),
-            right=Side(style='thin',  color='BFBFBF'),
-            top=Side(style='thin',    color='BFBFBF'),
+            left=Side(style='thin', color='BFBFBF'),
+            right=Side(style='thin', color='BFBFBF'),
+            top=Side(style='thin', color='BFBFBF'),
             bottom=Side(style='thin', color='BFBFBF')
         )
+        
         align_center = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
         wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Статистика"
+        wb.remove(wb.active) # Удаляем дефолтный лист
 
-        periods = stat_schema.get("periods", [])
-        fields  = stat_schema.get("fields",  [])
+        for sheet_index, sheet_data in enumerate(stat_schema):
+            title = sheet_data.get('sheet_title', f'Лист {sheet_index+1}')
+            safe_title = re.sub(r'[\\*?:/\[\]]', '', title)[:31]
+            ws = wb.create_sheet(title=safe_title)
 
-        period_order = list(reversed(range(len(periods))))
-        total_cols = 1 + len(fields)
+            header_rows = sheet_data.get('header_rows', [])
+            leaf_fields = sheet_data.get('leaf_fields', [])
+            periods_data = sheet_data.get('periods_data', [])
+            
+            max_depth = len(header_rows) if header_rows else 1
+            max_col = len(leaf_fields) + 1
 
-        # ---- Строка 1: заголовок ----
-        title_text = f"Статистика: {short_name}"
-        if user_title:
-            title_text += f" | {user_title}"
+            # 1. ЗАГОЛОВОК ЛИСТА
+            title_text = f"Статистика: {short_name}"
+            if user_title:
+                title_text += f" | {user_title}"
+            
+            title_cell = ws.cell(row=1, column=1, value=title_text)
+            title_cell.font = title_font
+            title_cell.alignment = align_center
+            
+            for col in range(1, max_col + 1):
+                ws.cell(row=1, column=col).border = thin_border
+                
+            ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
+            ws.row_dimensions[1].height = 60
 
-        title_cell = ws.cell(row=1, column=1, value=title_text)
-        title_cell.font      = Font(bold=True, size=14, color="FFFFFF", name='Arial')
-        title_cell.fill      = header_fill
-        title_cell.alignment = align_center
-        title_cell.border    = thin_border
-        if total_cols > 1:
-            ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
-            for col in range(2, total_cols + 1):
-                c = ws.cell(row=1, column=col)
-                c.fill   = header_fill
-                c.border = thin_border
-        ws.row_dimensions[1].height = 36
+            # 2. РЕНДЕР СЛОЖНОЙ ШАПКИ
+            start_row = 2
+            
+            for r in range(start_row, start_row + max_depth):
+                ws.row_dimensions[r].height = 40
+                for c in range(1, max_col + 1):
+                    cell = ws.cell(row=r, column=c)
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = align_center
+                    cell.border = thin_border
 
-        # ---- Строка 2: шапка (Период | Поле_1 | Поле_2 | ...) ----
-        ws.cell(row=2, column=1, value="Период")
-        for j, field in enumerate(fields):
-            ws.cell(row=2, column=2 + j, value=field["name"])
+            ws.cell(row=start_row, column=1, value="Период")
+            if max_depth > 1:
+                ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row + max_depth - 1, end_column=1)
 
-        for col in range(1, total_cols + 1):
-            cell = ws.cell(row=2, column=col)
-            cell.font      = header_font
-            cell.fill      = header_fill
-            cell.alignment = align_center
-            cell.border    = thin_border
+            occupied = set()
+            for row_idx, h_row in enumerate(header_rows):
+                c_row = start_row + row_idx
+                current_col = 2
+                for cell_info in h_row:
+                    while (c_row, current_col) in occupied:
+                        current_col += 1
+                        
+                    ws.cell(row=c_row, column=current_col, value=cell_info['label'])
+                    
+                    for r in range(c_row, c_row + cell_info['rowspan']):
+                        for c in range(current_col, current_col + cell_info['colspan']):
+                            occupied.add((r, c))
+                    
+                    if cell_info['colspan'] > 1 or cell_info['rowspan'] > 1:
+                        ws.merge_cells(
+                            start_row=c_row, 
+                            start_column=current_col, 
+                            end_row=c_row + cell_info['rowspan'] - 1, 
+                            end_column=current_col + cell_info['colspan'] - 1
+                        )
 
-        # ---- Строки 3+: периоды (от новых к старым) ----
-        current_row = 3
-        for p_idx in period_order:
-            period_info = periods[p_idx]
-            period_label = period_info["period"]
-
-            # 1. Вычисляем max_len
-            max_len = 1
-            has_submission = False
-            for field in fields:
-                val_data = field["values"][p_idx]
-                if val_data["has_data"]:
-                    has_submission = True
-                    val = val_data["value"]
-                    if isinstance(val, list):
-                        max_len = max(max_len, len(val))
-
-            start_merge_row = current_row
-
-            # 2. Генерируем строки
-            for i in range(max_len):
-                if i == 0:
-                    period_cell           = ws.cell(row=current_row, column=1, value=period_label)
-                    period_cell.font      = period_font
-                    period_cell.fill      = period_fill
-                    period_cell.alignment = align_center
-                    period_cell.border    = thin_border
-                else:
-                    # Пустая ячейка, будет объединена
-                    period_cell           = ws.cell(row=current_row, column=1)
-                    period_cell.border    = thin_border
-
-                for j, field in enumerate(fields):
-                    val_data = field["values"][p_idx]
-                    cell     = ws.cell(row=current_row, column=2 + j)
-
-                    if val_data["has_data"]:
-                        val = val_data["value"]
-                        cell_val = "-"
+            # 3. ДАННЫЕ
+            current_row = start_row + max_depth
+            
+            for p_data in periods_data:
+                period_label = p_data["period"]
+                
+                max_len = 1
+                if p_data["has_submission"]:
+                    for f in leaf_fields:
+                        f_id = str(f.get('name') or f.get('id', ''))
+                        val = p_data['values'].get(f_id)
                         if isinstance(val, list):
-                            if i < len(val):
-                                cell_val = val[i]
+                            max_len = max(max_len, len(val))
+
+                start_merge_row = current_row
+
+                for i in range(max_len):
+                    if i == 0:
+                        period_cell = ws.cell(row=current_row, column=1, value=period_label)
+                        period_cell.font = period_font
+                        period_cell.fill = period_fill
+                        period_cell.alignment = align_center
+                    else:
+                        period_cell = ws.cell(row=current_row, column=1)
+                        
+                    period_cell.border = thin_border
+
+                    for j, f in enumerate(leaf_fields):
+                        f_id = str(f.get('name') or f.get('id', ''))
+                        cell = ws.cell(row=current_row, column=2 + j)
+                        
+                        cell_val = "-"
+                        if p_data["has_submission"]:
+                            val = p_data['values'].get(f_id)
+                            if isinstance(val, list):
+                                if i < len(val):
+                                    cell_val = val[i]
+                            else:
+                                if i == 0:
+                                    cell_val = val
+                                else:
+                                    cell_val = ""
                         else:
                             if i == 0:
-                                cell_val = val
+                                cell_val = "Нет данных"
                             else:
-                                cell_val = "" # Будет объединена
-                        
-                        if cell_val not in ["", None, "-"]:
-                            if val_data.get("type") in ["number", "float"] or (isinstance(cell_val, (int, float, str)) and str(cell_val).replace('.', '', 1).replace(',', '', 1).replace('-', '', 1).isdigit()):
-                                try:
-                                    cell_val = float(str(cell_val).replace(',', '.')) if "." in str(cell_val) or "," in str(cell_val) else int(cell_val)
-                                except (ValueError, TypeError):
-                                    pass
+                                cell_val = ""
 
+                        if cell_val in [None, '', []]:
+                            cell_val = "-"
+
+                        is_numeric = str(f.get('type', '')).lower() in ['number', 'числовое']
+                        if is_numeric and cell_val not in ["-", "Нет данных", ""]:
+                            try:
+                                cell_num = float(str(cell_val).replace(',', '.')) if "." in str(cell_val) or "," in str(cell_val) else int(cell_val)
+                                cell_val = cell_num
+                            except (ValueError, TypeError):
+                                pass
+                                
                         cell.value = cell_val if cell_val != "" else None
                         
-                        if i == 0:
-                            status = val_data.get("status", "zero")
-                            if status == "up":
-                                cell.font = Font(color=COLOR_UP,   bold=True, name='Arial', size=11)
-                            elif status == "down":
+                        if i == 0 and is_numeric and "deltas" in p_data and f_id in p_data["deltas"]:
+                            delta = p_data["deltas"][f_id]
+                            if delta > 0:
+                                cell.font = Font(color=COLOR_UP, bold=True, name='Arial', size=11)
+                            elif delta < 0:
                                 cell.font = Font(color=COLOR_DOWN, bold=True, name='Arial', size=11)
                             else:
                                 cell.font = data_font
+                        elif cell_val == "Нет данных":
+                            cell.font = Font(color=COLOR_EMPTY, italic=True, name='Arial', size=11)
                         else:
                             cell.font = data_font
-                    else:
-                        if i == 0:
-                            cell.value = "Нет данных"
-                            cell.font  = Font(color=COLOR_EMPTY, italic=True, name='Arial', size=11)
-                        else:
-                            cell.value = None
+                            
+                        cell.alignment = align_center
+                        cell.border = thin_border
+                        
+                    current_row += 1
 
-                    cell.alignment = align_center
-                    cell.border    = thin_border
-                
-                current_row += 1
-            
-            # 3. Объединение ячеек для периода и скалярных полей
-            if max_len > 1:
-                ws.merge_cells(start_row=start_merge_row, start_column=1, end_row=current_row-1, end_column=1)
-                for j, field in enumerate(fields):
-                    val_data = field["values"][p_idx]
-                    if val_data["has_data"]:
-                        val = val_data["value"]
+                if max_len > 1:
+                    ws.merge_cells(start_row=start_merge_row, start_column=1, end_row=current_row-1, end_column=1)
+                    
+                    for j, f in enumerate(leaf_fields):
+                        f_id = str(f.get('name') or f.get('id', ''))
+                        val = p_data['values'].get(f_id) if p_data["has_submission"] else None
                         if not isinstance(val, list):
                             ws.merge_cells(start_row=start_merge_row, start_column=2+j, end_row=current_row-1, end_column=2+j)
-                    else:
-                        ws.merge_cells(start_row=start_merge_row, start_column=2+j, end_row=current_row-1, end_column=2+j)
-                
-                # 4. Строка "Итого"
-                total_fill_style = PatternFill("solid", fgColor="F8F9FA")
-                total_font_style = Font(name='Arial', size=11, bold=True)
-                
-                ws.cell(row=current_row, column=1, value="Итого").font = total_font_style
-                ws.cell(row=current_row, column=1).fill = total_fill_style
-                ws.cell(row=current_row, column=1).alignment = Alignment(horizontal="left", vertical="center")
-                ws.cell(row=current_row, column=1).border = thin_border
-                
-                for j, field in enumerate(fields):
-                    val_data = field["values"][p_idx]
-                    cell = ws.cell(row=current_row, column=2 + j)
-                    cell.fill = total_fill_style
-                    cell.font = total_font_style
-                    cell.alignment = align_center
-                    cell.border = thin_border
-                    
-                    if val_data["has_data"] and val_data.get("type") in ["number", "float"]:
-                        val = val_data["value"]
-                        total = 0.0
-                        has_total = False
-                        if isinstance(val, list):
-                            for v in val:
-                                if v is not None and str(v).strip() != "":
-                                    try:
-                                        v_clean = str(v).replace(',', '.')
-                                        total += float(v_clean)
-                                        has_total = True
-                                    except ValueError:
-                                        pass
-                        elif val is not None and str(val).strip() != "":
-                            try:
-                                v_clean = str(val).replace(',', '.')
-                                total += float(v_clean)
-                                has_total = True
-                            except ValueError:
-                                pass
-                        
-                        if has_total:
-                            cell.value = total if total % 1 != 0 else int(total)
-                        else:
                             cell.value = 0
                     else:
                         cell.value = "-"

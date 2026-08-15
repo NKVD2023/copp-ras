@@ -10,108 +10,63 @@ from app.models import ReportSubmission
 class StatService:
 
     @staticmethod
-    def build_stat_schema_for_export(assigned_templates, user_id):
+    def build_unified_stat_schema(matched_templates, user_id):
         """
-        Строит stat_schema для передачи в ExcelService.export_statistics().
-
-        Использует build_table_headers() из utils.py для корректного извлечения
-        листовых полей из иерархической схемы (аналогично логике дашборда).
-
-        :param assigned_templates: список ReportTemplate, отсортированных по id ASC
-        :param user_id: ID пользователя для поиска submissions
-        :return: dict {"periods": [...], "fields": [...]} или None если шаблонов нет
+        Строит единую stat_schema для вывода на дашборде и выгрузки в Excel.
+        Возвращает список листов (вкладок), где каждый лист содержит:
+        - header_rows: сложная структура заголовков для colspan/rowspan
+        - leaf_fields: плоские поля
+        - periods_data: список данных по периодам
         """
-        if not assigned_templates:
+        if not matched_templates:
             return None
 
-        latest_template = assigned_templates[-1]
-        schema = latest_template.schema or []
-
-        stat_schema = {
-            "periods": [],
-            "fields": []
-        }
-
-        # 1) Собираем submissions для каждого шаблона одним проходом
-        submissions_map = {}
-        for t in assigned_templates:
-            sub = ReportSubmission.query.filter_by(
-                template_id=t.id, user_id=user_id
-            ).first()
-            submissions_map[t.id] = sub
-            stat_schema["periods"].append({
-                "period": t.period or f"Период {t.id}",
-                "end_date": t.deadline.strftime("%d.%m.%Y") if t.deadline else "",
-                "template_id": t.id,
-            })
-
-        # 2) Извлекаем листовые поля из каждого листа шаблона
-        for sheet in schema:
-            fields = sheet.get("fields", [])
-            if not fields:
-                continue
-
-            _, leaf_fields = build_table_headers(fields)
-            sheet_title = sheet.get("sheet_title", "")
-
-            for field in leaf_fields:
-                field_name = str(field.get("name") or field.get("id", ""))
-                if not field_name:
-                    continue
-
-                field_type = field.get("type", "string")
-                # Пропускаем нечисловые/неэкспортируемые типы
-                if field_type in ["file", "comment"]:
-                    continue
-
-                label = field.get("label", field_name)
-                # Убрали добавление префикса листа по запросу пользователя
-
-                row_data = {
-                    "name": label,
-                    "values": []
+        # Ожидаем, что matched_templates отсортированы по убыванию (новые сверху)
+        latest_template = matched_templates[0]
+        
+        import copy
+        stat_schema = copy.deepcopy(latest_template.schema) or []
+        
+        for sheet in stat_schema:
+            fields = sheet.get('fields', [])
+            header_rows, leaf_fields = build_table_headers(fields)
+            sheet['header_rows'] = header_rows
+            sheet['leaf_fields'] = leaf_fields
+            sheet['periods_data'] = []
+            
+        for template in matched_templates:
+            submission = ReportSubmission.query.filter_by(template_id=template.id, user_id=user_id).first()
+            period_name = template.period or f"Период {template.id}"
+            
+            for sheet in stat_schema:
+                sheet_data = {
+                    'period': period_name,
+                    'template_id': template.id,
+                    'has_submission': submission is not None,
+                    'values': submission.data if submission else {}
                 }
-
-                prev_value = None
-                for t in assigned_templates:
-                    sub = submissions_map[t.id]
-                    val = None
-                    has_data = False
-
-                    if sub and sub.data and field_name in sub.data:
-                        raw = sub.data[field_name]
-                        if raw != "" and raw is not None:
-                            val = raw
-                            has_data = True
-
-                    # Приведение к числу для расчёта дельты
-                    current_num = None
-                    if has_data and field_type in ["number", "float"]:
-                        try:
-                            current_num = float(val) if "." in str(val) else int(val)
-                        except (ValueError, TypeError):
-                            pass
-
-                    delta = 0
-                    status = "zero"
-                    if current_num is not None and prev_value is not None:
-                        delta = current_num - prev_value
-                        if delta > 0:
-                            status = "up"
-                        elif delta < 0:
-                            status = "down"
-
-                    row_data["values"].append({
-                        "value": val if has_data else "",
-                        "has_data": has_data,
-                        "delta": delta,
-                        "status": status,
-                        "type": field_type,
-                    })
-
-                    if current_num is not None:
-                        prev_value = current_num
-
-                stat_schema["fields"].append(row_data)
+                sheet['periods_data'].append(sheet_data)
+                
+        # Рассчитываем дельты (разницу) между текущим и предыдущим периодом
+        for sheet in stat_schema:
+            periods_data = sheet['periods_data']
+            # Т.к. сортировка по убыванию, [i+1] — это предыдущий (более старый) период
+            for i in range(len(periods_data) - 1):
+                curr = periods_data[i]
+                prev = periods_data[i+1]
+                if curr['has_submission'] and prev['has_submission']:
+                    curr['deltas'] = {}
+                    for field in sheet['leaf_fields']:
+                        f_id = str(field.get('name') or field.get('id', ''))
+                        if not f_id: continue
+                        if field.get('type') == 'number':
+                            cv_raw = curr['values'].get(f_id)
+                            pv_raw = prev['values'].get(f_id)
+                            try:
+                                cv = float(cv_raw) if cv_raw not in [None, ""] else 0.0
+                                pv = float(pv_raw) if pv_raw not in [None, ""] else 0.0
+                                curr['deltas'][f_id] = cv - pv
+                            except (ValueError, TypeError):
+                                pass
 
         return stat_schema
