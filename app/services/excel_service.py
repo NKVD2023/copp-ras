@@ -252,46 +252,8 @@ class ExcelService:
                 
                 current_row += 1
 
-        # ---- Авто-размер колонок по содержимому ----
-        col_widths = {1: len("Период") + 4}
-        for j, field in enumerate(fields):
-            max_line = max((len(line) for line in field["name"].split("\n")), default=10)
-            col_widths[2 + j] = min(max_line + 4, 45)
-
-        for p_idx in period_order:
-            period_info  = periods[p_idx]
-            period_label = period_info["period"]
-            if period_info.get("end_date"):
-                period_label += f" по {period_info['end_date']}"
-            max_p = max((len(line) for line in period_label.split("\n")), default=10)
-            col_widths[1] = max(col_widths[1], min(max_p + 4, 35))
-
-            for j, field in enumerate(fields):
-                val_data = field["values"][p_idx]
-                text_len = len(str(val_data["value"])) if val_data["has_data"] else len("Нет данных")
-                col_widths[2 + j] = max(col_widths.get(2 + j, 12), min(text_len + 4, 45))
-
-        for col_idx, width in col_widths.items():
-            ws.column_dimensions[get_column_letter(col_idx)].width = max(width, 12)
-
-        # ---- Авто-высота строк ----
-        if fields:
-            max_header_lines = max(len(field["name"].split("\n")) for field in fields)
-            ws.row_dimensions[2].height = max(35, max_header_lines * 15 + 10)
-
-        col_a_width = col_widths.get(1, 20)
-        for row_offset, p_idx in enumerate(period_order):
-            row_num     = 3 + row_offset
-            period_info = periods[p_idx]
-            period_text = period_info["period"]
-            if period_info.get("end_date"):
-                period_text += f" по {period_info['end_date']}"
-            chars_per_line = max(col_a_width, 10)
-            lines = max(
-                sum(max(1, -(-len(line) // chars_per_line)) for line in period_text.split("\n")),
-                1
-            )
-            ws.row_dimensions[row_num].height = max(25, lines * 15 + 5)
+        # Авто-размер ячеек
+        ExcelService._autosize_excel(ws)
 
         output = BytesIO()
         wb.save(output)
@@ -543,7 +505,10 @@ class ExcelService:
                     total_row.append('-')
 
             ws.append(total_row)
-            ws.row_dimensions[current_row].height = 30
+            
+            # Применяем авто-размер ячеек к текущему листу
+            ExcelService._autosize_excel(ws)
+
             for col_idx in range(1, max_col + 1):
                 cell = ws.cell(row=current_row, column=col_idx)
                 cell.font = total_font
@@ -558,3 +523,47 @@ class ExcelService:
         output.seek(0)
         
         return output, filename
+
+    @staticmethod
+    def _autosize_excel(ws, min_col_width=12, max_col_width=60, default_row_height=15):
+        from openpyxl.utils import get_column_letter
+        
+        # Авто-размер колонок
+        for col in ws.columns:
+            max_length = 0
+            col_letter = None
+            for cell in col:
+                if col_letter is None:
+                    col_letter = get_column_letter(cell.column)
+                if cell.value:
+                    try:
+                        lines = str(cell.value).split("\n")
+                        for line in lines:
+                            if len(line) > max_length:
+                                max_length = len(line)
+                    except:
+                        pass
+            
+            if col_letter:
+                adjusted_width = min(max(max_length + 2, min_col_width), max_col_width)
+                ws.column_dimensions[col_letter].width = adjusted_width
+                
+        # Авто-высота строк
+        for row in ws.rows:
+            if not row:
+                continue
+            max_lines = 1
+            for cell in row:
+                if cell.value:
+                    try:
+                        col_letter = get_column_letter(cell.column)
+                        col_width = ws.column_dimensions[col_letter].width
+                        if not col_width:
+                            col_width = min_col_width
+                        lines = str(cell.value).split("\n")
+                        total_lines_for_cell = sum(max(1, -(-len(line) // int(col_width))) for line in lines)
+                        if total_lines_for_cell > max_lines:
+                            max_lines = total_lines_for_cell
+                    except:
+                        pass
+            ws.row_dimensions[row[0].row].height = max_lines * default_row_height + 5
