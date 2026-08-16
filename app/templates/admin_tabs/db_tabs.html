@@ -15,6 +15,7 @@
             Восстановить
         </button>
         <form id="restoreForm" action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-none">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <input type="file" name="backup_file" id="backupFileInput" accept=".zip" required onchange="promptRestorePassword()">
             <input type="hidden" name="password" id="restorePasswordHidden">
         </form>

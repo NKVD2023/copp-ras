@@ -11,6 +11,9 @@ from app import db
 from datetime import datetime
 import os
 import shutil
+import zipfile
+import io
+import tempfile
 from config import basedir
 from app.utils import log_action
 from app.auth.decorators import roles_required
@@ -127,15 +130,37 @@ def create_backup():
 @login_required
 @roles_required('admin')
 def download_current_db():
-    """Скачивание текущего (рабочего) файла базы данных."""
+    """Скачивание текущего (рабочего) файла базы данных и папки uploads в виде ZIP-архива."""
     if current_user.role != 'admin':
         return "Forbidden", 403
         
     db_path = os.path.join(basedir, 'reports.db')
-    if os.path.exists(db_path):
-        log_action('Скачивание БД', 'Скачана текущая база данных')
-        return send_file(db_path, as_attachment=True, download_name=f'copp_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db')
-    return "File not found", 404
+    uploads_dir = os.path.join(basedir, 'app', 'uploads')
+    
+    if not os.path.exists(db_path):
+        return "Database file not found", 404
+
+    # Создаем ZIP в памяти
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Добавляем БД
+        zf.write(db_path, 'reports.db')
+        
+        # Добавляем загруженные файлы (если есть)
+        if os.path.exists(uploads_dir):
+            for root, dirs, files in os.walk(uploads_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    # Вычисляем относительный путь для архива (например, app/uploads/image.png)
+                    rel_path = os.path.relpath(file_path, basedir)
+                    zf.write(file_path, rel_path)
+                    
+    memory_file.seek(0)
+    
+    log_action('Скачивание полного бэкапа', 'Скачана текущая база данных и загруженные файлы')
+    
+    filename = f'copp_backup_full_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+    return send_file(memory_file, as_attachment=True, download_name=filename, mimetype='application/zip')
 
 @admin_bp.route('/db/backup/download/<filename>')
 @login_required
@@ -222,8 +247,8 @@ def restore_backup(filename):
 @roles_required('admin')
 def upload_backup():
     """
-    Загрузка пользовательского SQLite файла на сервер.
-    Позволяет администратору восстановить базу из файла, который он хранил локально у себя.
+    Загрузка пользовательского ZIP-архива на сервер.
+    Позволяет администратору восстановить базу и загруженные файлы.
     """
     if current_user.role != 'admin':
         flash('Доступ запрещен')
@@ -235,25 +260,65 @@ def upload_backup():
         return redirect(url_for('admin.dashboard') + '#databaseTab')
         
     file = request.files.get('backup_file')
-    if not file or not file.filename.endswith('.db'):
-        flash('Неверный формат файла. Требуется .db')
+    if not file or not file.filename.endswith('.zip'):
+        flash('Неверный формат файла. Требуется .zip')
         return redirect(url_for('admin.dashboard') + '#databaseTab')
         
-    # Базовая защита: Проверка сигнатуры SQLite файла (защита от загрузки вредоносных бинарников)
-    header = file.read(16)
-    file.seek(0)
-    if header != b'SQLite format 3\000':
-        flash('Неверный формат файла. Это не база данных SQLite.')
+    # Проверка на ZIP
+    if not zipfile.is_zipfile(file):
+        flash('Неверный формат архива. Это не ZIP.')
         return redirect(url_for('admin.dashboard') + '#databaseTab')
         
     db_path = os.path.join(basedir, 'reports.db')
+    uploads_dir = os.path.join(basedir, 'app', 'uploads')
+    
     try:
-        # Сначала закрываем текущую сессию, чтобы её кэшированные данные не перезаписали новый файл при коммите лога
-        db.session.remove()
-        db.engine.dispose() # Отпускаем старый файл БД
-        file.save(db_path)  # Перезаписываем новым
-        log_action('Восстановление БД', f'База данных восстановлена из загруженного файла {file.filename}')
-        flash('База данных успешно восстановлена из загруженного файла')
+        # Распаковываем ZIP во временную директорию
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file.seek(0)
+            with zipfile.ZipFile(file, 'r') as zf:
+                zf.extractall(temp_dir)
+                
+            temp_db_path = os.path.join(temp_dir, 'reports.db')
+            
+            # Проверяем наличие reports.db в архиве
+            if not os.path.exists(temp_db_path):
+                flash('Ошибка: В архиве отсутствует reports.db')
+                return redirect(url_for('admin.dashboard') + '#databaseTab')
+                
+            # Проверка сигнатуры SQLite
+            with open(temp_db_path, 'rb') as f:
+                header = f.read(16)
+                if header != b'SQLite format 3\000':
+                    flash('Ошибка: reports.db в архиве поврежден или не является базой SQLite.')
+                    return redirect(url_for('admin.dashboard') + '#databaseTab')
+
+            # Закрываем сессию и отпускаем БД
+            db.session.remove()
+            db.engine.dispose()
+            
+            # Перемещаем базу данных
+            shutil.copy2(temp_db_path, db_path)
+            
+            # Восстанавливаем папку uploads (если она есть в архиве)
+            # В архиве папка может называться app/uploads. Но из-за особенностей os.walk
+            # файлы могли быть упакованы как 'app/uploads/file'
+            temp_uploads_dir = os.path.join(temp_dir, 'app', 'uploads')
+            
+            if os.path.exists(temp_uploads_dir):
+                # Бэкапим старую папку
+                if os.path.exists(uploads_dir):
+                    backup_uploads = os.path.join(basedir, 'app', 'uploads_bak')
+                    if os.path.exists(backup_uploads):
+                        shutil.rmtree(backup_uploads)
+                    shutil.move(uploads_dir, backup_uploads)
+                
+                # Копируем новую
+                shutil.copytree(temp_uploads_dir, uploads_dir)
+
+            log_action('Восстановление полного бэкапа', f'Система восстановлена из архива {file.filename}')
+            flash('Система (БД и файлы) успешно восстановлена из загруженного архива')
+            
     except Exception as e:
         flash(f'Ошибка при восстановлении: {str(e)}')
         
