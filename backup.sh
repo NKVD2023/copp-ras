@@ -5,7 +5,7 @@
 # ==============================================================================
 
 # Настройки путей
-PROJECT_DIR="/home/copp-admin/copp-ras"
+PROJECT_DIR="/var/www/copp-ras"
 BACKUP_DIR="/tmp/copp_backups"
 DB_FILE="reports.db"
 UPLOADS_DIR="app/uploads"
