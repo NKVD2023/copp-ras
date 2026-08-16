@@ -15,7 +15,7 @@
             Восстановить
         </button>
         <form id="restoreForm" action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-none">
-            <input type="file" name="backup_file" id="backupFileInput" accept=".db" required onchange="promptRestorePassword()">
+            <input type="file" name="backup_file" id="backupFileInput" accept=".zip" required onchange="promptRestorePassword()">
             <input type="hidden" name="password" id="restorePasswordHidden">
         </form>
     </div>
@@ -307,8 +307,9 @@
         const fileInput = document.getElementById('backupFileInput');
         if (!fileInput.files.length) return;
         
-
         withPassword(function(pwd) {
+            document.getElementById('restorePasswordHidden').value = pwd;
+            document.getElementById('restoreForm').submit();
         });
     }
 </script>
