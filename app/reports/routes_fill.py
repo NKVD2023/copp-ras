@@ -92,6 +92,15 @@ def fill_report(template_id):
             
         historical_data = None
         for sheet in schema:
+            t_groups = sheet.get('target_groups', [])
+            old_group = sheet.get('target_group')
+            if old_group and old_group not in t_groups:
+                t_groups.append(old_group)
+                
+            # Если лист не предназначен для группы текущего пользователя, пропускаем валидацию его полей
+            if t_groups and current_user.role not in ['admin', 'manager'] and current_user.group not in t_groups:
+                continue
+                
             for field in sheet.get('fields', []):
                 if field.get('is_active') is False:
                     # Принудительно восстанавливаем старое значение и пропускаем валидацию

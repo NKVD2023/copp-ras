@@ -74,9 +74,16 @@
     <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
         <h4 class="fw-bold text-dark mb-4">{{ template.name }}</h4>
         <ul class="nav nav-tabs" id="excelSheetsTabs" role="tablist">
+            {% set first_visible = namespace(found=false) %}
             {% for sheet in schema %}
-            <li class="nav-item"><button class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab"
-                    data-bs-target="#sheet-{{ loop.index }}" type="button">{{ sheet.sheet_title }}</button></li>
+                {% set t_groups = sheet.get('target_groups', []) %}
+                {% set old_group = sheet.get('target_group') %}
+                {% set all_t_groups = t_groups + ([old_group] if old_group and old_group not in t_groups else []) %}
+                {% set is_visible = not all_t_groups or current_user.group in all_t_groups or current_user.role in ['admin', 'manager'] %}
+                {% if is_visible %}
+                <li class="nav-item"><button class="nav-link {% if not first_visible.found %}active{% set first_visible.found = true %}{% endif %}" data-bs-toggle="tab"
+                        data-bs-target="#sheet-{{ loop.index }}" type="button">{{ sheet.sheet_title }}</button></li>
+                {% endif %}
             {% endfor %}
         </ul>
     </div>
@@ -145,8 +152,14 @@
         <form id="reportForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="tab-content">
+                {% set first_visible_content = namespace(found=false) %}
                 {% for sheet in schema %}
-                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="sheet-{{ loop.index }}"
+                {% set t_groups = sheet.get('target_groups', []) %}
+                {% set old_group = sheet.get('target_group') %}
+                {% set all_t_groups = t_groups + ([old_group] if old_group and old_group not in t_groups else []) %}
+                {% set is_visible = not all_t_groups or current_user.group in all_t_groups or current_user.role in ['admin', 'manager'] %}
+                {% if is_visible %}
+                <div class="tab-pane fade {% if not first_visible_content.found %}show active{% set first_visible_content.found = true %}{% endif %}" id="sheet-{{ loop.index }}"
                     role="tabpanel">
                     {% macro render_input(field, submission, is_locked, group_index=none, sheet_is_multiple=false) %}
                         {% if field.hint and not is_locked %}
@@ -310,6 +323,7 @@
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
             <hr class="border-secondary opacity-10 my-5">

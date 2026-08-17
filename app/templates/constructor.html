@@ -162,6 +162,12 @@
     // ==========================================
     let rawSchema = {% if template %}{{ template.schema | tojson | safe }}{% else %}[]{% endif %};
     
+    const allGroupsJS = [
+        {% for g in all_groups %}
+        "{{ g }}",
+        {% endfor %}
+    ];
+    
     // Передаем словари из Jinja в Javascript
     const allDictionaries = {
         {% for dict in all_dictionaries %}
@@ -429,6 +435,38 @@
         renderStructure();
     }
 
+    function getSheetGroupsLabel(sheet) {
+        let groups = sheet.target_groups || [];
+        // Обратная совместимость
+        if (sheet.target_group && groups.length === 0) {
+            groups = [sheet.target_group];
+            sheet.target_groups = groups;
+        }
+        if (groups.length === 0) return "Все группы";
+        return groups.join(', ');
+    }
+
+    function toggleSheetTargetGroup(sIdx, groupName, isChecked) {
+        let groups = reportStructure[sIdx].target_groups || [];
+        if (reportStructure[sIdx].target_group && groups.length === 0) {
+            groups = [reportStructure[sIdx].target_group];
+            delete reportStructure[sIdx].target_group;
+        }
+        if (isChecked) {
+            if (!groups.includes(groupName)) groups.push(groupName);
+        } else {
+            groups = groups.filter(g => g !== groupName);
+        }
+        reportStructure[sIdx].target_groups = groups;
+        
+        let btn = document.getElementById(`sheetGroupsBtn-${sIdx}`);
+        if (btn) btn.innerText = getSheetGroupsLabel(reportStructure[sIdx]);
+    }
+
+    function updateSheetTargetGroup(sIdx, groupName) {
+        reportStructure[sIdx].target_group = groupName;
+    }
+
     function updateFieldRequired(sIdx, fIdx, isRequired) {
         reportStructure[sIdx].fields[fIdx].required = isRequired;
     }
@@ -579,9 +617,32 @@
             return `
             <div class="card mb-4 border-primary-subtle shadow-sm">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3 gap-3">
-                    <div class="d-flex align-items-center flex-grow-1 gap-2">
+                    <div class="d-flex align-items-center gap-2" style="max-width: 400px; width: 100%;">
                         <span class="fw-bold text-primary-copp text-nowrap">Лист:</span>
                         <input type="text" class="form-control form-control-sm border-light-subtle fw-bold text-primary-copp" value="${String(sheet.sheet_title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&quot;/g, '&quot;')}" oninput="updateSheetTitle(${sIdx}, this.value)">
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-2 ms-3 border-start ps-3">
+                        <span class="small text-muted text-nowrap">Для групп:</span>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle text-truncate" style="max-width: 200px;" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="sheetGroupsBtn-${sIdx}">
+                                ${getSheetGroupsLabel(sheet)}
+                            </button>
+                            <ul class="dropdown-menu p-2 shadow-sm" style="min-width: 200px;">
+                                ${allGroupsJS.map(g => `
+                                <li>
+                                    <div class="form-check m-1">
+                                        <input class="form-check-input" type="checkbox" value="${g}" id="groupCheck-${sIdx}-${g}" 
+                                            ${(sheet.target_groups || (sheet.target_group ? [sheet.target_group] : [])).includes(g) ? 'checked' : ''} 
+                                            onchange="toggleSheetTargetGroup(${sIdx}, '${g}', this.checked)">
+                                        <label class="form-check-label" for="groupCheck-${sIdx}-${g}" style="cursor: pointer;">
+                                            ${g}
+                                        </label>
+                                    </div>
+                                </li>
+                                `).join('')}
+                            </ul>
+                        </div>
                     </div>
                     <div class="d-flex align-items-center form-check form-switch mb-0 ms-3 me-3 border-end pe-4">
                         <input class="form-check-input" type="checkbox" id="sheet-mult-${sIdx}" ${sheet.is_multiple ? 'checked' : ''} onchange="updateSheetMultiple(${sIdx}, this.checked)">

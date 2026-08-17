@@ -272,6 +272,11 @@
                         </thead>
                         <tbody>
                             {% for sub in submissions %}
+                            {% set t_groups = sheet.get('target_groups', []) %}
+                            {% set old_group = sheet.get('target_group') %}
+                            {% set all_t_groups = t_groups + ([old_group] if old_group and old_group not in t_groups else []) %}
+                            {% set is_user_visible = not all_t_groups or sub.user.group in all_t_groups %}
+                            {% if is_user_visible %}
                             {% set ns = namespace(max_len=1, has_data=false) %}
                             {% for field in sheet.leaf_fields %}
                                 {% set val = sub.data.get(field.name) %}
@@ -291,12 +296,13 @@
                                 {% endif %}
                             {% endfor %}
 
-                            {% if ns.has_data %}
+                            {% if ns.has_data or sub.id %}
                             {% for i in range(ns.max_len) %}
                             <tr data-org-name="{{ (sub.user.description or sub.user.username)|lower }}">
                                 {% if i == 0 %}
                                 <td class="p-3 fw-bold sticky-col align-middle" rowspan="{{ ns.max_len }}">
                                     {{ sub.user.description }}
+                                    <!-- Временно скрыто
                                     {% if sub.id %}
                                     <div class="mt-2">
                                         <button class="btn btn-sm btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1" onclick="returnForRevision({{ template.id }}, {{ sub.user.id }}, '{{ sub.user.description }}')" title="Вернуть отчет на доработку" style="font-size: 0.8rem;">
@@ -304,6 +310,7 @@
                                         </button>
                                     </div>
                                     {% endif %}
+                                    -->
                                 </td>
                                 {% endif %}
                                 
@@ -370,6 +377,7 @@
                             </tr>
                             {% endif %}
                             {% endif %}
+                            {% endif %}
                             {% else %}
                             <tr>
                                 <td colspan="{{ sheet.leaf_fields|length + 1 }}"
@@ -385,6 +393,11 @@
                                     {% if field.type == 'number' %}
                                     {% set ns = namespace(total=0, has_data=false) %}
                                     {% for sub in submissions %}
+                                    {% set t_groups = sheet.get('target_groups', []) %}
+                                    {% set old_group = sheet.get('target_group') %}
+                                    {% set all_t_groups = t_groups + ([old_group] if old_group and old_group not in t_groups else []) %}
+                                    {% set is_user_visible = not all_t_groups or sub.user.group in all_t_groups %}
+                                    {% if is_user_visible %}
                                     {% set val = sub.data.get(field.name) %}
                                     {% if val is not none and val != '' %}
                                         {% if val is iterable and val is not string %}
@@ -398,6 +411,7 @@
                                             {% set ns.total = ns.total + val|float(0) %}
                                             {% set ns.has_data = true %}
                                         {% endif %}
+                                    {% endif %}
                                     {% endif %}
                                     {% endfor %}
                                     {{ ns.total if ns.has_data else '0' }}
