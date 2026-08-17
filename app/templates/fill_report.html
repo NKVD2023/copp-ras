@@ -95,6 +95,17 @@
             <strong>Срок сдачи отчета истек.</strong> Форма переведена в режим "Только чтение". Редактирование
             заблокировано.
         </div>
+        {% elif has_cloud_draft %}
+        <div class="alert bg-success bg-opacity-10 border-success border-opacity-25 text-success small shadow-sm mb-4 p-3 rounded d-flex align-items-center gap-2">
+            <i class="bi bi-cloud-check-fill fs-4 flex-shrink-0"></i>
+            <div>
+                <strong>Восстановлен облачный черновик</strong>
+                {% if cloud_draft_time %}
+                от {{ (cloud_draft_time | msk_time).strftime('%H:%M %d.%m.%Y') }}.
+                {% endif %}
+                Вы можете продолжить заполнение с того места, где остановились.
+            </div>
+        </div>
         {% endif %}
 
         {% if template.attachments|length > 0 %}
@@ -348,17 +359,19 @@
     // Передаём в JS только данные, зависящие от Jinja2
     window.schemaTree = {{ schema | tojson | safe }};
     window.FILL_CONFIG = {
-        draftKey:    'autosave_draft_{{ template.id }}_{{ current_user.id }}',
-        totalTabs:   {{ schema | length }},
-        isPreview:   {{ 'true' if is_preview else 'false' }},
-        isLocked:    {{ 'true' if is_locked else 'false' }},
-        submitUrl:   '{{ url_for("reports.fill_report", template_id=template.id) }}',
-        prevDataUrl: '{{ url_for("reports.get_previous_data", template_id=template.id) }}',
-        csrfToken:   '{{ csrf_token() }}'
+        draftKey:       'autosave_draft_{{ template.id }}_{{ current_user.id }}',
+        totalTabs:      {{ schema | length }},
+        isPreview:      {{ 'true' if is_preview else 'false' }},
+        isLocked:       {{ 'true' if is_locked else 'false' }},
+        submitUrl:      '{{ url_for("reports.fill_report", template_id=template.id) }}',
+        draftUrl:       '{{ url_for("reports.save_draft", template_id=template.id) }}',
+        prevDataUrl:    '{{ url_for("reports.get_previous_data", template_id=template.id) }}',
+        csrfToken:      '{{ csrf_token() }}',
+        hasCloudDraft:  {{ 'true' if has_cloud_draft else 'false' }}
     };
 </script>
-<script src="{{ url_for('static', filename='js/report_validation.js') }}"></script>
-<script src="{{ url_for('static', filename='js/fill_report.js') }}"></script>
+<script src="{{ url_for('static', filename='js/report_validation.js') }}?v={{ range(1,999999)|random }}"></script>
+<script src="{{ url_for('static', filename='js/fill_report.js') }}?v={{ range(1,999999)|random }}"></script>
 <script>
     // Добавление нового поля в dynamic-field-wrapper (поле-уровневый is_multiple)
     function addDynamicField(btn, type, name, value = '') {

@@ -13,7 +13,7 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 import re
 from app.reports import reports_bp
-from app.models import ReportTemplate, ReportSubmission, User
+from app.models import ReportTemplate, ReportSubmission, User, ReportDraft
 from app import db
 from app.utils import log_action
 
@@ -177,3 +177,38 @@ def export_my_excel(template_id):
         as_attachment=True,
         download_name=f"Мой_отчет_{filename}"
     )
+
+
+@reports_bp.route('/return_revision/<int:template_id>/<int:user_id>', methods=['POST'])
+@login_required
+def return_revision(template_id, user_id):
+    """
+    Возврат отчета на доработку.
+    Переносит данные из ReportSubmission обратно в ReportDraft и удаляет Submission.
+    """
+    if current_user.role not in ['admin', 'manager']:
+        return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
+        
+    template = ReportTemplate.query.get_or_404(template_id)
+    submission = ReportSubmission.query.filter_by(template_id=template_id, user_id=user_id).first()
+    
+    if not submission:
+        return jsonify({'status': 'error', 'message': 'Сданный отчет не найден'}), 404
+        
+    # Создаем или обновляем черновик
+    draft = ReportDraft.query.filter_by(template_id=template_id, user_id=user_id).first()
+    if not draft:
+        draft = ReportDraft(template_id=template_id, user_id=user_id)
+        db.session.add(draft)
+        
+    draft.data = submission.data
+    
+    target_user = User.query.get(user_id)
+    org_name = target_user.description or target_user.username if target_user else str(user_id)
+    
+    db.session.delete(submission)
+    log_action('Возврат отчета на доработку', f'Отчет "{template.short_name}" возвращен учреждению {org_name}')
+    
+    db.session.commit()
+    
+    return jsonify({'status': 'success'})

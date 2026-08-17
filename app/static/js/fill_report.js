@@ -93,35 +93,81 @@
 
     function setupAutosave(form) {
         const DRAFT_KEY = window.FILL_CONFIG.draftKey;
-        let autosaveTimeout, fadeOutTimeout;
+        let localSaveTimeout, cloudSaveTimeout, fadeOutTimeout;
 
-        const triggerAutosave = () => {
-            if (window.FILL_CONFIG.isPreview) return;
-            clearTimeout(autosaveTimeout);
-            clearTimeout(fadeOutTimeout);
-
+        const showSavingIndicator = () => {
             const wrap      = document.getElementById('autosave-indicator');
             const indicator = document.getElementById('autosave-time');
             const icon      = document.querySelector('#autosave-indicator i');
-
             if (wrap && indicator && icon) {
                 wrap.style.opacity   = '1';
                 indicator.className  = 'text-primary';
                 indicator.textContent = 'Сохранение...';
                 icon.className = 'spinner-border spinner-border-sm me-1 text-primary';
             }
+        };
 
-            autosaveTimeout = setTimeout(() => {
+        const showSavedIndicator = (label) => {
+            const wrap      = document.getElementById('autosave-indicator');
+            const indicator = document.getElementById('autosave-time');
+            const icon      = document.querySelector('#autosave-indicator i');
+            if (wrap && indicator && icon) {
+                const now = new Date();
+                const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                indicator.className   = 'text-success';
+                indicator.textContent = `${label} в ${t}`;
+                icon.className = 'bi bi-cloud-check-fill me-1 text-success';
+                clearTimeout(fadeOutTimeout);
+                fadeOutTimeout = setTimeout(() => { wrap.style.opacity = '0'; }, 4000);
+            }
+        };
+
+        const saveToLocalStorage = () => {
+            try {
                 localStorage.setItem(DRAFT_KEY, JSON.stringify(getFormDataObj(form)));
-                if (wrap && indicator && icon) {
-                    const now = new Date();
-                    const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-                    indicator.className   = 'text-success';
-                    indicator.textContent = `Черновик сохранен в ${t}`;
-                    icon.className = 'bi bi-check-circle me-1 text-success';
-                    fadeOutTimeout = setTimeout(() => { wrap.style.opacity = '0'; }, 3000);
+            } catch(e) { /* ignore quota errors */ }
+        };
+
+        const saveToCloud = () => {
+            if (window.FILL_CONFIG.isPreview || window.FILL_CONFIG.isLocked) return;
+            const data = getFormDataObj(form);
+            showSavingIndicator();
+            fetch(window.FILL_CONFIG.draftUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    showSavedIndicator('Черновик сохранен ☁️');
+                    saveToLocalStorage();
                 }
-            }, 1000);
+            })
+            .catch(() => {
+                // Ошибка сети — сохраняем только локально
+                saveToLocalStorage();
+                const wrap      = document.getElementById('autosave-indicator');
+                const indicator = document.getElementById('autosave-time');
+                const icon      = document.querySelector('#autosave-indicator i');
+                if (wrap && indicator && icon) {
+                    indicator.className   = 'text-warning';
+                    indicator.textContent = 'Сохранено локально (нет сети)';
+                    icon.className = 'bi bi-cloud-slash me-1 text-warning';
+                    clearTimeout(fadeOutTimeout);
+                    fadeOutTimeout = setTimeout(() => { wrap.style.opacity = '0'; }, 4000);
+                }
+            });
+        };
+
+        const triggerAutosave = () => {
+            if (window.FILL_CONFIG.isPreview) return;
+            // Локальное сохранение — через 1 секунду после последнего изменения
+            clearTimeout(localSaveTimeout);
+            localSaveTimeout = setTimeout(saveToLocalStorage, 1000);
+            // Облачное сохранение — через 45 секунд после последнего изменения
+            clearTimeout(cloudSaveTimeout);
+            cloudSaveTimeout = setTimeout(saveToCloud, 45000);
         };
 
         form.addEventListener('input',  triggerAutosave);
@@ -134,27 +180,44 @@
 
     window.saveDraftManual = function (btn) {
         const form = document.getElementById('reportForm');
+        const originalHtml = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Сохранение...';
         btn.disabled = true;
 
-        localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(getFormDataObj(form)));
+        const data = getFormDataObj(form);
 
-        const indicator = document.getElementById('autosave-time');
-        const icon      = document.querySelector('#autosave-indicator i');
-        if (indicator && icon) {
-            const now = new Date();
-            const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-            indicator.textContent = `Сохранено вручную в ${t}`;
-            icon.className = 'bi bi-cloud-check-fill me-2 text-success';
-        }
+        // Сохраняем локально как резервный кэш
+        try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(data)); } catch(e) {}
 
-        btn.innerHTML = 'Сохранено';
-        btn.classList.replace('btn-copp', 'btn-success');
-        setTimeout(() => {
-            btn.innerHTML = 'Сохранить черновик';
-            btn.classList.replace('btn-success', 'btn-copp');
-            btn.disabled = false;
-        }, 2000);
+        // Отправляем на сервер
+        fetch(window.FILL_CONFIG.draftUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'success') {
+                btn.innerHTML = '<i class="bi bi-cloud-check-fill me-2"></i>Сохранено ☁️';
+                btn.classList.replace('btn-copp', 'btn-success');
+            } else {
+                btn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Ошибка';
+                btn.classList.replace('btn-copp', 'btn-warning');
+            }
+        })
+        .catch(() => {
+            // Оффлайн — показываем локальное сохранение
+            btn.innerHTML = '<i class="bi bi-floppy me-2"></i>Сохранено локально';
+            btn.classList.replace('btn-copp', 'btn-warning');
+        })
+        .finally(() => {
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.classList.replace('btn-success', 'btn-copp');
+                btn.classList.replace('btn-warning', 'btn-copp');
+                btn.disabled = false;
+            }, 2500);
+        });
     };
 
     // =========================================================================
@@ -182,9 +245,14 @@
         .then(res => res.json())
         .then(res => {
             if (res.status === 'success') {
-                btn.innerHTML = 'Сохранено';
+                btn.innerHTML = 'Сдано';
                 btn.classList.replace('btn-copp', 'btn-success');
-                localStorage.removeItem(window.FILL_CONFIG.draftKey);
+                // Удаляем облачный черновик и локальный кэш
+                try { localStorage.removeItem(window.FILL_CONFIG.draftKey); } catch(e) {}
+                fetch(window.FILL_CONFIG.draftUrl, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': window.FILL_CONFIG.csrfToken }
+                }).catch(() => {}); // игнорируем ошибку удаления
                 setTimeout(() => { window.location.href = '/'; }, 1000);
             } else {
                 coppAlert('Ошибка: ' + res.message, 'error');
@@ -413,10 +481,22 @@
     window.addSheetInstance = function(btn) {
         if (window.FILL_CONFIG && window.FILL_CONFIG.isLocked) return;
         
-        const wrapper = btn.closest('.sheet-content-wrapper');
+        // Поддерживаем и десктопный (.sheet-content-wrapper) и мобильный (.mobile-card) обёртки
+        const wrapper = btn.closest('.sheet-content-wrapper') || btn.closest('.mobile-card');
+        if (!wrapper) {
+            console.error('[addSheetInstance] Не найден родительский wrapper (.sheet-content-wrapper или .mobile-card)');
+            return;
+        }
         const container = wrapper.querySelector('.sheet-instances-container');
+        if (!container) {
+            console.error('[addSheetInstance] Не найден .sheet-instances-container внутри wrapper');
+            return;
+        }
         const items = container.querySelectorAll('.sheet-instance');
-        if (items.length === 0) return;
+        if (items.length === 0) {
+            console.error('[addSheetInstance] Нет ни одного .sheet-instance в контейнере');
+            return;
+        }
         
         const firstItem = items[0];
         const sheetTitle = wrapper.querySelector('.btn-add-sheet-instance')

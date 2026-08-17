@@ -138,3 +138,22 @@ class Dictionary(db.Model):
     name = db.Column(db.String(128), nullable=False)
     items = db.Column(JSON, nullable=False, default=list) # Список строк (вариантов ответа)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ReportDraft(db.Model):
+    """
+    Модель облачного черновика отчёта.
+    Хранит временные данные пользователя до финальной сдачи.
+    Один черновик на пару (пользователь, шаблон).
+    Автоматически удаляется при успешной сдаче отчёта.
+    """
+    __tablename__ = 'report_drafts'
+    id          = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('report_templates.id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    data        = db.Column(JSON)
+    updated_at  = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('template_id', 'user_id', name='uq_draft_template_user'),)
+
+    template = db.relationship('ReportTemplate', backref='drafts')
+    user     = db.relationship('User', backref='drafts')

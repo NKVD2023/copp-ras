@@ -8,7 +8,7 @@ from flask_login import login_required, current_user
 from datetime import date
 from app import db
 from app.reports import reports_bp
-from app.models import ReportTemplate, ReportSubmission
+from app.models import ReportTemplate, ReportSubmission, ReportDraft
 from app.utils import log_action, is_mobile
 
 # ==========================================
@@ -140,6 +140,11 @@ def fill_report(template_id):
 
         submission.data = json_data
         db.session.commit()
+        # Удаляем облачный черновик после успешной финальной сдачи
+        draft = ReportDraft.query.filter_by(template_id=template.id, user_id=current_user.id).first()
+        if draft:
+            db.session.delete(draft)
+            db.session.commit()
         log_action('Заполнение отчета', f'Отправлены данные для отчета {template.short_name}')
         return jsonify({'status': 'success'})
         
@@ -166,6 +171,15 @@ def fill_report(template_id):
                         historical_data = get_historical_data(template, current_user.id)
                     if field['name'] in historical_data:
                         display_data[field['name']] = historical_data[field['name']]
+
+    # Облачный черновик: если есть — показываем его данные поверх submission
+    cloud_draft = ReportDraft.query.filter_by(template_id=template.id, user_id=current_user.id).first()
+    has_cloud_draft = False
+    cloud_draft_time = None
+    if cloud_draft and cloud_draft.data and not is_locked:
+        display_data = cloud_draft.data.copy()
+        has_cloud_draft = True
+        cloud_draft_time = cloud_draft.updated_at
                         
     class DummySubmission:
         def __init__(self, data):
@@ -178,7 +192,15 @@ def fill_report(template_id):
     schema_tree = build_schema_tree(schema_obj)
     
     template_name = 'mobile/fill_report.html' if is_mobile(request) else 'fill_report.html'
-    return render_template(template_name, template=template, schema=schema_tree, submission=virtual_submission, is_locked=is_locked)
+    return render_template(
+        template_name,
+        template=template,
+        schema=schema_tree,
+        submission=virtual_submission,
+        is_locked=is_locked,
+        has_cloud_draft=has_cloud_draft,
+        cloud_draft_time=cloud_draft_time
+    )
 
 @reports_bp.route('/fill/<int:template_id>/past_submissions', methods=['GET'])
 @login_required
@@ -320,3 +342,53 @@ def get_previous_data(template_id):
         'data': mapped_data,
         'message': f'Данные из отчета "{previous_template.period or previous_template.name}" успешно загружены.'
     })
+
+
+# ==========================================
+# ОБЛАЧНЫЙ ЧЕРНОВИК
+# ==========================================
+
+@reports_bp.route('/fill/<int:template_id>/draft', methods=['POST'])
+@login_required
+def save_draft(template_id):
+    """
+    Сохраняет облачный черновик отчёта.
+    Не выполняет строгую валидацию — черновик может быть заполнен частично.
+    """
+    template = ReportTemplate.query.get_or_404(template_id)
+
+    if current_user.role != 'user':
+        return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
+
+    is_locked = template.deadline and date.today() > template.deadline
+    if is_locked:
+        return jsonify({'status': 'error', 'message': 'Дедлайн прошел. Редактирование запрещено.'}), 403
+
+    json_data = request.get_json()
+    if not json_data:
+        return jsonify({'status': 'error', 'message': 'Нет данных'}), 400
+
+    from datetime import datetime
+    draft = ReportDraft.query.filter_by(template_id=template.id, user_id=current_user.id).first()
+    if draft:
+        draft.data = json_data
+        draft.updated_at = datetime.utcnow()
+    else:
+        draft = ReportDraft(template_id=template.id, user_id=current_user.id, data=json_data)
+        db.session.add(draft)
+
+    db.session.commit()
+    return jsonify({'status': 'success', 'updated_at': draft.updated_at.strftime('%H:%M:%S %d.%m.%Y')})
+
+
+@reports_bp.route('/fill/<int:template_id>/draft', methods=['DELETE'])
+@login_required
+def delete_draft(template_id):
+    """
+    Удаляет облачный черновик (вызывается вручную или после сдачи отчёта).
+    """
+    draft = ReportDraft.query.filter_by(template_id=template_id, user_id=current_user.id).first()
+    if draft:
+        db.session.delete(draft)
+        db.session.commit()
+    return jsonify({'status': 'success'})

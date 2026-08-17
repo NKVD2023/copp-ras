@@ -17,6 +17,15 @@
 <div class="alert bg-danger bg-opacity-10 border-danger border-opacity-25 text-danger small shadow-sm mb-4 p-3 rounded">
     <strong>Режим чтения.</strong> Срок сдачи отчета истек.
 </div>
+{% elif has_cloud_draft %}
+<div class="alert bg-success bg-opacity-10 border-success border-opacity-25 text-success small shadow-sm mb-4 p-3 rounded d-flex align-items-center gap-2">
+    <i class="bi bi-cloud-check-fill fs-5 flex-shrink-0"></i>
+    <div>
+        <strong>Восстановлен облачный черновик</strong>
+        {% if cloud_draft_time %}от {{ (cloud_draft_time | msk_time).strftime('%H:%M %d.%m.%Y') }}.{% endif %}
+        Продолжайте заполнение.
+    </div>
+</div>
 {% endif %}
 
 <form id="reportForm">
@@ -24,7 +33,7 @@
     
     {% if not is_locked %}
     <div class="d-flex justify-content-between mb-3 gap-2">
-        <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center" onclick="loadPreviousData()">
+        <button type="button" id="btn-no-changes" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center" onclick="loadPreviousData()">
             <i class="bi bi-clock-history"></i> Без изменений
         </button>
         <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center" onclick="saveDraftManual(this)" style="color: #00334e; border-color: #00334e;">
@@ -203,7 +212,22 @@
     // Передаем схему в JS для валидации
     const schemaTree = {{ schema | tojson | safe }};
 </script>
-<script src="{{ url_for('static', filename='js/report_validation.js') }}"></script>
+<script src="{{ url_for('static', filename='js/report_validation.js') }}?v={{ range(1,999999)|random }}"></script>
+<script>
+    // Конфигурация для fill_report.js (используется для addSheetInstance / removeSheetInstance)
+    window.FILL_CONFIG = {
+        draftKey:       `autosave_draft_{{ template.id }}_{{ current_user.id }}`,
+        totalTabs:      {{ schema|length }},
+        isPreview:      false,
+        isLocked:       {{ 'true' if is_locked else 'false' }},
+        submitUrl:      '{{ url_for("reports.fill_report", template_id=template.id) }}',
+        draftUrl:       '{{ url_for("reports.save_draft", template_id=template.id) }}',
+        prevDataUrl:    '{{ url_for("reports.get_previous_data", template_id=template.id) }}',
+        csrfToken:      '{{ csrf_token() }}',
+        hasCloudDraft:  {{ 'true' if has_cloud_draft else 'false' }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/fill_report.js') }}?v={{ range(1,999999)|random }}"></script>
 <script>
     let runClientValidation = null;
     let currentStep = 1;
@@ -274,25 +298,6 @@
             }
         }
 
-        // Автосохранение
-        let autosaveTimeout;
-        form.addEventListener('input', () => {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(getFormData()));
-            
-            // Показ индикатора
-            const indicator = document.getElementById('autosave-indicator');
-            if (indicator) {
-                indicator.style.opacity = '1';
-                const now = new Date();
-                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-                indicator.innerHTML = `<i class="bi bi-check-circle"></i> Сохранено ${timeStr}`;
-                
-                clearTimeout(autosaveTimeout);
-                autosaveTimeout = setTimeout(() => {
-                    indicator.style.opacity = '0';
-                }, 3000);
-            }
-        });
         {% endif %}
         
         // Логика свайпов
@@ -331,172 +336,9 @@
         
         // Инициализация клиентской валидации (суммы вложенных полей)
         if (typeof initRealTimeValidation === 'function') {
-            runClientValidation = initRealTimeValidation(schemaTree, getFormData, form);
+            runClientValidation = initRealTimeValidation(schemaTree, () => window.getFormDataObj(form), form);
         }
     });
-
-    function getFormData() {
-        const formData = new FormData(form);
-        const data = {};
-        
-        const multipleInputs = Array.from(form.querySelectorAll('[data-multiple="true"]'));
-        const multipleNames = new Set(multipleInputs.map(el => el.name));
-
-        for (const key of new Set(formData.keys())) {
-            if (key === 'csrf_token') continue;
-            
-            if (multipleNames.has(key)) {
-                data[key] = formData.getAll(key);
-            } else {
-                data[key] = formData.get(key);
-            }
-        }
-        return data;
-    }
-
-    function populateForm(data) {
-        for (const [key, value] of Object.entries(data)) {
-            const wrapper = document.querySelector(`.dynamic-field-wrapper[data-name="${key}"]`);
-            
-            if (wrapper && Array.isArray(value)) {
-                const inputs = wrapper.querySelectorAll('[data-multiple="true"]');
-                while (inputs.length > value.length && inputs.length > 1) {
-                    inputs[inputs.length - 1].closest('.dynamic-field-item').remove();
-                }
-                
-                for (let i = 0; i < value.length; i++) {
-                    const currentInputs = wrapper.querySelectorAll('[data-multiple="true"]');
-                    if (i < currentInputs.length) {
-                        if (currentInputs[i].tomselect) {
-                            currentInputs[i].tomselect.setValue(value[i]);
-                        } else {
-                            currentInputs[i].value = value[i];
-                        }
-                    } else {
-                        const type = currentInputs[0].tagName.toLowerCase() === 'textarea' ? 'text' : currentInputs[0].type;
-                        addDynamicField(wrapper.querySelector('.btn-add-dynamic-mobile'), type, key, value[i]);
-                    }
-                }
-            } else {
-                let fields = form.querySelectorAll(`[name="${key}"]`);
-                if (fields.length === 0) continue;
-                
-                // If it's an array and the field is marked as multiple (sheet-level)
-                if (Array.isArray(value) && fields[0].hasAttribute('data-multiple')) {
-                    // Try to find the add block button
-                    const blockContainer = fields[0].closest('.sheet-instances-container');
-                    const wrapperCard = fields[0].closest('.mobile-card');
-                    const addBtn = wrapperCard ? wrapperCard.querySelector('.btn-add-sheet-instance') : null;
-                    
-                    // Add instances if needed
-                    if (blockContainer && addBtn) {
-                        while (blockContainer.querySelectorAll('.sheet-instance').length < value.length) {
-                            addSheetInstance(addBtn);
-                        }
-                        // Refresh fields list after adding
-                        fields = form.querySelectorAll(`[name="${key}"]`);
-                    }
-                    
-                    // Set values
-                    for (let i = 0; i < value.length; i++) {
-                        if (i < fields.length) {
-                            if (fields[i].tomselect) {
-                                fields[i].tomselect.setValue(value[i]);
-                            } else {
-                                fields[i].value = value[i];
-                            }
-                        }
-                    }
-                } else {
-                    const field = fields[0];
-                    if (field) {
-                        const valToSet = Array.isArray(value) ? value[0] : value;
-                        if (field.tomselect) {
-                            field.tomselect.setValue(valToSet);
-                        } else {
-                            field.value = valToSet;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Сохранение черновика
-    async function saveDraftManual(btn) {
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        btn.disabled = true;
-        
-        try {
-            const data = getFormData();
-            const response = await fetch('{{ url_for("reports.fill_report", template_id=template.id) }}', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                localStorage.removeItem(DRAFT_KEY);
-                showNotification('Черновик сохранен на сервере');
-            } else {
-                showNotification(result.message || 'Ошибка сохранения', 'error');
-            }
-        } catch (error) {
-            showNotification('Ошибка сети', 'error');
-        } finally {
-            btn.innerHTML = '<i class="bi bi-save"></i>';
-            btn.disabled = false;
-        }
-    }
-
-    // Полная отправка отчета
-    async function submitFullForm(btn) {
-        // Простая валидация HTML5
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-        
-        // Клиентская валидация иерархии сумм
-        if (runClientValidation && !runClientValidation()) {
-            showNotification('Пожалуйста, исправьте ошибки валидации сумм перед отправкой (подсвечены красным).', 'warning');
-            return;
-        }
-
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Отправка...';
-        btn.disabled = true;
-        
-        try {
-            const data = getFormData();
-            const response = await fetch('{{ url_for("reports.fill_report", template_id=template.id) }}', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                localStorage.removeItem(DRAFT_KEY);
-                window.location.href = "{{ url_for('reports.dashboard') }}";
-            } else {
-                showNotification(result.message || 'Ошибка отправки', 'error');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        } catch (error) {
-            showNotification('Ошибка сети', 'error');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
 
     // Динамические поля
     function addDynamicField(btn, type, name, value = '') {
@@ -535,160 +377,9 @@
         if (btn.closest('form')) btn.closest('form').dispatchEvent(new Event('change', {bubbles: true}));
     }
     
-    function addSheetInstance(btn) {
-        {% if is_locked %}return;{% endif %}
-        
-        const wrapper = btn.closest('.mobile-card');
-        const container = wrapper.querySelector('.sheet-instances-container');
-        const items = container.querySelectorAll('.sheet-instance');
-        if (items.length === 0) return;
-        
-        const firstItem = items[0];
-        const sheetTitle = btn.textContent.replace(/Добавить еще\s*["«]?|["»]?/gi, '').trim() || 'Специальность';
-        const newIdx = items.length + 1;
-        
-        const savedValues = new Map();
-        firstItem.querySelectorAll('select').forEach(sel => {
-            savedValues.set(sel.name || sel.id, Array.from(sel.selectedOptions).map(o => o.value));
-            if (sel.tomselect) sel.tomselect.destroy();
-        });
-        firstItem.querySelectorAll('input, textarea').forEach(inp => {
-            savedValues.set(inp.name || inp.id, inp.value);
-        });
-        
-        const newItem = firstItem.cloneNode(true);
-        
-        if (window.initTomSelects) window.initTomSelects(firstItem);
-        firstItem.querySelectorAll('select').forEach(sel => {
-            const key = sel.name || sel.id;
-            const vals = savedValues.get(key);
-            if (vals && sel.tomselect) {
-                sel.tomselect.setValue(vals.length === 1 ? vals[0] : vals);
-            }
-        });
-        firstItem.querySelectorAll('input, textarea').forEach(inp => {
-            const key = inp.name || inp.id;
-            if (savedValues.has(key)) inp.value = savedValues.get(key);
-        });
-        
-        newItem.querySelectorAll('input, select, textarea').forEach(input => {
-            if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
-            else input.value = '';
-        });
-        
-        newItem.querySelectorAll('.ts-wrapper').forEach(w => w.remove());
-        
-        const hiddenRemoveBtn = newItem.querySelector('.remove-sheet-instance');
-        if (hiddenRemoveBtn) hiddenRemoveBtn.remove();
-        newItem.querySelectorAll('.sheet-instance-divider').forEach(d => d.remove());
-        
-        newItem.dataset.instIdx = items.length;
-        
-        const divider = document.createElement('div');
-        divider.className = 'sheet-instance-divider my-4 position-relative text-center';
-        divider.innerHTML = `
-            <hr class="border-secondary opacity-25">
-            <span class="position-absolute top-50 start-50 translate-middle bg-white px-2 small text-muted fw-bold">Блок ${newIdx}</span>
-            <div class="mt-2 text-end">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
-            </div>
-        `;
-        newItem.insertBefore(divider, newItem.firstChild);
-        container.appendChild(newItem);
-        
-        if (window.initTomSelects) window.initTomSelects(newItem);
-        if (btn.closest('form')) btn.closest('form').dispatchEvent(new Event('change', {bubbles: true}));
-        
-        setTimeout(() => newItem.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-    }
+    // addSheetInstance определена в fill_report.js (window.addSheetInstance)
+    // Поддерживает оба wrapper: .sheet-content-wrapper (десктоп) и .mobile-card (мобильный)
 
-    function removeSheetInstance(btn) {
-        {% if is_locked %}return;{% endif %}
-        const item = btn.closest('.sheet-instance');
-        if (!item) return;
-        
-        Swal.fire({
-            title: 'Удалить этот блок?',
-            text: "Все введенные в нем данные будут потеряны",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Удалить',
-            cancelButtonText: 'Отмена'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const container = item.closest('.sheet-instances-container');
-                item.remove();
-                
-                // Re-index remaining instances
-                const remaining = container.querySelectorAll('.sheet-instance');
-                remaining.forEach((inst, idx) => {
-                    inst.dataset.instIdx = idx;
-                    const numSpan = inst.querySelector('.sheet-instance-divider span');
-                    if (numSpan) numSpan.textContent = `Блок ${idx + 1}`;
-                });
-            }
-        });
-    }
-    
-    // Загрузка предыдущих данных
-    async function loadPreviousData() {
-        const btn = document.querySelector('.fab-secondary') || document.querySelector('button[onclick="loadPreviousData()"]');
-        const iconHtml = btn.innerHTML;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
-        try {
-            const listResponse = await fetch('{{ url_for("reports.get_past_submissions", template_id=template.id) }}');
-            const listData = await listResponse.json();
-
-            btn.innerHTML = iconHtml;
-
-            if (listData.status !== 'success') {
-                return showNotification('Ошибка: ' + listData.message, 'error');
-            }
-
-            const pastList = listData.data;
-            if (!pastList || pastList.length === 0) {
-                return showNotification('У вас нет отчетов за прошлые периоды.', 'error');
-            }
-
-            const latestReport = pastList[0];
-
-            Swal.fire({
-                title: 'Подтверждение',
-                html: `Данные будут скопированы из вашего последнего отчета:<br><b class="mt-2 d-inline-block text-primary">${latestReport.label}</b><br><br>Это действие перезапишет все текущие заполненные поля.`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#003366',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Скопировать',
-                cancelButtonText: 'Отмена',
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-                    try {
-                        const url = '{{ url_for("reports.get_previous_data", template_id=template.id) }}' + '?submission_id=' + latestReport.submission_id;
-                        const response = await fetch(url);
-                        const data = await response.json();
-                        
-                        if (data.status === 'success') {
-                            populateForm(data.data);
-                            showNotification('Данные успешно скопированы', 'success');
-                        } else {
-                            showNotification(data.message, 'error');
-                        }
-                    } catch (error) {
-                        showNotification('Ошибка при загрузке данных', 'error');
-                    } finally {
-                        btn.innerHTML = iconHtml;
-                    }
-                }
-            });
-        } catch (error) {
-            btn.innerHTML = iconHtml;
-            showNotification('Ошибка сети', 'error');
-        }
-    }
 </script>
 {% endblock %}

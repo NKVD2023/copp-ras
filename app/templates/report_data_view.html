@@ -19,6 +19,7 @@
 
     <script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
     <script src="{{ url_for('static', filename='js/html2pdf.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
 
     <style>
         /* 1. Настраиваем тело страницы как Flex-контейнер на весь экран */
@@ -294,7 +295,16 @@
                             {% for i in range(ns.max_len) %}
                             <tr data-org-name="{{ (sub.user.description or sub.user.username)|lower }}">
                                 {% if i == 0 %}
-                                <td class="p-3 fw-bold sticky-col align-middle" rowspan="{{ ns.max_len }}">{{ sub.user.description }}</td>
+                                <td class="p-3 fw-bold sticky-col align-middle" rowspan="{{ ns.max_len }}">
+                                    {{ sub.user.description }}
+                                    {% if sub.id %}
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1" onclick="returnForRevision({{ template.id }}, {{ sub.user.id }}, '{{ sub.user.description }}')" title="Вернуть отчет на доработку" style="font-size: 0.8rem;">
+                                            <i class="bi bi-arrow-counterclockwise"></i> На доработку
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </td>
                                 {% endif %}
                                 
                                 {% for field in sheet.leaf_fields %}
@@ -761,6 +771,54 @@
                     // Ignore transient network errors during polling
                     setTimeout(() => pollTaskStatus(taskId, btn, originalHtml), 1000);
                 });
+        }
+        function returnForRevision(templateId, userId, orgName) {
+            Swal.fire({
+                title: 'Вернуть на доработку?',
+                html: `Вы уверены, что хотите вернуть отчет учреждения <br><b class="text-primary">${orgName}</b><br> на доработку?<br><br><small class="text-muted">Отчет исчезнет из этой сводки и снова появится у учреждения в виде черновика.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f39c12',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Да, вернуть',
+                cancelButtonText: 'Отмена',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Возврат...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+                    
+                    fetch(`/return_revision/${templateId}/${userId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            Swal.fire({
+                                title: 'Успешно',
+                                text: 'Отчет возвращен на доработку.',
+                                icon: 'success',
+                                confirmButtonColor: '#003366'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire('Ошибка', data.message, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire('Ошибка', 'Произошла ошибка сети', 'error');
+                    });
+                }
+            });
         }
     </script>
 </body>
