@@ -54,10 +54,46 @@ def edit_dictionary(dict_id):
     
     dictionary.name = name
     dictionary.items = items_list
+    
+    # Каскадное обновление: обновляем снапшоты списков во всех существующих отчетах
+    from app.models import ReportTemplate
+    from sqlalchemy.orm.attributes import flag_modified
+    import json
+    
+    templates = ReportTemplate.query.all()
+    for template in templates:
+        if not template.schema:
+            continue
+            
+        schema = template.schema
+        is_string = False
+        if isinstance(schema, str):
+            try:
+                schema = json.loads(schema)
+                is_string = True
+            except:
+                continue
+                
+        modified = False
+        if isinstance(schema, list):
+            for sheet in schema:
+                for field in sheet.get('fields', []):
+                    if field.get('dictionary_id') == dict_id:
+                        field['options'] = items_list
+                        field['dictionary_name'] = name
+                        modified = True
+                        
+        if modified:
+            if is_string:
+                template.schema = json.dumps(schema, ensure_ascii=False)
+            else:
+                template.schema = schema
+                flag_modified(template, 'schema')
+                
     db.session.commit()
     
-    log_action('Редактирование шаблона', f'Отредактирован шаблон выпадающего списка: {name}')
-    flash('Шаблон успешно обновлен!', 'success')
+    log_action('Редактирование шаблона', f'Отредактирован шаблон выпадающего списка: {name} с обновлением во всех отчетах')
+    flash('Шаблон успешно обновлен! Все отчеты, использующие этот список, также были обновлены.', 'success')
     return redirect(url_for('admin.dashboard') + '#listsTab')
 
 @admin_bp.route('/dictionaries/<int:dict_id>/delete', methods=['POST'])
