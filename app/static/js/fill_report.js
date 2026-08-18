@@ -51,7 +51,8 @@
 
     function updateWizardButtons(index) {
         currentTabIndex = index;
-        const totalTabs = (window.FILL_CONFIG || {}).totalTabs || 1;
+        const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        const totalTabs = tabs.length;
         const btnPrev   = document.getElementById('btn-prev-step');
         const btnNext   = document.getElementById('btn-next-step');
         const btnSubmit = document.getElementById('btn-submit-report');
@@ -68,22 +69,28 @@
     }
 
     window.nextTab = function () {
-        const pane = document.querySelector(`#sheet-${currentTabIndex + 1}`);
+        const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        if (currentTabIndex >= tabs.length) return;
+        
+        const currentTabBtn = tabs[currentTabIndex];
+        const targetSelector = currentTabBtn.dataset.bsTarget;
+        const pane = document.querySelector(targetSelector);
+        
         if (pane) {
             for (const input of pane.querySelectorAll('input[required], textarea[required], select[required]')) {
                 if (!input.checkValidity()) { input.reportValidity(); return; }
             }
         }
-        if (currentTabIndex < (window.FILL_CONFIG || {}).totalTabs - 1) {
-            const el = document.querySelector(`button[data-bs-target="#sheet-${currentTabIndex + 2}"]`);
-            if (el) bootstrap.Tab.getOrCreateInstance(el).show();
+        
+        if (currentTabIndex < tabs.length - 1) {
+            bootstrap.Tab.getOrCreateInstance(tabs[currentTabIndex + 1]).show();
         }
     };
 
     window.prevTab = function () {
         if (currentTabIndex > 0) {
-            const el = document.querySelector(`button[data-bs-target="#sheet-${currentTabIndex}"]`);
-            if (el) bootstrap.Tab.getOrCreateInstance(el).show();
+            const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+            bootstrap.Tab.getOrCreateInstance(tabs[currentTabIndex - 1]).show();
         }
     };
 
