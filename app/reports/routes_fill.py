@@ -92,7 +92,11 @@ def fill_report(template_id):
             
         historical_data = None
         for sheet in schema:
-            t_groups = sheet.get('target_groups', [])
+            t_groups_raw = sheet.get('target_groups')
+            if not isinstance(t_groups_raw, list):
+                t_groups_raw = []
+            t_groups = list(t_groups_raw)
+            
             old_group = sheet.get('target_group')
             if old_group and old_group not in t_groups:
                 t_groups.append(old_group)
