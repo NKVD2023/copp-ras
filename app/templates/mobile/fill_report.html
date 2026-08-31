@@ -210,7 +210,7 @@
 {% block scripts %}
 <script>
     // Передаем схему в JS для валидации
-    const schemaTree = {{ schema | tojson | safe }};
+    window.schemaTree = {{ schema | tojson | safe }};
 </script>
 <script src="{{ url_for('static', filename='js/report_validation.js') }}?v={{ range(1,999999)|random }}"></script>
 <script>
@@ -229,7 +229,6 @@
 </script>
 <script src="{{ url_for('static', filename='js/fill_report.js') }}?v={{ range(1,999999)|random }}"></script>
 <script>
-    let runClientValidation = null;
     let currentStep = 1;
     const totalSteps = {{ schema|length }};
     const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
@@ -269,6 +268,17 @@
     }
     
     function nextStep() {
+        const currentStepEl = document.getElementById('step-' + currentStep);
+        if (currentStepEl) {
+            const inputs = currentStepEl.querySelectorAll('input[required], textarea[required], select[required]');
+            for (const input of inputs) {
+                if (!input.checkValidity()) {
+                    input.reportValidity();
+                    return;
+                }
+            }
+        }
+
         if (currentStep < totalSteps) {
             currentStep++;
             updateWizardUI();
@@ -332,11 +342,6 @@
                 // Свайп вправо -> Назад
                 prevStep();
             }
-        }
-        
-        // Инициализация клиентской валидации (суммы вложенных полей)
-        if (typeof initRealTimeValidation === 'function') {
-            runClientValidation = initRealTimeValidation(schemaTree, () => window.getFormDataObj(form), form);
         }
     });
 
