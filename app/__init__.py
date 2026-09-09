@@ -1,31 +1,24 @@
 """
-Основной модуль инициализации Flask-приложения (Core).
-Здесь создаются экземпляры расширений (SQLAlchemy, LoginManager, CSRFProtect),
-а также находится фабрика приложения `create_app`, которая собирает все блюпринты.
+app/__init__.py
+Фабрика Flask-приложения (Application Factory).
+
+Здесь только:
+  - создание экземпляра Flask
+  - подключение расширений из app.extensions
+  - регистрация блюпринтов
+  - регистрация Jinja2-фильтров и security-хуков
+
+Все экземпляры расширений (db, login_manager, ...) — в app/extensions.py
+Все модели БД — в app/models/
 """
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
 from config import Config
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_migrate import Migrate
+from app.extensions import db, migrate, login_manager, csrf, limiter
 
-# Инициализация глобальных расширений Flask
-db = SQLAlchemy()
-migrate = Migrate()
-login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
-login_manager.login_message = "Авторизуйтесь для доступа к платформе."
-csrf = CSRFProtect()
-limiter = Limiter(key_func=get_remote_address)
 
 def create_app(config_class: type = Config) -> Flask:
     """
     Фабрика создания Flask-приложения.
-    Инициализирует настройки, подключает базу данных, менеджер авторизации, CSRF-защиту
-    и регистрирует все маршруты (блюпринты) системы.
 
     :param config_class: Класс с настройками конфигурации (по умолчанию config.Config).
     :return: Инициализированный объект Flask-приложения.
@@ -33,24 +26,22 @@ def create_app(config_class: type = Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Привязываем расширения к текущему приложению
+    # ── Расширения ────────────────────────────────────────────────────────────
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
-    
-    # Автоматическое создание недостающих таблиц (чтобы избежать 500 ошибки после пуша)
+
+    # ── База данных ───────────────────────────────────────────────────────────
     with app.app_context():
-        from app import models
+        from app import models  # noqa: F401 — регистрирует модели в SQLAlchemy
         db.create_all()
 
+    # ── Security headers ──────────────────────────────────────────────────────
     @app.after_request
     def add_security_headers(response):
-        """
-        Добавляет заголовки безопасности HTTP к каждому ответу.
-        Защищает от Clickjacking и MIME-sniffing.
-        """
+        """Добавляет заголовки безопасности HTTP к каждому ответу."""
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
@@ -64,33 +55,27 @@ def create_app(config_class: type = Config) -> Flask:
         )
         return response
 
+    # ── Jinja2 Context Processors ─────────────────────────────────────────────
     @app.context_processor
     def inject_config() -> dict:
-        """
-        Добавляет объект конфигурации во все шаблоны Jinja2.
-        Позволяет обращаться к настройкам напрямую из HTML-кода (например, {{ config.APP_NAME }}).
-        """
+        """Прокидывает объект конфигурации в каждый шаблон."""
         return dict(config=app.config)
 
+    # ── Jinja2 Filters ────────────────────────────────────────────────────────
     from datetime import timedelta
 
     @app.template_filter('msk_time')
     def msk_time_filter(dt):
-        """
-        Jinja фильтр: Сдвигает время из базы данных (UTC) на Московское (UTC+3) 
-        для корректного отображения в интерфейсе.
-        Использование в шаблоне: {{ dt_obj | msk_time }}
-        """
+        """Сдвигает datetime из UTC в МСК (UTC+3)."""
         if dt:
             return dt + timedelta(hours=3)
         return dt
 
-    # Импортируем блюпринты локально, чтобы избежать циклических импортов
+    # ── Blueprints ────────────────────────────────────────────────────────────
     from app.auth.routes import auth_bp
     from app.admin import admin_bp
     from app.reports import reports_bp
 
-    # Регистрация маршрутов
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(reports_bp, url_prefix='/')

@@ -5,7 +5,7 @@
 """
 from flask import request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from app import db, limiter
+from app.extensions import db, limiter
 from app.admin import admin_bp
 from app.models import User, ReportSubmission, ReportTemplate
 from app.utils import log_action

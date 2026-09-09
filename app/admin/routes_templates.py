@@ -10,7 +10,7 @@ import openpyxl
 from io import BytesIO
 import json
 from datetime import datetime
-from app import db
+from app.extensions import db
 from app.admin import admin_bp
 from app.models import User, ReportTemplate, ReportSubmission
 from app.utils import log_action
@@ -200,7 +200,7 @@ def clone_template(template_id):
         for sheet in schema_data:
             for field in sheet.get('fields', []):
                 if not field.get('isGroup'):
-                    field['is_active'] = (field['name'] in active_fields)
+                    field['is_active'] = (field.get('name') in active_fields)
                     
         new_template.schema = schema_data
         flag_modified(new_template, 'schema')
@@ -274,7 +274,7 @@ def edit_template_meta(template_id):
         for sheet in schema_data:
             for field in sheet.get('fields', []):
                 if not field.get('isGroup'):
-                    field['is_active'] = (field['name'] in active_fields)
+                    field['is_active'] = (field.get('name') in active_fields)
                     
         template.schema = schema_data
         flag_modified(template, 'schema')

@@ -137,8 +137,7 @@
                     {% endif %}
                     
                     <a href="{{ url_for('reports.download_file', file_id=file.id) }}" 
-                       class="text-decoration-none bg-{{ badge_color }} bg-opacity-10 text-{{ badge_color }} border border-{{ badge_color }} border-opacity-25 py-2 px-4 d-inline-flex align-items-center gap-2 rounded-pill transition-all" 
-                       style="transition: all 0.2s; font-size: 0.95rem;" onmouseover="this.classList.add('shadow-sm')" onmouseout="this.classList.remove('shadow-sm')">
+                       class="text-decoration-none bg-{{ badge_color }} bg-opacity-10 text-{{ badge_color }} border border-{{ badge_color }} border-opacity-25 py-2 px-4 d-inline-flex align-items-center gap-2 rounded-pill transition-all field-nav-item" onmouseover="this.classList.add('shadow-sm')" onmouseout="this.classList.remove('shadow-sm')">
                         <i class="bi {{ icon }} fs-5"></i>
                         <span class="fw-semibold text-truncate" style="max-width: 300px;" title="{{ file.filename }}">{{ file.filename }}</span>
                         <span class="opacity-75 small ms-1">{{ (file.file_size / 1024 / 1024)|round(2) }} МБ</span>
@@ -191,7 +190,7 @@
                                             value="{{ v }}" min="0" step="any" {% if field.required and loop.index == 1 %}required{% endif %} {% if is_locked %}disabled{% endif %}>
                                     {% endif %}
                                     {% if not is_locked %}
-                                    <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
+                                    <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field d-none" {% if loop.index == 1 %}{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
                                     {% endif %}
                                 </div>
                                 {% endfor %}
@@ -279,7 +278,7 @@
                         {% set ns = namespace(max_len=1) %}
                         {% if sheet.get('is_multiple') %}
                             {% for field in sheet.fields %}
-                                {% set val = submission.data.get(field.name) %}
+                                {% set val = submission.data.get(field.name) if submission else None %}
                                 {% if val is iterable and val is not string and val is not mapping %}
                                     {% if val|length > ns.max_len %}
                                         {% set ns.max_len = val|length %}
@@ -303,7 +302,7 @@
                             {% endif %}
                             {% if loop.first and sheet.get('is_multiple') and not is_locked %}
                             <div class="position-absolute top-0 end-0">
-                                <button type="button" class="btn btn-outline-danger btn-sm px-3 remove-sheet-instance" style="display:none;" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
+                                <button type="button" class="btn btn-outline-danger btn-sm px-3 remove-sheet-instance d-none" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
                             </div>
                             {% endif %}
                             {% for node in sheet.fields_tree %}
@@ -333,7 +332,7 @@
                         {% if is_preview %}Только для просмотра.{% elif is_locked %}Просмотр исторической записи.{% else %}Данные сохраняются в единый документ.{% endif %}
                     </span>
                     {% if not is_locked and not is_preview %}
-                    <span id="autosave-indicator" class="text-success small fw-medium mt-1" style="opacity: 0; transition: opacity 0.3s;">
+                    <span id="autosave-indicator" class="text-success small fw-medium mt-1 autosave-hidden">
                         <i class="bi bi-check-circle"></i> <span id="autosave-time"></span>
                     </span>
                     {% endif %}
@@ -385,6 +384,10 @@
     };
 </script>
 <script src="{{ url_for('static', filename='js/report_validation.js') }}?v={{ range(1,999999)|random }}"></script>
+<script src="{{ url_for('static', filename='js/wizard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/autosave.js') }}"></script>
+<script src="{{ url_for('static', filename='js/previous_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dynamic_fields.js') }}"></script>
 <script src="{{ url_for('static', filename='js/fill_report.js') }}?v={{ range(1,999999)|random }}"></script>
 <script>
     // Добавление нового поля в dynamic-field-wrapper (поле-уровневый is_multiple)

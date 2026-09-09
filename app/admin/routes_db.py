@@ -7,7 +7,7 @@ from flask import request, jsonify, send_file, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.admin import admin_bp
 from app.models import User, ReportTemplate, ReportSubmission
-from app import db
+from app.extensions import db
 from datetime import datetime
 import os
 import shutil

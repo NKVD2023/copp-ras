@@ -188,7 +188,7 @@
                 <!-- Строка поиска -->
                 <div class="position-relative me-2 d-none d-lg-block">
                     <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                    <input type="text" id="orgSearchInput" class="form-control rounded-pill ps-5 bg-light border-0 search-pill" placeholder="Поиск по организации..." autocomplete="off" style="width: 280px;">
+                    <input type="text" id="orgSearchInput" class="form-control rounded-pill ps-5 bg-light border-0 search-pill w-280" placeholder="Поиск по организации..." autocomplete="off" >
                 </div>
 
                 <!-- Кнопки действий -->
@@ -305,7 +305,7 @@
                                     <!-- Временно скрыто
                                     {% if sub.id %}
                                     <div class="mt-2">
-                                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1" onclick="returnForRevision({{ template.id }}, {{ sub.user.id }}, '{{ sub.user.description }}')" title="Вернуть отчет на доработку" style="font-size: 0.8rem;">
+                                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p" onclick="returnForRevision({{ template.id }}, {{ sub.user.id }}, '{{ sub.user.description }}')" title="Вернуть отчет на доработку" >
                                             <i class="bi bi-arrow-counterclockwise"></i> На доработку
                                         </button>
                                     </div>
@@ -348,7 +348,7 @@
                             
                             {% if ns.max_len > 1 %}
                             <tr class="fw-bold" data-org-name="{{ (sub.user.description or sub.user.username)|lower }}">
-                                <td class="p-3 sticky-col align-middle text-start" style="background-color: #f8f9fa !important;">Итого по организации</td>
+                                <td class="p-3 sticky-col align-middle text-start bg-section">Итого по организации</td>
                                 {% for field in sheet.leaf_fields %}
                                     {% set f_type = field.get('type', '')|string|lower %}
                                     {% if f_type in ['number', 'числовое'] %}
@@ -367,11 +367,11 @@
                                                 {% set ns_sub.has_data = true %}
                                             {% endif %}
                                         {% endif %}
-                                        <td class="p-3 align-middle text-center" style="background-color: #f8f9fa !important;">
+                                        <td class="p-3 align-middle text-center bg-section">
                                             {{ ns_sub.total if ns_sub.has_data else '0' }}
                                         </td>
                                     {% else %}
-                                        <td class="p-3 align-middle text-center" style="background-color: #f8f9fa !important;">-</td>
+                                        <td class="p-3 align-middle text-center bg-section">-</td>
                                     {% endif %}
                                 {% endfor %}
                             </tr>
@@ -426,7 +426,7 @@
             {% endfor %}
             
             <div class="tab-pane fade" id="panel-analytics" role="tabpanel">
-                <div class="p-4" style="overflow-y: auto; height: 100%; background: #f8f9fa;">
+                <div class="p-4 sidebar-scroll">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="fw-bold text-dark m-0">Аналитика и Дашборды</h4>
                         <button class="btn btn-danger shadow-sm px-4" onclick="exportToPDF()">

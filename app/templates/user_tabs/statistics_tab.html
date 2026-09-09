@@ -228,7 +228,7 @@
     <!-- Строка 1: заголовок + подпись -->
     <div class="d-flex align-items-center gap-2 mb-3">
         <h5 class="fw-bold mb-0">Моя статистика</h5>
-        <span class="badge bg-warning text-dark" style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">В тестовом режиме</span>
+        <span class="badge bg-warning text-dark badge-compact">В тестовом режиме</span>
         <span class="text-muted small ms-1 d-none d-md-inline">— анализ ваших показателей за все периоды</span>
     </div>
 
@@ -238,31 +238,28 @@
         <!-- Форма: только выбор отчёта и кнопка Показать -->
         <form method="GET" action="{{ url_for('reports.dashboard') }}" class="d-flex align-items-center gap-2" style="overflow: visible; flex: 1; max-width: 800px;">
             <input type="hidden" name="tab" value="statisticsTab">
-            <div style="flex: 1 1 auto; min-width: 250px;">
+            <div class="flex-auto-250">
                 <select name="short_name" id="stat-short-name-select" name="short_name"
-                        class="form-select border-0 bg-light rounded-3 fw-semibold"
-                        style="font-size: 0.85rem;" required>
+                        class="form-select border-0 bg-light rounded-3 fw-semibold fs-sm" required>
                     <option value="" disabled {% if not selected_short_name %}selected{% endif %}>Выберите тип отчёта...</option>
                     {% for sn in stat_short_names %}
                         <option value="{{ sn }}" {% if selected_short_name == sn %}selected{% endif %}>{{ sn }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <button type="submit" class="btn btn-copp rounded-pill fw-semibold px-4" style="flex: 0 0 auto; min-height: 38px;">
+            <button type="submit" class="btn btn-copp rounded-pill fw-semibold px-4 flex-no-shrink-38">
                 <i class="bi bi-search me-1"></i> Показать
             </button>
         </form>
 
         {% if stat_schema %}
         <!-- Разделитель -->
-        <div style="width:1px; height:28px; background:#e2e8f0; flex-shrink:0;" class="d-none d-md-block"></div>
+        <div class="nav-divider d-none d-md-block"></div>
 
         <!-- Таблетки-переключатели (стандартные Bootstrap nav-pills) -->
-        <ul class="nav nav-pills p-1 rounded-pill flex-nowrap gap-1"
-            style="background:#f1f5f9;" id="statsViewToggle" role="tablist">
+        <ul class="nav nav-pills p-1 rounded-pill flex-nowrap gap-1 bg-slate-50" id="statsViewToggle" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-pill px-3 py-1 fw-semibold"
-                        style="font-size:0.82rem;"
+                <button class="nav-link active rounded-pill px-3 py-1 fw-semibold fs-82"
                         id="table-view-tab"
                         data-bs-toggle="tab" data-bs-target="#table-view"
                         type="button" role="tab">
@@ -270,8 +267,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill px-3 py-1 fw-semibold"
-                        style="font-size:0.82rem;"
+                <button class="nav-link rounded-pill px-3 py-1 fw-semibold fs-82"
                         id="dashboard-view-tab"
                         data-bs-toggle="tab" data-bs-target="#dashboard-view"
                         type="button" role="tab">
@@ -282,8 +278,7 @@
 
         <!-- Кнопка Экспорт -->
         <a href="{{ url_for('reports.export_user_statistics', short_name=selected_short_name) }}"
-           class="btn btn-sm fw-semibold rounded-pill px-3"
-           style="background:#16a34a; color:#fff; border:none; font-size:0.82rem; white-space:nowrap;">
+           class="btn btn-sm fw-semibold rounded-pill px-3 btn-export-green">
             <i class="bi bi-file-earmark-excel me-1"></i>Экспорт в Excel
         </a>
         {% endif %}
@@ -314,7 +309,7 @@
 </div>
 {% else %}
 <div class="text-center py-5 text-muted flex-grow-1 d-flex flex-column align-items-center justify-content-center">
-    <i class="bi bi-bar-chart text-light opacity-50" style="font-size: 4rem;"></i>
+    <i class="bi bi-bar-chart text-light opacity-50 fs-4rem"></i>
     <p class="mt-3 mb-0">Выберите тип отчета для просмотра динамики.</p>
 </div>
 {% endif %}
@@ -330,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function () {
             allowEmptyOption: true,
             render: {
                 no_results: function(data, escape) {
-                    return '<div class="no-results" style="padding:8px;">Не найдено: ' + escape(data.input) + '</div>';
+                    return '<div class="no-results p-2">Не найдено: ' + escape(data.input) + '</div>';
                 }
             }
         });

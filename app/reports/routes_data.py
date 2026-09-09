@@ -14,7 +14,7 @@ from openpyxl.utils import get_column_letter
 import re
 from app.reports import reports_bp
 from app.models import ReportTemplate, ReportSubmission, User, ReportDraft
-from app import db
+from app.extensions import db
 from app.utils import log_action
 
 # ==========================================

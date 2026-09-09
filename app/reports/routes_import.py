@@ -12,7 +12,7 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 import re
-from app import db
+from app.extensions import db
 from app.reports import reports_bp
 from app.models import ReportTemplate, ReportSubmission, User
 

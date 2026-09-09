@@ -6,6 +6,13 @@
 {% endblock %}
 
 {% block content %}
+{% set visible_schema = [] %}
+{% for sheet in visible_schema %}
+  {% set tg = sheet.get('target_groups', []) %}
+  {% if not tg or current_user.group in tg %}
+    {% set _ = visible_schema.append(sheet) %}
+  {% endif %}
+{% endfor %}
 <div class="d-flex align-items-start mb-4">
     <a href="{{ url_for('reports.dashboard') }}" class="btn btn-light rounded-circle me-3 mt-1 flex-shrink-0">
         <i class="bi bi-arrow-left"></i>
@@ -36,21 +43,21 @@
         <button type="button" id="btn-no-changes" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center" onclick="loadPreviousData()">
             <i class="bi bi-clock-history"></i> Без изменений
         </button>
-        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center" onclick="saveDraftManual(this)" style="color: #00334e; border-color: #00334e;">
+        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 flex-fill justify-content-center copp-brand-border" onclick="saveDraftManual(this)" >
             <i class="bi bi-save"></i> Сохранить черновик
         </button>
     </div>
     {% endif %}
 
     <div class="d-flex justify-content-between align-items-end mb-1">
-        <div class="fw-bold small text-muted" id="wizard-progress-text">Шаг 1 из {{ schema|length }}</div>
-        <div id="autosave-indicator" class="small text-success" style="opacity: 0; transition: opacity 0.3s;"><i class="bi bi-check-circle"></i> Сохранено</div>
+        <div class="fw-bold small text-muted" id="wizard-progress-text">Шаг 1 из {{ visible_schema|length }}</div>
+        <div id="autosave-indicator" class="small text-success autosave-hidden"><i class="bi bi-check-circle"></i> Сохранено</div>
     </div>
-    <div class="progress mb-4" style="height: 6px; border-radius: 3px;">
-        <div class="progress-bar" id="wizard-progress-bar" role="progressbar" style="background-color: #00334e; width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    <div class="progress mb-4 wizard-progress">
+        <div class="progress-bar progress-copp-0" id="wizard-progress-bar" role="progressbar"  aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
     </div>
 
-    {% for sheet in schema %}
+    {% for sheet in visible_schema %}
     <div class="wizard-step {% if loop.first %}active{% endif %}" id="step-{{ loop.index }}">
         <div class="mobile-card shadow-none border-0">
             <h6 class="fw-bold text-primary mb-3">{{ sheet.sheet_title }}</h6>
@@ -85,7 +92,7 @@
                 {% endif %}
                 {% if loop.first and sheet.get('is_multiple') and not is_locked %}
                     <div class="text-end mb-2">
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-sheet-instance" style="display:none;" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-sheet-instance d-none" onclick="removeSheetInstance(this)"><i class="bi bi-trash"></i> Удалить блок</button>
                     </div>
                 {% endif %}
 
@@ -97,12 +104,12 @@
                 
                 {% if is_active %}
                 {% if lvl == 0 and not loop.first %}
-                    <hr style="border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1;">
+                    <hr class="hr-dashed-neg">
                 {% endif %}
                 <div class="mb-4 {% if lvl > 0 %}ps-4 position-relative border-start border-2{% endif %}" {% if lvl > 0 %}style="border-color: rgba(0, 51, 78, 0.1) !important;"{% endif %}>
                     {% if lvl > 0 %}
                     <!-- Tree branch horizontal line -->
-                    <div style="position: absolute; left: 0; top: 0.85rem; width: 0.75rem; height: 2px; background-color: rgba(0, 51, 78, 0.1);"></div>
+                    <div class="field-branch-h-line"></div>
                     {% endif %}
                     <label class="form-label small d-flex align-items-center gap-1 flex-wrap">
                         {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
@@ -129,7 +136,7 @@
                                         value="{{ v }}" min="0" step="any" inputmode="decimal" {% if field.required and loop.index == 1 %}required{% endif %} {% if effective_locked %}disabled{% endif %}>
                                 {% endif %}
                                 {% if not effective_locked %}
-                                <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field" {% if loop.index == 1 %}style="display:none;"{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
+                                <button type="button" class="btn btn-outline-danger px-3 mt-1 remove-dynamic-field d-none" {% if loop.index == 1 %}{% endif %} onclick="removeDynamicField(this)"><i class="bi bi-trash"></i></button>
                                 {% endif %}
                             </div>
                             {% endfor %}
@@ -176,7 +183,7 @@
             </div>
             
             {% if sheet.get('is_multiple') and not is_locked %}
-            <button type="button" class="btn btn-outline-primary w-100 mt-3 mb-4 d-flex align-items-center justify-content-center gap-2 btn-add-sheet-instance" style="border-style: dashed; border-color: #00334e; color: #00334e;" onclick="addSheetInstance(this)">
+            <button type="button" class="btn btn-outline-primary w-100 mt-3 mb-4 d-flex align-items-center justify-content-center gap-2 btn-add-sheet-instance btn-copp-outline" onclick="addSheetInstance(this)">
                 <i class="bi bi-plus-circle"></i> Добавить еще "{{ sheet.sheet_title }}"
             </button>
             {% endif %}
@@ -186,18 +193,18 @@
     
     {% if not is_locked %}
     <div class="mb-3 d-flex justify-content-center">
-        <button type="button" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2" onclick="saveDraftManual(this)" style="color: #00334e; border-color: #00334e;">
+        <button type="button" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2 copp-brand-border" onclick="saveDraftManual(this)" >
             <i class="bi bi-save"></i> Сохранить черновик
         </button>
     </div>
     {% endif %}
     
     <div class="d-flex justify-content-between mt-4">
-        <button type="button" class="btn btn-light border px-4" id="btn-prev" onclick="prevStep()" style="display: none;">Назад</button>
+        <button type="button" class="btn btn-light border px-4 d-none" id="btn-prev" onclick="prevStep()" >Назад</button>
         <div class="ms-auto">
             <button type="button" class="btn btn-dark px-4" id="btn-next" onclick="nextStep()">Далее</button>
             {% if not is_locked %}
-            <button type="button" class="btn btn-success px-4" id="btn-submit" onclick="submitFullForm(this)" style="display: none; background-color: #00334e; border-color: #00334e; color: white;">Сдать отчет</button>
+            <button type="button" class="btn btn-success px-4 d-none btn-copp-solid" id="btn-submit" onclick="submitFullForm(this)" >Сдать отчет</button>
             {% endif %}
         </div>
     </div>
@@ -210,14 +217,14 @@
 {% block scripts %}
 <script>
     // Передаем схему в JS для валидации
-    window.schemaTree = {{ schema | tojson | safe }};
+    window.schemaTree = {{ visible_schema | tojson | safe }};
 </script>
 <script src="{{ url_for('static', filename='js/report_validation.js') }}?v={{ range(1,999999)|random }}"></script>
 <script>
     // Конфигурация для fill_report.js (используется для addSheetInstance / removeSheetInstance)
     window.FILL_CONFIG = {
         draftKey:       `autosave_draft_{{ template.id }}_{{ current_user.id }}`,
-        totalTabs:      {{ schema|length }},
+        totalTabs:      {{ visible_schema|length }},
         isPreview:      false,
         isLocked:       {{ 'true' if is_locked else 'false' }},
         submitUrl:      '{{ url_for("reports.fill_report", template_id=template.id) }}',
@@ -227,10 +234,14 @@
         hasCloudDraft:  {{ 'true' if has_cloud_draft else 'false' }}
     };
 </script>
+<script src="{{ url_for('static', filename='js/wizard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/autosave.js') }}"></script>
+<script src="{{ url_for('static', filename='js/previous_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dynamic_fields.js') }}"></script>
 <script src="{{ url_for('static', filename='js/fill_report.js') }}?v={{ range(1,999999)|random }}"></script>
 <script>
     let currentStep = 1;
-    const totalSteps = {{ schema|length }};
+    const totalSteps = {{ visible_schema|length }};
     const DRAFT_KEY = `autosave_draft_{{ template.id }}_{{ current_user.id }}`;
     const form = document.getElementById('reportForm');
     

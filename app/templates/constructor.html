@@ -54,7 +54,7 @@
         <div class="bg-light p-4 rounded mb-5 border">
             <label class="form-label small fw-bold text-dark mb-3">Предварительное назначение прав доступа:</label>
             <div class="mb-3">
-                <label class="fw-bold text-dark mb-2" style="font-size: 0.9rem;">Назначить целой группе:</label>
+                <label class="fw-bold text-dark mb-2 fs-base">Назначить целой группе:</label>
                 <div class="d-flex flex-wrap gap-3">
                     {% for g in all_groups %}
                     <div class="form-check">
@@ -617,7 +617,7 @@
             return `
             <div class="card mb-4 border-primary-subtle shadow-sm">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3 gap-3">
-                    <div class="d-flex align-items-center gap-2" style="max-width: 400px; width: 100%;">
+                    <div class="d-flex align-items-center gap-2 mw-400-full">
                         <span class="fw-bold text-primary-copp text-nowrap">Лист:</span>
                         <input type="text" class="form-control form-control-sm border-light-subtle fw-bold text-primary-copp" value="${String(sheet.sheet_title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&quot;/g, '&quot;')}" oninput="updateSheetTitle(${sIdx}, this.value)">
                     </div>
@@ -625,17 +625,17 @@
                     <div class="d-flex align-items-center gap-2 ms-3 border-start ps-3">
                         <span class="small text-muted text-nowrap">Для групп:</span>
                         <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle text-truncate" style="max-width: 200px;" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="sheetGroupsBtn-${sIdx}">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle text-truncate mw-200" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="sheetGroupsBtn-${sIdx}">
                                 ${getSheetGroupsLabel(sheet)}
                             </button>
-                            <ul class="dropdown-menu p-2 shadow-sm" style="min-width: 200px;">
+                            <ul class="dropdown-menu p-2 shadow-sm min-w-200">
                                 ${allGroupsJS.map(g => `
                                 <li>
                                     <div class="form-check m-1">
                                         <input class="form-check-input" type="checkbox" value="${g}" id="groupCheck-${sIdx}-${g}" 
                                             ${(sheet.target_groups || (sheet.target_group ? [sheet.target_group] : [])).includes(g) ? 'checked' : ''} 
                                             onchange="toggleSheetTargetGroup(${sIdx}, '${g}', this.checked)">
-                                        <label class="form-check-label" for="groupCheck-${sIdx}-${g}" style="cursor: pointer;">
+                                        <label class="form-check-label cursor-pointer" for="groupCheck-${sIdx}-${g}" >
                                             ${g}
                                         </label>
                                     </div>
@@ -646,7 +646,7 @@
                     </div>
                     <div class="d-flex align-items-center form-check form-switch mb-0 ms-3 me-3 border-end pe-4">
                         <input class="form-check-input" type="checkbox" id="sheet-mult-${sIdx}" ${sheet.is_multiple ? 'checked' : ''} onchange="updateSheetMultiple(${sIdx}, this.checked)">
-                        <label class="form-check-label small text-primary fw-bold ms-2" for="sheet-mult-${sIdx}" style="cursor: pointer;">Многократное заполнение листа</label>
+                        <label class="form-check-label small text-primary fw-bold ms-2 cursor-pointer" for="sheet-mult-${sIdx}" >Многократное заполнение листа</label>
                     </div>
                     <div class="d-flex align-items-center">
                         <button type="button" onclick="copySheet(${sIdx})" class="btn btn-sm btn-outline-secondary px-3 border-0 flex-shrink-0 me-2" title="Копировать лист">
@@ -676,17 +676,17 @@
                                     <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
-                                <div class="flex-grow-1" style="min-width: 200px;">
+                                <div class="flex-grow-1 min-w-200">
                                     <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>`;
                             } else {
                                 let extraCheckbox = '';
                                 
-                                controlsHtml = `<select class="form-select form-select-sm text-muted" style="width: 140px;" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
+                                controlsHtml = `<select class="form-select form-select-sm text-muted w-140" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
                                     <option value="number" ${f.type === 'number' || f.type === 'Числовое' ? 'selected' : ''}>Числовое</option>
                                     <option value="text" ${f.type === 'text' || f.type === 'Текстовое' ? 'selected' : ''}>Текстовое</option>
                                 </select>
-                                <div class="form-check mb-0 ms-2" ${f.type === 'group' ? 'style="display:none;"' : ''}>
+                                <div class="form-check mb-0 ms-2 d-none" ${f.type === 'group' ? '' : ''}>
                                     <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
@@ -709,7 +709,7 @@
                                  ondrop="dropField(event, ${sIdx}, ${fIdx})"
                                  ondragend="dragEndField(event)">
                                 <div class="d-flex align-items-start gap-2 mb-2">
-                                    <div class="btn-group btn-group-sm mt-1 me-2 shadow-sm flex-shrink-0" style="min-width: 50px;">
+                                    <div class="btn-group btn-group-sm mt-1 me-2 shadow-sm flex-shrink-0 min-w-50">
                                         <button onclick="changeLevel(${sIdx}, ${fIdx}, -1)" class="btn btn-light border text-muted py-0 px-2 fw-bold" ${!canOutdent ? 'disabled' : ''}>&lt;</button>
                                         <button onclick="changeLevel(${sIdx}, ${fIdx}, 1)" class="btn btn-light border text-muted py-0 px-2 fw-bold" ${!canIndent ? 'disabled' : ''}>&gt;</button>
                                     </div>
@@ -739,14 +739,14 @@
                         
                         <div class="d-flex align-items-center gap-3 mt-1">
                             <div class="d-flex gap-3 align-items-center flex-wrap">
-                                <select id="type-${sIdx}" class="form-select form-select-sm" style="width: 200px;" data-no-tomselect="true" onchange="toggleDictionarySelect(${sIdx}, this.value)">
+                                <select id="type-${sIdx}" class="form-select form-select-sm w-200" data-no-tomselect="true" onchange="toggleDictionarySelect(${sIdx}, this.value)">
                                     <option value="number">Числовое</option>
                                     <option value="text">Текстовое</option>
                                     <option value="select">Выпадающий список</option>
                                 </select>
                                 
-                                <div id="dict-wrapper-${sIdx}" style="display: none;">
-                                    <select id="dict-${sIdx}" class="form-select form-select-sm" style="width: 250px;">
+                                <div id="dict-wrapper-${sIdx}" class="d-none">
+                                    <select id="dict-${sIdx}" class="form-select form-select-sm w-250">
                                         <option value="">-- Выберите шаблон списка --</option>
                                         {% for dict in all_dictionaries %}
                                         <option value="{{ dict.id }}">{{ dict.name }} ({{ dict.items|length }} вар.)</option>

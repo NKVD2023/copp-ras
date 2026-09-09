@@ -1,6 +1,6 @@
 import threading
 import uuid
-from app import db
+from app.extensions import db
 from app.models import BackgroundTask, ReportTemplate, ReportSubmission
 from app.services.excel_service import ExcelService
 import os

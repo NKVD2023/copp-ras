@@ -47,3 +47,237 @@
 .admin-card-wrapper {
     max-width: 500px;
 }
+/* ============================================================
+   components.css
+   Утилитарные CSS-классы проекта COPP-RAS.
+   Заменяют повторяющиеся inline-стили в шаблонах.
+   ============================================================ */
+
+/* ── Скруглення (border-radius) ───────────────────────────── */
+.rounded-card   { border-radius: 12px !important; }
+.rounded-card-sm{ border-radius: 10px !important; }
+.rounded-btn    { border-radius: 8px  !important; }
+
+/* ── Размеры шрифта ───────────────────────────────────────── */
+.fs-xxs  { font-size: 0.65rem !important; }
+.fs-xs   { font-size: 0.75rem !important; }
+.fs-xs-p { font-size: 0.8rem  !important; }
+.fs-sm   { font-size: 0.85rem !important; }
+.fs-md   { font-size: 0.875rem!important; }
+.fs-base { font-size: 0.9rem  !important; }
+
+/* ── Курсор ───────────────────────────────────────────────── */
+.cursor-pointer { cursor: pointer !important; }
+
+/* ── Прокручиваемые контейнеры ───────────────────────────── */
+.scrollable-xs  { max-height: 150px; overflow-y: auto; }
+.scrollable-sm  { max-height: 250px; overflow-y: auto; }
+.scrollable-md  { max-height: 350px; overflow-y: auto; }
+
+/* ── Максимальные ширины ─────────────────────────────────── */
+.mw-450 { max-width: 450px !important; }
+
+/* ── Аватар/иконка пользователя ─────────────────────────── */
+.avatar-64  { width: 64px; height: 64px; }
+.avatar-48  { width: 48px; height: 48px; }
+.icon-lg    { font-size: 2.5rem !important; }
+
+/* ── Flex-утилиты ─────────────────────────────────────────── */
+.flex-min-0 { flex: 1; min-width: 0; }
+
+/* ── Трансформации ───────────────────────────────────────── */
+.scale-120  { transform: scale(1.2); }
+
+/* ── Бейджи ролей ─────────────────────────────────────────── */
+.badge-role {
+    font-size: 0.65rem !important;
+    padding: 0.35rem 0.6rem !important;
+    font-weight: 700 !important;
+    border-radius: 50rem !important;
+}
+.badge-role-admin   { background-color: #ffe5e5; color: #dc3545; }
+.badge-role-manager { background-color: #e5f0ff; color: #0d6efd; }
+.badge-role-user    { background-color: #e6f4ea; color: #1e8e3e; }
+
+/* ── Бейджи статусов отчёта ──────────────────────────────── */
+.badge-status { font-size: 0.75rem !important; }
+
+/* ── Текстовые цвета (серые оттенки) ─────────────────────── */
+.text-gray-400 { color: #9ca3af !important; }
+.text-gray-500 { color: #6b7280 !important; }
+.text-gray-600 { color: #4b5563 !important; }
+.text-gray-800 { color: #1f2937 !important; }
+
+/* ── Таблица логов ───────────────────────────────────────── */
+.log-table-date  { color: #6b7280; font-size: 0.875rem; white-space: normal; }
+.log-table-user  { font-weight: 600; font-size: 0.875rem; color: #1f2937; }
+.log-table-sub   { font-size: 0.75rem; color: #6b7280; white-space: normal; word-break: break-word; }
+.log-table-action{ color: #6b7280; font-size: 0.875rem; white-space: normal; }
+.log-table-detail{ color: #4b5563; font-size: 0.875rem; white-space: normal; word-break: break-word; }
+.log-table-ip    { color: #6b7280; font-size: 0.875rem; font-family: monospace; white-space: normal; word-break: break-all; }
+.log-table-empty { text-align: center; color: #6b7280; padding: 1.5rem; }
+.log-table-footer{
+    border-top: 1px solid #f3f4f6;
+    padding: 0.75rem 1.5rem;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    background-color: #fff;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+.log-table-count { font-size: 0.85rem; color: #6b7280; }
+
+/* ── Сортируемые заголовки таблиц ───────────────────────── */
+.th-sortable { cursor: pointer !important; user-select: none !important; }
+.th-w-12 { width: 12%; }
+.th-w-13 { width: 13%; }
+.th-w-15 { width: 15%; }
+.th-w-20 { width: 20%; }
+.th-w-40 { width: 40%; }
+
+/* ── Карточки отчётов (admin reports_macro) ──────────────── */
+.report-card         { border-radius: 10px; }
+.report-card-menu    { border-radius: 12px; padding: 8px 0; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 12px 35px rgba(0,0,0,0.2) !important; }
+.report-card-meta    { font-size: 0.9rem; }
+.report-card-stat    { font-size: 0.85rem; }
+.report-progress     { height: 8px; }
+.report-debtors-list { max-height: 150px; overflow-y: auto; }
+.report-debtors-btn  { font-size: 0.8rem; }
+.report-assign-list  { max-height: 250px; overflow-y: auto; }
+.report-files-list   { max-height: 350px; overflow-y: auto; }
+.report-assign-label { font-size: 0.9rem; }
+.report-assign-section-border { border-color: #e2e8f0 !important; }
+.report-border-top   { border-top-color: #eaeaea !important; }
+.report-truncate-name{ max-width: 450px; }
+
+/* ── Чекбокс файлов (увеличенный) ───────────────────────── */
+.file-checkbox { transform: scale(1.2); }
+.file-label    { cursor: pointer; transition: background-color 0.2s; }
+
+/* ── Мобильные карточки ──────────────────────────────────── */
+.mobile-report-card     { border-radius: 12px; }
+.mobile-report-card-desc{
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.mobile-profile-card    { border-radius: 12px; border-color: #edf2f7; }
+.mobile-analytics-card  { border-radius: 12px; border-color: #edf2f7; }
+.mobile-attachment-card { border-radius: 12px; }
+.mobile-attachment-name { font-size: 0.9rem; }
+.mobile-section-hidden  { display: none; }
+
+/* ── Кнопка прогресс-бара ─────────────────────────────────── */
+.wizard-progress        { height: 6px; border-radius: 3px; }
+.wizard-progress-bar    { background-color: #00334e; }
+
+/* ── Дерево полей (fill_report) ──────────────────────────── */
+.field-branch-v { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background-color: rgba(0, 51, 78, 0.1); }
+.field-branch-h { position: absolute; left: 0; top: 0.85rem; width: 0.75rem; height: 2px; background-color: rgba(0, 51, 78, 0.1); }
+.field-border-child { border-color: rgba(0, 51, 78, 0.1) !important; }
+.field-hr-dashed { border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1; }
+
+/* ── Поиск в логах ───────────────────────────────────────── */
+.log-search-input { max-width: 250px; border-radius: 50rem; overflow: hidden; }
+.log-card { border-radius: 0.5rem; border: 1px solid #e5e7eb !important; }
+
+/* ── Статистика ──────────────────────────────────────────── */
+.dot-separator { color: #d1d5db; font-size: 0.6rem; }
+
+/* ── Дополнительные утилиты (вторая волна) ────────────────── */
+
+/* Шрифты */
+.fs-82        { font-size: 0.82rem !important; }
+.fs-72        { font-size: 0.72rem !important; }
+.fs-4rem      { font-size: 4rem !important; }
+
+/* Мини-бейдж (компактный) */
+.badge-compact { font-size: 0.72rem !important; padding: 3px 8px !important; border-radius: 6px !important; }
+
+/* Ширины */
+.mw-500   { max-width: 500px !important; }
+.min-w-200{ min-width: 200px !important; }
+.min-w-250{ min-width: 250px !important; }
+.w-140    { width: 140px !important; }
+.w-200    { width: 200px !important; }
+.w-250    { width: 250px !important; }
+.w-280    { width: 280px !important; }
+
+/* Flex утилиты */
+.flex-auto-250 { flex: 1 1 auto; min-width: 250px; }
+.flex-no-shrink-38 { flex: 0 0 auto; min-height: 38px; }
+
+/* Разделитель (вертикальная линия в navbar) */
+.nav-divider { width: 1px; height: 28px; background: #e2e8f0; flex-shrink: 0; }
+
+/* Autosave индикатор */
+.autosave-hidden { opacity: 0; transition: opacity 0.3s; }
+
+/* Навигация */
+.nav-gap-py { gap: 1.5rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+
+/* Фоны */
+.bg-slate-50 { background: #f1f5f9 !important; }
+
+/* Кнопка экспорта */
+.btn-export-green {
+    background: #16a34a !important;
+    color: #fff !important;
+    border: none !important;
+    font-size: 0.82rem !important;
+    white-space: nowrap !important;
+}
+
+/* Цвет бренда для border+color */
+.copp-brand-border { color: #00334e !important; border-color: #00334e !important; }
+
+/* Серый фон секции */
+.bg-section { background-color: #f8f9fa !important; }
+
+/* ── Финальная волна (уникальные стили) ───────────────────── */
+
+/* Конструктор */
+.field-nav-item       { transition: all 0.2s; font-size: 0.95rem; }
+.field-nav-sticky     { position: sticky; top: 0; z-index: 1020; }
+.field-actions-abs    { position: absolute; top: 1.5rem; right: 1.5rem; }
+.field-branch-h-line  { position: absolute; left: 0; top: 0.85rem; width: 0.75rem; height: 2px; background-color: rgba(0, 51, 78, 0.1); }
+.constructor-scroll   { overflow-y: auto; max-height: 60vh; }
+.sidebar-scroll       { overflow-y: auto; height: 100%; background: #f8f9fa; }
+.min-w-50  { min-width: 50px !important; }
+.min-w-150 { min-width: 150px !important; }
+.mw-400-full { max-width: 400px; width: 100%; }
+.mw-200    { max-width: 200px !important; }
+.progress-bar-8 { height: 8px; }
+.gap-sm-nowrap  { gap: 0.25rem; white-space: nowrap; width: fit-content; }
+.flex-nowrap-shrink0 { gap: 0.25rem; white-space: nowrap; flex-shrink: 0; align-items: center; }
+.icon-nav   { font-size: 1.5rem; line-height: 1; padding: 0 5px; }
+
+/* ── Волна 4 — финальные уникальные стили ─────────────────── */
+.navbar-glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 1020;
+    transition: all 0.3s ease;
+}
+.progress-copp-0 { background-color: #00334e; width: 0%; }
+.btn-copp-solid  { background-color: #00334e; border-color: #00334e; color: white; }
+.btn-copp-outline{ border-style: dashed; border-color: #00334e; color: #00334e; }
+.log-card-footer {
+    border-top: 1px solid #f3f4f6;
+    padding: 0.75rem 1.5rem;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    background-color: #fff;
+}
+.hr-dashed-neg  { border-top: 1px dashed #dee2e6; margin: 1.5rem -16px; opacity: 1; }
+.card-table     { border-radius: 0.5rem; border: 1px solid #e5e7eb !important; }
+.dropdown-card  { border-radius: 12px; padding: 8px 0; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 12px 35px rgba(0,0,0,0.2) !important; }
+.input-pill-sm  { border-radius: 50rem; overflow: hidden; }
+.input-pill-mw  { border-radius: 50rem; width: auto; max-width: 250px; }
+.sidebar-main   { flex-grow: 1; overflow: auto; background-color: #f8fafc; }
+.alert-light-danger { font-size: 0.85rem; box-shadow: none; background-color: #f8d7da1a; }
+.scrollable-xs-sm { font-size: 0.8rem; max-height: 150px; overflow-y: auto; }
+.fs-11  { font-size: 1.1rem !important; }
+.fs-06  { font-size: 0.6rem  !important; }
+.border-bottom-var { border-bottom: 1px solid var(--border-color); }

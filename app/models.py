@@ -2,7 +2,7 @@
 Модуль моделей базы данных (Database Models).
 Описывает структуру всех таблиц в SQLite с использованием SQLAlchemy ORM.
 """
-from app import db, login_manager
+from app.extensions import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import JSON

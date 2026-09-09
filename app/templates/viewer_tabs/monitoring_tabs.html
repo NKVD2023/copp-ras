@@ -42,17 +42,16 @@
                             <div class="accordion-item rounded">
                                 <h2 class="accordion-header">
                                     <button
-                                        class="accordion-button collapsed py-2 px-3 small text-danger fw-bold rounded"
+                                        class="accordion-button collapsed py-2 px-3 small text-danger fw-bold rounded alert-light-danger"
                                         type="button" data-bs-toggle="collapse"
                                         data-bs-target="#debtorsCollapse-{{ template.id }}"
-                                        style="font-size: 0.85rem; box-shadow: none; background-color: #f8d7da1a;">
+                                        >
                                         Не сдали отчет ({{ debtors|length }})
                                     </button>
                                 </h2>
                                 <div id="debtorsCollapse-{{ template.id }}" class="accordion-collapse collapse"
                                     data-bs-parent="#debtorsAccordion-{{ template.id }}">
-                                    <div class="accordion-body p-2 bg-light border-top"
-                                        style="font-size: 0.8rem; max-height: 150px; overflow-y: auto;">
+                                    <div class="accordion-body p-2 bg-light border-top scrollable-xs-sm">
                                         <ul class="mb-0 ps-3 text-muted">
                                             {% for debtor in debtors %}
                                             <li class="mb-1">
@@ -120,16 +119,14 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
 
-                    <div class="modal-body px-4 py-2" style="overflow-y: auto; max-height: 60vh;">
+                    <div class="modal-body px-4 py-2 constructor-scroll">
                         <p class="small text-muted mb-3">Выберите пользователей, которые должны заполнить этот отчет:
                         </p>
 
-                        <div class="form-check mb-3 pb-3 border-bottom border-2"
-                            style="border-color: #e2e8f0 !important;">
+                        <div class="form-check mb-3 pb-3 border-bottom border-2 report-assign-section-border">
                             <input class="form-check-input shadow-sm border-secondary" type="checkbox"
                                 id="selectAll-{{ template.id }}" onchange="toggleSelectAll(this, '{{ template.id }}')">
-                            <label class="form-check-label fw-bold text-primary-copp w-100 ms-1"
-                                style="cursor: pointer;" for="selectAll-{{ template.id }}">
+                            <label class="form-check-label fw-bold text-primary-copp w-100 ms-1 cursor-pointer" for="selectAll-{{ template.id }}">
                                 Выбрать всех / Снять выделение
                             </label>
                         </div>
@@ -140,9 +137,9 @@
                                 <input class="form-check-input shadow-sm user-checkbox-{{ template.id }}"
                                     type="checkbox" name="user_ids" value="{{ u.id }}" {% if u in
                                     template.assigned_users %}checked{% endif %} id="user-{{ template.id }}-{{ u.id }}">
-                                <label class="form-check-label w-100 ms-1" style="cursor: pointer;"
+                                <label class="form-check-label w-100 ms-1 cursor-pointer"
                                     for="user-{{ template.id }}-{{ u.id }}">
-                                    <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ u.username }}</div>
+                                    <div class="fw-bold text-dark fs-base">{{ u.username }}</div>
                                     {% if u.description %}<div class="text-muted small">{{ u.description }}</div>{%
                                     endif %}
                                 </label>
@@ -213,9 +210,9 @@
                                 <input class="form-check-input shadow-sm" type="checkbox" name="user_ids"
                                     value="{{ u.id }}" {% if u in template.assigned_users %}checked{% endif %}
                                     id="user-{{ template.id }}-{{ u.id }}">
-                                <label class="form-check-label w-100 ms-1" style="cursor: pointer;"
+                                <label class="form-check-label w-100 ms-1 cursor-pointer"
                                     for="user-{{ template.id }}-{{ u.id }}">
-                                    <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ u.username }}</div>
+                                    <div class="fw-bold text-dark fs-base">{{ u.username }}</div>
                                     {% if u.description %}<div class="text-muted small">{{ u.description }}</div>{%
                                     endif %}
                                 </label>

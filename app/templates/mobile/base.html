@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile_app.css') }}">
     <!-- CSS-компоненты (карточки, кнопки, формы, таблицы, вкладки) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ range(1,99999)|random }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/buttons.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/forms.css') }}">
@@ -30,12 +31,12 @@
 <body>
     
     <!-- Top Header -->
-    <div class="bg-white px-3 py-3 shadow-sm d-flex justify-content-between align-items-center" style="position: sticky; top: 0; z-index: 1020;">
+    <div class="bg-white px-3 py-3 shadow-sm d-flex justify-content-between align-items-center field-nav-sticky">
         <a href="/" class="text-decoration-none d-flex align-items-center gap-2">
             <img src="{{ url_for('static', filename='img/logoblue2.png') }}" alt="Логотип" height="32">
             <div class="d-flex flex-column justify-content-center lh-1">
-                <span class="fw-bold text-dark mb-1" style="font-size: 0.85rem;">Республики Крым</span>
-                <span class="text-muted" style="font-size: 0.6rem;">Региональная Аналитическая Система</span>
+                <span class="fw-bold text-dark mb-1 fs-sm">Республики Крым</span>
+                <span class="text-muted fs-06">Региональная Аналитическая Система</span>
             </div>
         </a>
         <div class="d-flex align-items-center gap-2">

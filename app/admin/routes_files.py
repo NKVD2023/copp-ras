@@ -3,7 +3,7 @@ import uuid
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import current_user
 from werkzeug.utils import secure_filename
-from app import db
+from app.extensions import db
 from app.admin import admin_bp
 from app.models import UploadedFile, ReportTemplate
 from config import basedir

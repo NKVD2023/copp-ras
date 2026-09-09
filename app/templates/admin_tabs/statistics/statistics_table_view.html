@@ -1,6 +1,6 @@
 {% if stat_schema %}
     <!-- Вкладки листов -->
-    <ul class="nav nav-tabs stats-sheet-tabs" id="statsTabs" role="tablist" style="border-bottom: 1px solid var(--border-color);">
+    <ul class="nav nav-tabs stats-sheet-tabs border-bottom-var" id="statsTabs" role="tablist" >
         {% for sheet in stat_schema %}
             <li class="nav-item">
                 <button class="nav-link {% if loop.first %}active{% endif %} fw-semibold"
@@ -108,10 +108,10 @@
 
                                 {% if ns.max_len > 1 %}
                                 <tr class="fw-bold">
-                                    <td class="stat-sticky-col text-start align-middle" style="background-color: #f8f9fa !important;">Итого</td>
+                                    <td class="stat-sticky-col text-start align-middle bg-section">Итого</td>
                                     {% for field in sheet.leaf_fields %}
                                         {% set f_id = (field.get('name') or field.get('id', ''))|string %}
-                                        <td class="text-center align-middle" style="background-color: #f8f9fa !important;">
+                                        <td class="text-center align-middle bg-section">
                                             {% set f_type = field.get('type', '')|string|lower %}
                                             {% if f_type in ['number', 'числовое'] and p_data.has_submission %}
                                                 {% set ns_sub = namespace(total=0.0, has_data=false) %}

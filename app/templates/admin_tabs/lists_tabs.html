@@ -13,7 +13,7 @@
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold">{{ dict.name }}</h5>
                 <div class="dropdown">
-                    <button class="btn btn-link text-muted p-0 border-0" type="button" data-bs-toggle="dropdown" style="font-size: 1.5rem; line-height: 1; padding: 0 5px;">
+                    <button class="btn btn-link text-muted p-0 border-0 icon-nav" type="button" data-bs-toggle="dropdown" >
                         &#8942;
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
@@ -30,7 +30,7 @@
             </div>
             <div class="card-body">
                 <p class="text-muted small mb-2">Вариантов: {{ dict.items|length }}</p>
-                <div class="bg-light p-2 rounded" style="max-height: 150px; overflow-y: auto;">
+                <div class="bg-light p-2 rounded scrollable-xs">
                     <ul class="list-unstyled mb-0 small">
                         {% for item in dict.items[:10] %}
                         <li>&bull; {{ item }}</li>

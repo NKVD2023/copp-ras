@@ -2,7 +2,7 @@
     <h6 class="fw-bold m-0">Журнал действий системы</h6>
     <div class="d-flex gap-2 align-items-center">
         <!-- Поиск -->
-        <div class="input-group input-group-sm soft-ui-input" style="max-width: 250px; border-radius: 50rem; overflow: hidden;">
+        <div class="input-group input-group-sm soft-ui-input log-search-input">
             <span class="input-group-text border-0 bg-transparent text-secondary ps-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
                   <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
@@ -100,26 +100,26 @@
 </style>
 
 <!-- Обертка таблицы -->
-<div class="card border-0 shadow-sm mt-3" style="border-radius: 0.5rem; border: 1px solid #e5e7eb !important;">
+<div class="card border-0 shadow-sm mt-3 card-table">
     <!-- Контейнер с прокруткой -->
     <div class="card-body p-0">
         <div class="table-container">
             <table class="table modern-table" id="logsTable">
                 <thead>
                     <tr>
-                        <th class="sortable" data-col="0" style="cursor: pointer; user-select: none; width: 12%;">
+                        <th class="sortable th-sortable th-w-12" data-col="0" >
                             Дата и время <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="1" style="cursor: pointer; user-select: none; width: 20%;">
+                        <th class="sortable th-sortable th-w-20" data-col="1" >
                             Пользователь <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="2" style="cursor: pointer; user-select: none; width: 15%;">
+                        <th class="sortable th-sortable th-w-15" data-col="2" >
                             Действие <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="3" style="cursor: pointer; user-select: none; width: 40%;">
+                        <th class="sortable th-sortable th-w-40" data-col="3" >
                             Подробности <span class="sort-icon text-copp ms-1"></span>
                         </th>
-                        <th class="sortable" data-col="4" style="cursor: pointer; user-select: none; width: 13%;">
+                        <th class="sortable th-sortable th-w-13" data-col="4" >
                             IP-адрес <span class="sort-icon text-copp ms-1"></span>
                         </th>
                     </tr>
@@ -128,7 +128,7 @@
                     {% for log in logs_list %}
                     <tr class="log-row">
                         <!-- Дата -->
-                        <td style="color: #6b7280; font-size: 0.875rem; white-space: normal;" data-sort-value="{{ (log.timestamp|msk_time).strftime('%Y-%m-%d %H:%M:%S') }}">
+                        <td class="log-table-date" data-sort-value="{{ (log.timestamp|msk_time).strftime('%Y-%m-%d %H:%M:%S') }}">
                             {{ (log.timestamp|msk_time).strftime('%d.%m.%Y %H:%M') }}
                         </td>
                         
@@ -137,55 +137,55 @@
                             {% if log.user %}
                                 <div class="d-flex flex-column align-items-start gap-1">
                                     {% if log.user.role == 'admin' %}
-                                        <span class="badge rounded-pill fw-bold" style="background-color: #ffe5e5; color: #dc3545; font-size: 0.65rem; padding: 0.35rem 0.6rem;">АДМИН</span>
+                                        <span class="badge rounded-pill fw-bold badge-role badge-role-admin">АДМИН</span>
                                     {% elif log.user.role == 'manager' %}
-                                        <span class="badge rounded-pill fw-bold" style="background-color: #e5f0ff; color: #0d6efd; font-size: 0.65rem; padding: 0.35rem 0.6rem;">РЕДАКТОР</span>
+                                        <span class="badge rounded-pill fw-bold badge-role badge-role-manager">РЕДАКТОР</span>
                                     {% else %}
-                                        <span class="badge rounded-pill fw-bold" style="background-color: #e6f4ea; color: #1e8e3e; font-size: 0.65rem; padding: 0.35rem 0.6rem;">ПОЛЬЗОВАТЕЛЬ</span>
+                                        <span class="badge rounded-pill fw-bold badge-role badge-role-user">ПОЛЬЗОВАТЕЛЬ</span>
                                     {% endif %}
-                                    <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">{{ log.user.username }}</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; white-space: normal; word-break: break-word;">
+                                    <div class="log-table-user">{{ log.user.username }}</div>
+                                    <div class="log-table-sub">
                                         {% if log.user.description and log.user.description != 'None' %}{{ log.user.description }}{% endif %}
                                     </div>
                                 </div>
                             {% else %}
                                 <div class="d-flex flex-column align-items-start gap-1">
-                                    <span class="badge rounded-pill fw-bold" style="background-color: #ffe5e5; color: #dc3545; font-size: 0.65rem; padding: 0.35rem 0.6rem;">АДМИН</span>
-                                    <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">Система</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280;">Фоновые задачи</div>
+                                    <span class="badge rounded-pill fw-bold badge-role badge-role-admin">АДМИН</span>
+                                    <div class="log-table-user">Система</div>
+                                    <div class="log-table-sub">Фоновые задачи</div>
                                 </div>
                             {% endif %}
                         </td>
                         
                         <!-- Действие -->
-                        <td style="color: #6b7280; font-size: 0.875rem; white-space: normal;">
-                            <span style="color:#d1d5db; font-size:0.6rem;" class="me-2">●</span>{{ log.action }}
+                        <td class="log-table-action">
+                            <span class="dot-separator me-2">●</span>{{ log.action }}
                         </td>
                         
                         <!-- Подробности -->
-                        <td style="color: #4b5563; font-size: 0.875rem; white-space: normal; word-break: break-word;">
+                        <td class="log-table-detail">
                             {{ log.details }}
                         </td>
 
                         <!-- IP-адрес -->
-                        <td style="color: #6b7280; font-size: 0.875rem; font-family: monospace; white-space: normal; word-break: break-all;">
+                        <td class="log-table-ip">
                             {{ log.ip_address or '' }}
                         </td>
                     </tr>
                     {% else %}
                     <tr class="no-logs-row">
-                        <td colspan="5" style="text-align: center; color: #6b7280; padding: 1.5rem;">Журнал действий пуст.</td>
+                        <td colspan="5" class="log-table-empty">Журнал действий пуст.</td>
                     </tr>
                     {% endfor %}
-                    <tr id="noResultsRow" style="display: none;">
-                        <td colspan="5" style="text-align: center; color: #6b7280; padding: 1.5rem;">По вашему запросу ничего не найдено.</td>
+                    <tr id="noResultsRow" class="d-none">
+                        <td colspan="5" class="log-table-empty">По вашему запросу ничего не найдено.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
         
         <!-- Футер таблицы -->
-        <div class="d-flex justify-content-between align-items-center" style="border-top: 1px solid #f3f4f6; padding: 0.75rem 1.5rem; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; background-color: #fff;">
+        <div class="d-flex justify-content-between align-items-center log-card-footer">
             <div style="font-size: 0.85rem; color: #6b7280;">Всего записей: {{ logs_list|length }}</div>
         </div>
     </div>

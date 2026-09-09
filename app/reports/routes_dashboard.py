@@ -44,7 +44,7 @@ def dashboard():
             needs_commit = True
             
     if needs_commit:
-        from app import db
+        from app.extensions import db
         db.session.commit()
     
     # Архив пользователя (теперь "Завершенные отчеты"):

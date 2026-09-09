@@ -6,7 +6,7 @@
 from flask import render_template, request, jsonify
 from flask_login import login_required, current_user
 from datetime import date
-from app import db
+from app.extensions import db
 from app.reports import reports_bp
 from app.models import ReportTemplate, ReportSubmission, ReportDraft
 from app.utils import log_action, is_mobile

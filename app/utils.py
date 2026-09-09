@@ -4,7 +4,7 @@
 """
 from flask_login import current_user
 from flask import request
-from app import db
+from app.extensions import db
 from app.models import ActionLog
 
 def log_action(action: str, details: str = ""):

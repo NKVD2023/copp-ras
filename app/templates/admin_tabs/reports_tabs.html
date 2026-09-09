@@ -2,7 +2,7 @@
     <div class="d-flex flex-wrap flex-xl-nowrap justify-content-between align-items-center gap-3">
         
         <!-- Tabs on the left -->
-        <ul class="nav nav-pills segmented-control bg-light p-1 rounded-pill flex-nowrap overflow-auto mb-0" id="reportsSubTabs" role="tablist" style="gap: 0.25rem; white-space: nowrap; flex-shrink: 0; align-items: center;">
+        <ul class="nav nav-pills segmented-control bg-light p-1 rounded-pill flex-nowrap overflow-auto mb-0 flex-nowrap-shrink0" id="reportsSubTabs" role="tablist" >
             <li class="nav-item" role="presentation">
                 <button class="nav-link active rounded-pill px-3 py-2" id="published-tab" data-bs-toggle="tab" data-bs-target="#published-reports" type="button" role="tab" aria-controls="published-reports" aria-selected="true">
                     <i class="bi bi-eye-fill me-1"></i> Опубликованные
@@ -31,12 +31,12 @@
         </ul>
 
         <!-- Search and sort in the middle -->
-        <div class="d-flex flex-grow-1 gap-2 align-items-center" style="max-width: 500px;">
-            <div class="input-group flex-grow-1 soft-ui-input" style="border-radius: 50rem; overflow: hidden;">
+        <div class="d-flex flex-grow-1 gap-2 align-items-center mw-500">
+            <div class="input-group flex-grow-1 soft-ui-input input-pill-sm">
                 <span class="input-group-text border-0 text-secondary ps-3 py-2 bg-transparent"><i class="bi bi-search"></i></span>
                 <input type="text" id="reportSearch" class="form-control soft-ui-input border-0 ps-0 py-2" placeholder="Поиск отчетов по названию..." autocomplete="off">
             </div>
-            <select class="form-select text-secondary py-2 soft-ui-input" style="border-radius: 50rem; width: auto; max-width: 250px;" onchange="window.location.href='?sort=' + this.value">
+            <select class="form-select text-secondary py-2 soft-ui-input input-pill-mw" onchange="window.location.href='?sort=' + this.value">
                 <option value="deadline_asc" {% if current_sort == 'deadline_asc' %}selected{% endif %}>Срок сдачи (сначала ближайшие)</option>
                 <option value="deadline_desc" {% if current_sort == 'deadline_desc' %}selected{% endif %}>Срок сдачи (сначала дальние)</option>
                 <option value="id_desc" {% if current_sort == 'id_desc' %}selected{% endif %}>Сначала новые</option>
@@ -88,7 +88,7 @@
 
 
                 <div class="alert alert-warning small py-2 d-flex align-items-start gap-2 mb-3">
-                    <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 1.1rem;"></i>
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-11"></i>
                     <div>
                         <strong>Внимание!</strong> Импорт структуры из Excel не всегда идеален (особенно при сложных шапках таблиц или объединенных ячейках). 
                         После загрузки <b>обязательно</b> проверьте все созданные строки, столбцы и типы данных в конструкторе вручную.

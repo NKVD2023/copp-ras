@@ -10,7 +10,7 @@ from flask_login import login_required, current_user
 from app.admin import admin_bp
 from app.models import User, ReportTemplate, ReportSubmission, ActionLog, UploadedFile
 from app.auth.decorators import roles_required
-from app import db
+from app.extensions import db
 from config import basedir
 from app.services.template_service import TemplateService
 from app.services.excel_service import ExcelService

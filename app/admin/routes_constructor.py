@@ -6,7 +6,7 @@
 from flask import render_template, request, redirect, url_for, jsonify
 from flask_login import login_required
 from datetime import datetime
-from app import db
+from app.extensions import db
 from app.admin import admin_bp
 from app.models import User, ReportTemplate
 from app.utils import log_action

@@ -1,6 +1,6 @@
 import datetime
 from app.models import ReportSubmission, User, user_template_access
-from app import db
+from app.extensions import db
 
 class TemplateService:
     @staticmethod
