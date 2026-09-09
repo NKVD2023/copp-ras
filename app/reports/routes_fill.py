@@ -106,20 +106,24 @@ def fill_report(template_id):
                 continue
                 
             for field in sheet.get('fields', []):
+                field_name = field.get('name')
+                if not field_name:
+                    continue
+                    
                 if field.get('is_active') is False:
                     # Принудительно восстанавливаем старое значение и пропускаем валидацию
-                    if field['name'] in old_data:
-                        json_data[field['name']] = old_data[field['name']]
+                    if field_name in old_data:
+                        json_data[field_name] = old_data[field_name]
                     else:
                         if historical_data is None:
                             historical_data = get_historical_data(template, current_user.id)
-                        if field['name'] in historical_data:
-                            json_data[field['name']] = historical_data[field['name']]
-                        elif field['name'] in json_data:
-                            del json_data[field['name']]
+                        if field_name in historical_data:
+                            json_data[field_name] = historical_data[field_name]
+                        elif field_name in json_data:
+                            del json_data[field_name]
                     continue
                     
-                val = json_data.get(field['name'])
+                val = json_data.get(field_name)
                 
                 # Приводим к списку для унифицированной проверки
                 vals_to_check = val if isinstance(val, list) else [val]
@@ -178,12 +182,16 @@ def fill_report(template_id):
     
     for sheet in schema_obj:
         for field in sheet.get('fields', []):
+            field_name = field.get('name')
+            if not field_name:
+                continue
+                
             if field.get('is_active') is False:
-                if field['name'] not in display_data:
+                if field_name not in display_data:
                     if historical_data is None:
                         historical_data = get_historical_data(template, current_user.id)
-                    if field['name'] in historical_data:
-                        display_data[field['name']] = historical_data[field['name']]
+                    if field_name in historical_data:
+                        display_data[field_name] = historical_data[field_name]
 
     # Облачный черновик: если есть — показываем его данные поверх submission
     cloud_draft = ReportDraft.query.filter_by(template_id=template.id, user_id=current_user.id).first()
@@ -315,6 +323,10 @@ def get_previous_data(template_id):
         for sheet in schema:
             stack = []
             for field in sheet.get('fields', []):
+                field_name = field.get('name')
+                if not field_name:
+                    continue
+                    
                 level = int(field.get('level', 0))
                 norm = normalize_label(field.get('label', ''))
                 
@@ -330,7 +342,7 @@ def get_previous_data(template_id):
                     path = f"{original_path}_{counter}"
                     counter += 1
                 
-                mapping[field['name']] = path
+                mapping[field_name] = path
                 stack.append({'level': level, 'norm': norm})
         return mapping
 

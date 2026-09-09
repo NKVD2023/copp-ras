@@ -494,8 +494,10 @@
         if (!sheet) return;
         
         let newLvl = sheet.fields[fIdx].level || 0;
+        const fieldId = 'temp_' + Date.now();
         const newField = {
-            id: 'temp_' + Date.now(),
+            id: fieldId,
+            name: fieldId,
             label: 'Новое поле',
             type: 'number',
             required: false,

@@ -50,7 +50,7 @@ def _validate_nodes(nodes, json_data):
         if field.get('type') in ('text', 'Текстовое', 'select') or field.get('validateSum') is False:
             continue
             
-        parent_val_raw = json_data.get(field['name'])
+        parent_val_raw = json_data.get(field.get('name'))
         # Если родитель вообще не заполнен, пропускаем проверку
         if parent_val_raw is None or (isinstance(parent_val_raw, list) and len(parent_val_raw) == 0) or str(parent_val_raw).strip() == '':
             continue
@@ -62,7 +62,7 @@ def _validate_nodes(nodes, json_data):
             child_field = child.get('field', {})
             # Суммируем только числовые дочерние поля
             if child_field.get('type') not in ('text', 'Текстовое', 'select'):
-                child_val = json_data.get(child_field['name'])
+                child_val = json_data.get(child_field.get('name'))
                 children_sum += sum_field_values(child_val)
                 
         # Если сумма детей больше родителя (с учетом небольшой погрешности float)

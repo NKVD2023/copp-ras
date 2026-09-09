@@ -55,7 +55,9 @@ def view_data(template_id):
         for field in leaf_fields:
             if field.get('is_active') is False:
                 has_inactive_fields = True
-                inactive_field_names.append(field['name'])
+                field_name = field.get('name')
+                if field_name:
+                    inactive_field_names.append(field_name)
 
     if has_inactive_fields:
         submitted_user_ids = {s.user_id for s in submissions}
