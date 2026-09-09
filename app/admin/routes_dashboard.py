@@ -236,3 +236,43 @@ def export_admin_statistics():
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+@admin_bp.route('/repair_db')
+@login_required
+@roles_required('admin')
+def repair_db():
+    from app.models import ReportTemplate
+    from sqlalchemy.orm.attributes import flag_modified
+    import json
+    
+    templates = ReportTemplate.query.all()
+    repaired_count = 0
+    
+    for t in templates:
+        if not t.schema:
+            continue
+            
+        modified = False
+        schema_data = t.schema
+        if isinstance(schema_data, str):
+            try:
+                schema_data = json.loads(schema_data)
+            except:
+                continue
+                
+        for sheet in schema_data:
+            for field in sheet.get('fields', []):
+                if not field.get('name'):
+                    field_id = field.get('id')
+                    if field_id:
+                        field['name'] = field_id
+                        modified = True
+                        if field.get('is_active') is False:
+                            field['is_active'] = True
+                            
+        if modified:
+            t.schema = schema_data
+            flag_modified(t, 'schema')
+            repaired_count += 1
+            
+    db.session.commit()
+    return f"Готово! Восстановлено шаблонов: {repaired_count}. Теперь можете вернуться в отчеты."
