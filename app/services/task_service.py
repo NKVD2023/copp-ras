@@ -49,7 +49,7 @@ class TaskService:
         # Create task record
         task = BackgroundTask(
             id=task_id,
-            name=f"Генерация отчета: {template.short_name}",
+            name=f"Генерация отчета: {template.short_name}"[:128],
             user_id=current_user_id
         )
         db.session.add(task)

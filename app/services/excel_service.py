@@ -41,7 +41,10 @@ class ExcelService:
         wb.save(output)
         output.seek(0)
         
-        filename = f"Должники_{template.short_name}.xlsx".replace(" ", "_")
+        import re
+        safe_name = re.sub(r'[^\w\s-]', '', template.short_name).strip().replace(" ", "_")
+        if len(safe_name) > 50: safe_name = safe_name[:50] + "..."
+        filename = f"Должники_{safe_name}.xlsx"
         return output, filename
 
     @staticmethod
@@ -244,7 +247,8 @@ class ExcelService:
         wb.save(output)
         output.seek(0)
 
-        safe_name = short_name.replace(" ", "_").replace("/", "-")
+        safe_name = re.sub(r'[^\w\s-]', '', short_name).strip().replace(" ", "_")
+        if len(safe_name) > 50: safe_name = safe_name[:50] + "..."
         filename = f"Статистика_{safe_name}.xlsx"
         return output, filename
 
@@ -501,7 +505,9 @@ class ExcelService:
                 cell.border = thin_border
                 cell.alignment = align_left if col_idx == 1 else align_center
 
-        filename = f"Свод_{template.short_name}.xlsx".replace(" ", "_")
+        safe_name = re.sub(r'[^\w\s-]', '', template.short_name).strip().replace(" ", "_")
+        if len(safe_name) > 50: safe_name = safe_name[:50] + "..."
+        filename = f"Свод_{safe_name}.xlsx"
         
         output = BytesIO()
         wb.save(output)

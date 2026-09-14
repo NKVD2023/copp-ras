@@ -5,14 +5,17 @@
 <!-- Скрываем нижнюю навигацию при заполнении отчета -->
 {% endblock %}
 
-{% block content %}
 {% set visible_schema = [] %}
-{% for sheet in visible_schema %}
-  {% set tg = sheet.get('target_groups', []) %}
-  {% if not tg or current_user.group in tg %}
+{% for sheet in schema %}
+  {% set t_groups = sheet.get('target_groups', []) %}
+  {% set old_group = sheet.get('target_group') %}
+  {% set all_t_groups = t_groups + ([old_group] if old_group and old_group not in t_groups else []) %}
+  {% if not all_t_groups or current_user.group in all_t_groups or current_user.role in ['admin', 'manager'] %}
     {% set _ = visible_schema.append(sheet) %}
   {% endif %}
 {% endfor %}
+
+{% block content %}
 <div class="d-flex align-items-start mb-4">
     <a href="{{ url_for('reports.dashboard') }}" class="btn btn-light rounded-circle me-3 mt-1 flex-shrink-0">
         <i class="bi bi-arrow-left"></i>
