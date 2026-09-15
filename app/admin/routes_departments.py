@@ -59,6 +59,21 @@ def create_department():
         if t:
             dept.templates.append(t)
 
+    # Назначаем файлы
+    from app.models import UploadedFile, Dictionary
+    file_ids = request.form.getlist('file_ids')
+    for fid in file_ids:
+        f = UploadedFile.query.get(int(fid))
+        if f:
+            f.department_id = dept.id
+            
+    # Назначаем справочники
+    dict_ids = request.form.getlist('dictionary_ids')
+    for did in dict_ids:
+        d = Dictionary.query.get(int(did))
+        if d:
+            d.department_id = dept.id
+
     db.session.commit()
     log_action('Создание отдела', f'Создан отдел: {name}')
     return redirect(url_for('admin.dashboard') + '#departmentsTab')
@@ -111,6 +126,25 @@ def edit_department(dept_id):
         if t and t not in dept.templates:
             dept.templates.append(t)
 
+    from app.models import UploadedFile, Dictionary
+    # Пересобираем файлы
+    for f in UploadedFile.query.filter_by(department_id=dept.id).all():
+        f.department_id = None
+    file_ids = request.form.getlist('file_ids')
+    for fid in file_ids:
+        f = UploadedFile.query.get(int(fid))
+        if f:
+            f.department_id = dept.id
+            
+    # Пересобираем справочники
+    for d in Dictionary.query.filter_by(department_id=dept.id).all():
+        d.department_id = None
+    dict_ids = request.form.getlist('dictionary_ids')
+    for did in dict_ids:
+        d = Dictionary.query.get(int(did))
+        if d:
+            d.department_id = dept.id
+
     db.session.commit()
     log_action('Редактирование отдела', f'Обновлён отдел: {dept.name}')
     return redirect(url_for('admin.dashboard') + '#departmentsTab')
@@ -129,6 +163,13 @@ def delete_department(dept_id):
     # Открепляем пользователей (не удаляем их!)
     for u in dept.members.all():
         u.department_id = None
+
+    from app.models import UploadedFile, Dictionary
+    # Открепляем файлы и справочники
+    for f in UploadedFile.query.filter_by(department_id=dept.id).all():
+        f.department_id = None
+    for d in Dictionary.query.filter_by(department_id=dept.id).all():
+        d.department_id = None
 
     dept_name = dept.name
     db.session.delete(dept)
