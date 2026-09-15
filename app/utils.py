@@ -172,3 +172,14 @@ def build_table_headers(fields):
     
     return header_rows, leaf_fields
 
+def get_manager_department(user):
+    """
+    Возвращает отдел менеджера или None.
+    Если пользователь - менеджер, то возвращает отдел, которым он руководит.
+    """
+    if getattr(user, 'role', '') == 'manager':
+        from app.models import Department
+        # user.managed_department это relationship uselist=False
+        return getattr(user, 'managed_department', None)
+    return None
+

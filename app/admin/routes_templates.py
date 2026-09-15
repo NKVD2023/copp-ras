@@ -48,7 +48,7 @@ def assign_template_users(template_id):
 
 @admin_bp.route('/reset_to_pure/<int:template_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@roles_required('admin', 'manager')
 def reset_to_pure(template_id):
     """
     Сброс черновика в "Чистый шаблон": очистка периода, дедлайна и исполнителей.
@@ -134,7 +134,7 @@ def toggle_archive(template_id):
 
 @admin_bp.route('/archive_submission/<int:submission_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@roles_required('admin', 'manager')
 def archive_submission(submission_id):
     """
     Архивация сданного отчета
@@ -212,7 +212,7 @@ def clone_template(template_id):
 
 @admin_bp.route('/delete_template/<int:template_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@roles_required('admin', 'manager')
 def delete_template(template_id):
     """
     Полное удаление отчета из системы вместе со всеми ответами пользователей.

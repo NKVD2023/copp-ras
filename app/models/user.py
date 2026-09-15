@@ -18,6 +18,7 @@ class User(UserMixin, db.Model):
     description = db.Column(db.String(256))
     role = db.Column(db.String(20), default='user')
     group = db.Column(db.String(50), nullable=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='SET NULL'), nullable=True)
     assigned_templates = db.relationship(
         'ReportTemplate', secondary=user_template_access,
         backref=db.backref('assigned_users', lazy='dynamic')

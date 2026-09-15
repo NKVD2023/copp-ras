@@ -17,7 +17,7 @@ from app.auth.decorators import roles_required
 
 @admin_bp.route('/create_user', methods=['POST'])
 @login_required
-@roles_required('admin')
+@roles_required('admin', 'manager')
 def create_user():
     """
     Создание нового аккаунта. 
@@ -44,6 +44,14 @@ def create_user():
 
     user = User(username=username, role=role, description=description, group=group)
     user.set_password(password)
+    
+    # Если создает менеджер, автоматически привязываем пользователя к его отделу
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            user.department_id = dept.id
+            
     db.session.add(user)
     db.session.commit()
     log_action('Создание пользователя', f'Создан новый пользователь: {username} с ролью {role}')
@@ -51,13 +59,21 @@ def create_user():
 
 @admin_bp.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@roles_required('admin', 'manager')
 def delete_user(user_id):
     """
     Удаление пользователя и каскадное удаление всех его сданных отчетов.
     Вызывается из вкладки "Пользователи".
     """
     user = User.query.get_or_404(user_id)
+    
+    # Защита для менеджера
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept or user.department_id != dept.id:
+            flash('Доступ запрещен')
+            return redirect(url_for('admin.dashboard'))
     # Очищаем связанные данные, чтобы не сломать внешние ключи
     ReportSubmission.query.filter_by(user_id=user.id).delete()
     username = user.username
@@ -68,10 +84,18 @@ def delete_user(user_id):
 
 @admin_bp.route('/edit_user/<int:user_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@roles_required('admin', 'manager')
 def edit_user(user_id):
     """Единый маршрут для редактирования всех данных пользователя (основные данные, пароль, доступы)."""
     user = User.query.get_or_404(user_id)
+    
+    # Защита для менеджера
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept or user.department_id != dept.id:
+            flash('Доступ запрещен')
+            return redirect(url_for('admin.dashboard'))
     
     # 1. Основные данные
     username = request.form.get('username')

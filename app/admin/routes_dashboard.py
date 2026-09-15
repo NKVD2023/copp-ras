@@ -43,11 +43,22 @@ def dashboard():
     
     sort_param = request.args.get('sort')
     
-    # 1. Данные пользователей (исключая текущего)
-    users = User.query.filter(User.id != current_user.id).all()
-    
-    # 2. Список шаблонов (новые сверху)
-    all_templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
+    # === MANAGER ACCESS FILTER ===
+    # Если текущий пользователь manager, он видит только своих юзеров и свои шаблоны
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            users = dept.members.filter(User.id != current_user.id).all()
+            all_templates = dept.templates.order_by(ReportTemplate.id.desc()).all()
+        else:
+            users = []
+            all_templates = []
+    else:
+        # 1. Данные пользователей (исключая текущего) для Admin
+        users = User.query.filter(User.id != current_user.id).all()
+        # 2. Список шаблонов (новые сверху) для Admin
+        all_templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
     
     # 3. Собираем словарь должников и распределяем шаблоны
     debtors_map, pure_templates, published_templates, draft_templates, archived_templates, completed_templates = TemplateService.get_dashboard_stats(all_templates)
@@ -59,8 +70,21 @@ def dashboard():
     completed_templates = TemplateService.sort_templates(completed_templates, sort_param or 'id_desc')
 
     # Данные для вкладки "База Данных" и "Сданные отчёты" (если нужны)
-    all_users = User.query.all()
-    all_submissions = ReportSubmission.query.order_by(ReportSubmission.id.desc()).all()
+    if current_user.role == 'manager':
+        all_users = users
+        if dept:
+            allowed_user_ids = [u.id for u in dept.members.all()]
+            allowed_template_ids = [t.id for t in dept.templates.all()]
+            all_submissions = ReportSubmission.query.filter(
+                ReportSubmission.user_id.in_(allowed_user_ids),
+                ReportSubmission.template_id.in_(allowed_template_ids)
+            ).order_by(ReportSubmission.id.desc()).all()
+        else:
+            all_submissions = []
+    else:
+        all_users = User.query.all()
+        all_submissions = ReportSubmission.query.order_by(ReportSubmission.id.desc()).all()
+        
     active_submissions = [sub for sub in all_submissions if getattr(sub, 'is_archived', False) == False]
 
     # 4. Сканируем папку backups для отображения списка резервных копий
@@ -149,6 +173,12 @@ def dashboard():
                                 except (ValueError, TypeError):
                                     pass
 
+    if current_user.role == 'admin':
+        from app.models import Department
+        all_departments = Department.query.all()
+    else:
+        all_departments = []
+
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
                            users=users, 
@@ -172,7 +202,8 @@ def dashboard():
                            selected_short_name=selected_short_name,
                            stat_schema=stat_schema,
                            current_sort=sort_param,
-                           current_date=datetime.date.today())
+                           current_date=datetime.date.today(),
+                           departments=all_departments)
 
 
 @admin_bp.route('/clear_logs', methods=['POST'])

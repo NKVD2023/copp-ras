@@ -163,6 +163,12 @@ def edit_constructor(template_id):
     """
     template = ReportTemplate.query.get_or_404(template_id)
     
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept or template not in dept.templates:
+            return "Доступ запрещен", 403
+    
     if request.method == 'POST':
         import json
         data = request.form
