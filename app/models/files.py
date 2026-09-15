@@ -17,4 +17,5 @@ class UploadedFile(db.Model):
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     file_size = db.Column(db.Integer)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     uploader = db.relationship('User', backref='uploaded_files')

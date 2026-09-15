@@ -9,3 +9,4 @@ class Dictionary(db.Model):
     name = db.Column(db.String(128), nullable=False)
     items = db.Column(JSON, nullable=False, default=list)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
