@@ -130,13 +130,22 @@
                                 </div>
 
                                 <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-templates-create" style="height: 400px;">
-                                    {% for t in pure_templates %}
+                                    {% for t in templates %}
                                         <div class="js-template-item mb-1 rounded js-hover-bg p-2 px-3">
                                             <div class="form-check m-0">
                                                 <input class="form-check-input mt-1 template-checkbox-create" type="checkbox" name="template_ids" value="{{ t.id }}" id="create_template{{ t.id }}" onchange="updateTemplateCount('create')">
                                                 <label class="form-check-label w-100" style="cursor:pointer;" for="create_template{{ t.id }}">
                                                     <span class="d-block fw-bold text-dark js-search-text" style="font-size: 0.95rem;">{{ t.short_name }}</span>
-                                                    <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">{{ t.name }}</span>
+                                                    <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">
+                                                        {% if t.is_template %}
+                                                            <span class="badge bg-primary text-white border" style="font-size: 0.65rem;">Конструктор</span>
+                                                        {% elif t.is_published %}
+                                                            <span class="badge bg-success text-white border" style="font-size: 0.65rem;">Опубликован</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark border" style="font-size: 0.65rem;">Черновик</span>
+                                                        {% endif %}
+                                                        {{ t.name }}
+                                                    </span>
                                                 </label>
                                             </div>
                                         </div>
@@ -278,14 +287,23 @@
                                 </div>
 
                                 <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-templates-{{ dept.id }}" style="height: 400px;">
-                                    {% for t in pure_templates %}
+                                    {% for t in templates %}
                                         <div class="js-template-item mb-1 rounded js-hover-bg p-2 px-3">
                                             <div class="form-check m-0">
                                                 <input class="form-check-input mt-1 template-checkbox-{{ dept.id }}" type="checkbox" name="template_ids" value="{{ t.id }}" id="edit_{{ dept.id }}_template{{ t.id }}"
                                                     {% if t in dept.templates %}checked{% endif %} onchange="updateTemplateCount('{{ dept.id }}')">
                                                 <label class="form-check-label w-100" style="cursor:pointer;" for="edit_{{ dept.id }}_template{{ t.id }}">
                                                     <span class="d-block fw-bold text-dark js-search-text" style="font-size: 0.95rem;">{{ t.short_name }}</span>
-                                                    <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">{{ t.name }}</span>
+                                                    <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">
+                                                        {% if t.is_template %}
+                                                            <span class="badge bg-primary text-white border" style="font-size: 0.65rem;">Конструктор</span>
+                                                        {% elif t.is_published %}
+                                                            <span class="badge bg-success text-white border" style="font-size: 0.65rem;">Опубликован</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark border" style="font-size: 0.65rem;">Черновик</span>
+                                                        {% endif %}
+                                                        {{ t.name }}
+                                                    </span>
                                                 </label>
                                             </div>
                                         </div>
