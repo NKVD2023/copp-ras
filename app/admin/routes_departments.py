@@ -38,7 +38,14 @@ def create_department():
     db.session.add(dept)
     db.session.flush()  # получаем dept.id до commit
 
-    # Назначаем выбранных пользователей в отдел
+    # Назначаем целыми группами
+    groups = request.form.getlist('groups')
+    if groups:
+        group_users = User.query.filter(User.group.in_(groups)).all()
+        for u in group_users:
+            u.department_id = dept.id
+
+    # Назначаем выбранных индивидуальных пользователей в отдел
     user_ids = request.form.getlist('user_ids')
     for uid in user_ids:
         u = User.query.get(int(uid))
@@ -84,6 +91,12 @@ def edit_department(dept_id):
         u.department_id = None
 
     # 2) Назначаем department_id новым участникам
+    groups = request.form.getlist('groups')
+    if groups:
+        group_users = User.query.filter(User.group.in_(groups)).all()
+        for u in group_users:
+            u.department_id = dept.id
+            
     user_ids = request.form.getlist('user_ids')
     for uid in user_ids:
         u = User.query.get(int(uid))

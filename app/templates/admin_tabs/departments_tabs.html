@@ -1,205 +1,273 @@
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <h3 class="mb-0 text-dark"><i class="bi bi-diagram-3 me-2 text-primary"></i> Управление отделами</h3>
-        <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#createDepartmentModal">
-            <i class="bi bi-plus-circle me-1"></i> Создать отдел
-        </button>
-    </div>
-
-    <!-- Список отделов -->
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+<div class="departments-module">
+    <!-- Капсульная навигация -->
+    <ul class="nav nav-pills gap-2 mb-4" id="departments-pills-tab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4 fw-medium shadow-sm d-flex align-items-center gap-2" 
+                    id="pills-create-dept-tab" data-bs-toggle="pill" data-bs-target="#pills-create-dept" 
+                    type="button" role="tab" style="background-color: var(--bs-nav-pills-link-active-bg, #003366);">
+                <i class="bi bi-plus-circle"></i> Создание отдела
+            </button>
+        </li>
         {% for dept in departments %}
-        <div class="col">
-            <div class="card h-100 shadow-sm border-0 rounded-4 admin-card-hover">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="card-title fw-bold text-dark mb-0">{{ dept.name }}</h5>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-light rounded-circle" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                <li>
-                                    <a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#editDepartmentModal{{ dept.id }}">
-                                        <i class="bi bi-pencil me-2 text-primary"></i> Редактировать
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form action="{{ url_for('admin.delete_department', dept_id=dept.id) }}" method="POST" onsubmit="return confirm('Удалить отдел? Пользователи и шаблоны останутся, но будут отвязаны от этого отдела.')">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="dropdown-item py-2 text-danger">
-                                            <i class="bi bi-trash me-2"></i> Удалить
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 fw-medium shadow-sm bg-white text-dark border" 
+                    id="pills-dept-{{ dept.id }}-tab" data-bs-toggle="pill" data-bs-target="#pills-dept-{{ dept.id }}" 
+                    type="button" role="tab" 
+                    onclick="this.style.backgroundColor='#003366'; this.style.color='white'; this.classList.remove('bg-white', 'text-dark'); resetOtherPills(this);">
+                {{ dept.name }}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Контент вкладок -->
+    <div class="tab-content" id="departments-pills-tabContent">
+        
+        <!-- Вкладка: СОЗДАТЬ ОТДЕЛ -->
+        <div class="tab-pane fade show active" id="pills-create-dept" role="tabpanel">
+            <div class="card border-0 shadow-sm mx-auto" style="max-width: 800px; border-radius: 16px;">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-light text-primary rounded-circle mb-3" style="width: 60px; height: 60px;">
+                            <i class="bi bi-diagram-3 fs-3" style="color: #003366;"></i>
                         </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-1">Руководитель:</small>
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-person-badge fs-5 text-secondary"></i>
-                            <span class="fw-medium text-dark">
-                                {% if dept.manager %}
-                                    {{ dept.manager.username }}
-                                {% else %}
-                                    <span class="text-danger">Не назначен</span>
-                                {% endif %}
-                            </span>
-                        </div>
+                        <h4 class="fw-bold mb-1">Создать новый отдел</h4>
+                        <p class="text-muted small">Укажите название, выберите руководителя и добавьте учреждения</p>
                     </div>
 
-                    <div class="d-flex gap-3 text-muted small">
-                        <div title="Пользователи в отделе">
-                            <i class="bi bi-people me-1"></i> {{ dept.members.count() }}
-                        </div>
-                        <div title="Назначенные шаблоны">
-                            <i class="bi bi-file-earmark-text me-1"></i> {{ dept.templates.count() }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Модалка редактирования отдела -->
-        <div class="modal fade" id="editDepartmentModal{{ dept.id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content rounded-4 border-0 shadow-lg">
-                    <form action="{{ url_for('admin.edit_department', dept_id=dept.id) }}" method="POST">
+                    <form action="{{ url_for('admin.create_department') }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <div class="modal-header border-bottom-0 pb-0">
-                            <h5 class="modal-title fw-bold">Редактировать отдел</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small text-uppercase">Название отдела</label>
+                            <input type="text" name="name" class="form-control form-control-lg border-light-subtle bg-light" placeholder="Например: Муниципальные администраторы" required>
                         </div>
-                        <div class="modal-body py-4">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Название отдела</label>
-                                <input type="text" name="name" class="form-control" value="{{ dept.name }}" required>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small text-uppercase">Руководитель отдела (manager)</label>
+                            <select name="manager_id" class="form-select form-select-lg border-light-subtle bg-light">
+                                <option value="">-- Без руководителя --</option>
+                                {% for u in all_users if u.role == 'manager' %}
+                                    <option value="{{ u.id }}">{{ u.username }} ({{ u.description or 'без описания' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        {% if all_groups %}
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small text-uppercase">Добавить целые группы</label>
+                            <div class="d-flex flex-wrap gap-2 p-3 bg-light rounded-3 border border-light-subtle">
+                                {% for g in all_groups %}
+                                    <div class="form-check form-check-inline m-0">
+                                        <input class="form-check-input" type="checkbox" name="groups" value="{{ g }}" id="create_group_{{ loop.index }}" onchange="toggleGroupUsers('create', '{{ g }}', this.checked)">
+                                        <label class="form-check-label" for="create_group_{{ loop.index }}">{{ g }}</label>
+                                    </div>
+                                {% endfor %}
                             </div>
-                            
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold">Руководитель отдела (manager)</label>
-                                <select name="manager_id" class="form-select">
-                                    <option value="">-- Без руководителя --</option>
-                                    {% for u in all_users if u.role == 'manager' %}
-                                        <option value="{{ u.id }}" {% if dept.manager_id == u.id %}selected{% endif %}>
-                                            {{ u.username }} ({{ u.description or 'без описания' }})
-                                        </option>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small text-uppercase">Участники (учреждения)</label>
+                                <div class="border border-light-subtle rounded-3 p-3 bg-light overflow-auto custom-scrollbar" style="height: 250px;">
+                                    {% for u in all_users if u.role == 'user' %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input user-checkbox-create" data-group="{{ u.group or '' }}" type="checkbox" name="user_ids" value="{{ u.id }}" id="create_user{{ u.id }}">
+                                            <label class="form-check-label" for="create_user{{ u.id }}">
+                                                <span class="d-block">{{ u.username }}</span>
+                                                <small class="text-muted" style="font-size: 0.75rem;">{{ u.description }}</small>
+                                            </label>
+                                        </div>
                                     {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Участники (учреждения)</label>
-                                    <div class="border rounded p-2 overflow-auto" style="max-height: 200px;">
-                                        {% for u in all_users if u.role == 'user' %}
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="user_ids" value="{{ u.id }}" id="dept{{ dept.id }}_user{{ u.id }}"
-                                                    {% if u.department_id == dept.id %}checked{% endif %}>
-                                                <label class="form-check-label" for="dept{{ dept.id }}_user{{ u.id }}">
-                                                    {{ u.username }} <small class="text-muted">({{ u.description }})</small>
-                                                </label>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Назначенные шаблоны</label>
-                                    <div class="border rounded p-2 overflow-auto" style="max-height: 200px;">
-                                        {% set dept_template_ids = dept.templates.all() | map(attribute='id') | list %}
-                                        {% for t in pure_templates %}
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="template_ids" value="{{ t.id }}" id="dept{{ dept.id }}_template{{ t.id }}"
-                                                    {% if t.id in dept_template_ids %}checked{% endif %}>
-                                                <label class="form-check-label" for="dept{{ dept.id }}_template{{ t.id }}">
-                                                    {{ t.short_name or t.name }}
-                                                </label>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small text-uppercase">Назначенные шаблоны</label>
+                                <div class="border border-light-subtle rounded-3 p-3 bg-light overflow-auto custom-scrollbar" style="height: 250px;">
+                                    {% for t in pure_templates %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="template_ids" value="{{ t.id }}" id="create_template{{ t.id }}">
+                                            <label class="form-check-label" for="create_template{{ t.id }}">
+                                                {{ t.short_name or t.name }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer border-top-0 pt-0">
-                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Отмена</button>
-                            <button type="submit" class="btn btn-primary rounded-pill px-4">Сохранить</button>
+                        
+                        <div class="text-center mt-5">
+                            <button type="submit" class="btn btn-lg rounded-pill px-5 text-white shadow-sm" style="background-color: #003366;">
+                                <i class="bi bi-check2 me-2"></i> Создать отдел
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-        {% else %}
-        <div class="col-12 text-center py-5">
-            <div class="text-muted">
-                <i class="bi bi-diagram-3 icon-lg mb-3 d-block text-secondary opacity-50"></i>
-                <p>Нет созданных отделов.</p>
+
+        <!-- Вкладки: РЕДАКТИРОВАНИЕ ОТДЕЛОВ -->
+        {% for dept in departments %}
+        <div class="tab-pane fade" id="pills-dept-{{ dept.id }}" role="tabpanel">
+            <div class="card border-0 shadow-sm mx-auto" style="max-width: 800px; border-radius: 16px;">
+                <div class="card-body p-5">
+                    
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h4 class="fw-bold mb-1">Редактировать отдел</h4>
+                            <p class="text-muted small">Внесение изменений в отдел «{{ dept.name }}»</p>
+                        </div>
+                        <form action="{{ url_for('admin.delete_department', dept_id=dept.id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот отдел? Пользователи не будут удалены, но потеряют привязку.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                <i class="bi bi-trash"></i> Удалить
+                            </button>
+                        </form>
+                    </div>
+
+                    <form action="{{ url_for('admin.edit_department', dept_id=dept.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small text-uppercase">Название отдела</label>
+                            <input type="text" name="name" class="form-control form-control-lg border-light-subtle bg-light" value="{{ dept.name }}" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small text-uppercase">Руководитель отдела (manager)</label>
+                            <select name="manager_id" class="form-select form-select-lg border-light-subtle bg-light">
+                                <option value="">-- Без руководителя --</option>
+                                {% for u in all_users if u.role == 'manager' %}
+                                    <option value="{{ u.id }}" {% if dept.manager_id == u.id %}selected{% endif %}>
+                                        {{ u.username }} ({{ u.description or 'без описания' }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        {% if all_groups %}
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small text-uppercase">Массовое добавление группы</label>
+                            <div class="d-flex flex-wrap gap-2 p-3 bg-light rounded-3 border border-light-subtle">
+                                {% for g in all_groups %}
+                                    <div class="form-check form-check-inline m-0">
+                                        <input class="form-check-input" type="checkbox" name="groups" value="{{ g }}" id="edit_{{ dept.id }}_group_{{ loop.index }}" onchange="toggleGroupUsers('{{ dept.id }}', '{{ g }}', this.checked)">
+                                        <label class="form-check-label" for="edit_{{ dept.id }}_group_{{ loop.index }}">{{ g }}</label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small text-uppercase">Участники (учреждения)</label>
+                                <div class="border border-light-subtle rounded-3 p-3 bg-light overflow-auto custom-scrollbar" style="height: 250px;">
+                                    {% for u in all_users if u.role == 'user' %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input user-checkbox-{{ dept.id }}" data-group="{{ u.group or '' }}" type="checkbox" name="user_ids" value="{{ u.id }}" id="edit_{{ dept.id }}_user{{ u.id }}"
+                                                {% if u.department_id == dept.id %}checked{% endif %}>
+                                            <label class="form-check-label" for="edit_{{ dept.id }}_user{{ u.id }}">
+                                                <span class="d-block">{{ u.username }}</span>
+                                                <small class="text-muted" style="font-size: 0.75rem;">{{ u.description }}</small>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small text-uppercase">Назначенные шаблоны</label>
+                                <div class="border border-light-subtle rounded-3 p-3 bg-light overflow-auto custom-scrollbar" style="height: 250px;">
+                                    {% set dept_template_ids = dept.templates.all() | map(attribute='id') | list %}
+                                    {% for t in pure_templates %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="template_ids" value="{{ t.id }}" id="edit_{{ dept.id }}_template{{ t.id }}"
+                                                {% if t.id in dept_template_ids %}checked{% endif %}>
+                                            <label class="form-check-label" for="edit_{{ dept.id }}_template{{ t.id }}">
+                                                {{ t.short_name or t.name }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-5">
+                            <button type="button" class="btn btn-light rounded-pill px-4 me-2" onclick="document.getElementById('pills-create-dept-tab').click();">Отмена</button>
+                            <button type="submit" class="btn btn-lg rounded-pill px-5 text-white shadow-sm" style="background-color: #003366;">
+                                Сохранить
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
         {% endfor %}
-    </div>
-
-<!-- Модалка создания отдела -->
-<div class="modal fade" id="createDepartmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <form action="{{ url_for('admin.create_department') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="modal-header border-bottom-0 pb-0">
-                    <h5 class="modal-title fw-bold">Новый отдел</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body py-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Название отдела <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" placeholder="Например: Муниципальные администраторы" required>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Руководитель отдела (manager)</label>
-                        <select name="manager_id" class="form-select">
-                            <option value="">-- Выберите руководителя --</option>
-                            {% for u in all_users if u.role == 'manager' %}
-                                <option value="{{ u.id }}">{{ u.username }} ({{ u.description or 'без описания' }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Участники (учреждения)</label>
-                            <div class="border rounded p-2 overflow-auto" style="max-height: 200px;">
-                                {% for u in all_users if u.role == 'user' %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="user_ids" value="{{ u.id }}" id="new_dept_user{{ u.id }}">
-                                        <label class="form-check-label" for="new_dept_user{{ u.id }}">
-                                            {{ u.username }} <small class="text-muted">({{ u.description }})</small>
-                                        </label>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Назначенные шаблоны</label>
-                            <div class="border rounded p-2 overflow-auto" style="max-height: 200px;">
-                                {% for t in pure_templates %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="template_ids" value="{{ t.id }}" id="new_dept_template{{ t.id }}">
-                                        <label class="form-check-label" for="new_dept_template{{ t.id }}">
-                                            {{ t.short_name or t.name }}
-                                        </label>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-top-0 pt-0">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4">Создать</button>
-                </div>
-            </form>
-        </div>
+        
     </div>
 </div>
+
+<style>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1; 
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8; 
+}
+</style>
+
+<script>
+function toggleGroupUsers(deptPrefix, groupName, isChecked) {
+    const checkboxes = document.querySelectorAll('.user-checkbox-' + deptPrefix);
+    checkboxes.forEach(cb => {
+        if (cb.getAttribute('data-group') === groupName) {
+            cb.checked = isChecked;
+        }
+    });
+}
+
+function resetOtherPills(activeBtn) {
+    // Вспомогательная функция для сброса стилей неактивных вкладок
+    const allPills = document.querySelectorAll('#departments-pills-tab .nav-link');
+    allPills.forEach(pill => {
+        if (pill !== activeBtn) {
+            pill.style.backgroundColor = '';
+            pill.style.color = '';
+            pill.classList.add('bg-white', 'text-dark');
+        }
+    });
+    // Сброс первой вкладки, так как у нее нет bg-white по умолчанию
+    const createPill = document.getElementById('pills-create-dept-tab');
+    if (activeBtn !== createPill) {
+        createPill.style.backgroundColor = '';
+        createPill.style.color = '';
+        createPill.classList.add('bg-white', 'text-dark');
+    } else {
+        createPill.style.backgroundColor = '#003366';
+        createPill.style.color = 'white';
+        createPill.classList.remove('bg-white', 'text-dark');
+    }
+}
+
+// Привяжем обработчик к первой вкладке
+document.addEventListener("DOMContentLoaded", function() {
+    const createPill = document.getElementById('pills-create-dept-tab');
+    if(createPill) {
+        createPill.addEventListener('click', function() {
+            this.style.backgroundColor = '#003366';
+            this.style.color = 'white';
+            this.classList.remove('bg-white', 'text-dark');
+            resetOtherPills(this);
+        });
+    }
+});
+</script>
