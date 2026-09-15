@@ -87,9 +87,13 @@
                                     </span>
                                 </div>
                                 
-                                <div class="input-group mb-4 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
+                                <div class="input-group mb-2 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
                                     <span class="input-group-text bg-white border-0 pe-2"><i class="bi bi-search text-muted"></i></span>
                                     <input type="text" class="form-control border-0 ps-1 js-search-users search-input" data-target="list-create" placeholder="Поиск учреждения по логину или названию...">
+                                </div>
+                                <div class="form-check form-switch mb-3 ms-1">
+                                    <input class="form-check-input js-filter-selected" type="checkbox" id="showOnlySelected-create" data-target="list-create">
+                                    <label class="form-check-label text-muted small" for="showOnlySelected-create">Показывать только выбранные</label>
                                 </div>
 
                                 <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-create" style="height: 400px;">
@@ -197,9 +201,13 @@
                                     </span>
                                 </div>
                                 
-                                <div class="input-group mb-4 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
+                                <div class="input-group mb-2 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
                                     <span class="input-group-text bg-white border-0 pe-2"><i class="bi bi-search text-muted"></i></span>
                                     <input type="text" class="form-control border-0 ps-1 js-search-users search-input" data-target="list-{{ dept.id }}" placeholder="Поиск учреждения по логину или названию...">
+                                </div>
+                                <div class="form-check form-switch mb-3 ms-1">
+                                    <input class="form-check-input js-filter-selected" type="checkbox" id="showOnlySelected-{{ dept.id }}" data-target="list-{{ dept.id }}" checked>
+                                    <label class="form-check-label text-muted small" for="showOnlySelected-{{ dept.id }}">Показывать только участников отдела</label>
                                 </div>
 
                                 <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-{{ dept.id }}" style="height: 400px;">
@@ -282,28 +290,79 @@ document.addEventListener("DOMContentLoaded", function() {
     updateCount('{{ dept.id }}');
     {% endfor %}
 
+    // Функция применения фильтров
+    function applyListFilters(targetId) {
+        const listContainer = document.getElementById(targetId);
+        if (!listContainer) return;
+
+        const searchInput = document.querySelector(`input[data-target="${targetId}"]`);
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const toggleId = targetId.replace('list-', 'showOnlySelected-');
+        const toggle = document.getElementById(toggleId);
+        const showOnlySelected = toggle ? toggle.checked : false;
+
+        const userItems = listContainer.querySelectorAll('.js-user-item');
+        userItems.forEach(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            const isChecked = checkbox && checkbox.checked;
+            const title = item.querySelector('.js-search-text').textContent.toLowerCase();
+            const desc = item.querySelector('.js-search-desc').textContent.toLowerCase();
+
+            let visible = true;
+
+            // Скрываем, если включен фильтр "только участники", но чекбокс не выбран
+            if (showOnlySelected && !isChecked) {
+                visible = false;
+            }
+
+            // Скрываем, если не совпадает с поиском
+            if (searchTerm && !(title.includes(searchTerm) || desc.includes(searchTerm))) {
+                visible = false;
+            }
+
+            item.style.display = visible ? '' : 'none';
+        });
+    }
+
+    // Обработчик изменения тумблера "Показывать только участников"
+    const toggles = document.querySelectorAll('.js-filter-selected');
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', function(e) {
+            const targetId = e.target.getAttribute('data-target');
+            applyListFilters(targetId);
+        });
+    });
+
+    // Обработчик изменения чекбоксов внутри списка
+    // Чтобы если юзер снял галочку, а тумблер включен, элемент не исчезал мгновенно,
+    // мы можем применять фильтр или просто обновлять счетчик.
+    // Но для счетчика мы уже вызываем updateCount().
+
     // Живой поиск
     const searchInputs = document.querySelectorAll('.js-search-users');
     searchInputs.forEach(input => {
         input.addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase().trim();
             const targetId = e.target.getAttribute('data-target');
-            const listContainer = document.getElementById(targetId);
+            const toggleId = targetId.replace('list-', 'showOnlySelected-');
+            const toggle = document.getElementById(toggleId);
             
-            if (!listContainer) return;
+            // Если начали вводить текст, автоматически отключаем "Показывать только участников", 
+            // чтобы искать по всей базе (удобный UX)
+            if (e.target.value.trim() !== '' && toggle && toggle.checked) {
+                toggle.checked = false;
+            }
             
-            const userItems = listContainer.querySelectorAll('.js-user-item');
-            userItems.forEach(item => {
-                const title = item.querySelector('.js-search-text').textContent.toLowerCase();
-                const desc = item.querySelector('.js-search-desc').textContent.toLowerCase();
-                
-                if (title.includes(searchTerm) || desc.includes(searchTerm)) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
+            applyListFilters(targetId);
         });
     });
+
+    // Первичное применение фильтров при загрузке (чтобы скрыть лишних в редактировании)
+    setTimeout(() => {
+        const uniqueTargets = new Set();
+        document.querySelectorAll('.js-search-users').forEach(input => {
+            uniqueTargets.add(input.getAttribute('data-target'));
+        });
+        uniqueTargets.forEach(targetId => applyListFilters(targetId));
+    }, 100);
 });
 </script>
