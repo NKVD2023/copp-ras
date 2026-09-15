@@ -131,6 +131,17 @@
                         {% else %}
                         <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 badge-status">Черновик</span>
                         {% endif %}
+                        
+                        {% if current_user.role == 'admin' %}
+                            {% set t_depts = t.departments.all() %}
+                            {% if t_depts %}
+                                {% for d in t_depts %}
+                                    <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1" title="Отчет принадлежит отделу: {{ d.name }}"><i class="bi bi-diagram-3 me-1 text-muted"></i>{{ d.name }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge bg-light text-muted border border-secondary-subtle px-2 py-1" title="Отчет не привязан ни к одному отделу"><i class="bi bi-diagram-3 me-1"></i>Без отдела</span>
+                            {% endif %}
+                        {% endif %}
                     </div>
 
                     <h5 class="card-title fw-bold text-dark mb-1 lh-sm">{{ t.short_name or t.name }}</h5>
