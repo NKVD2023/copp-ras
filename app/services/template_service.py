@@ -14,14 +14,16 @@ class TemplateService:
         if not template_ids:
             return {}, [], [], [], [], []
 
-        # 1. Загружаем сразу всех назначенных пользователей для всех шаблонов
+        # 1. Загружаем сразу всех назначенных пользователей для нужных шаблонов
         assigned_users_raw = db.session.query(
             user_template_access.c.template_id, User
-        ).join(User, user_template_access.c.user_id == User.id).all()
+        ).join(User, user_template_access.c.user_id == User.id)\
+         .filter(user_template_access.c.template_id.in_(template_ids)).all()
         
         assigned_users_map = {t_id: [] for t_id in template_ids}
         for t_id, user in assigned_users_raw:
-            assigned_users_map[t_id].append(user)
+            if t_id in assigned_users_map:
+                assigned_users_map[t_id].append(user)
 
         # 2. Загружаем все сданные отчеты для этих шаблонов
         submissions_raw = db.session.query(
