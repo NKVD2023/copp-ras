@@ -154,11 +154,72 @@
     }
 
     function toggleSelectAll(masterCheckbox, templateId) {
-        const checkboxes = document.querySelectorAll(`.user-checkbox-${templateId}`);
+        const checkboxes = document.querySelectorAll(`.user-item-${templateId} .user-checkbox-${templateId}`);
         checkboxes.forEach(cb => {
-            cb.checked = masterCheckbox.checked;
+            // Check only visible ones if filtering is active, or all? Let's check all visible
+            const item = cb.closest(`.user-item-${templateId}`);
+            if (item.style.display !== 'none') {
+                cb.checked = masterCheckbox.checked;
+            }
+        });
+        updateCounter(templateId);
+    }
+
+    function toggleGroup(templateId, groupName, isChecked) {
+        const items = document.querySelectorAll(`.user-item-${templateId}`);
+        items.forEach(item => {
+            if (item.getAttribute('data-group') === groupName) {
+                const cb = item.querySelector('input[type="checkbox"]');
+                if (cb) cb.checked = isChecked;
+            }
+        });
+        updateCounter(templateId);
+    }
+
+    function filterAssignUsers(templateId, searchTerm) {
+        searchTerm = searchTerm.toLowerCase().trim();
+        const items = document.querySelectorAll(`.user-item-${templateId}`);
+        const showAssignedOnly = document.getElementById(`showAssignedOnly-${templateId}`)?.checked;
+        
+        items.forEach(item => {
+            const matchesSearch = item.getAttribute('data-search').includes(searchTerm);
+            const isAssigned = item.querySelector('input[type="checkbox"]').checked;
+            
+            let visible = matchesSearch;
+            if (showAssignedOnly && !isAssigned) visible = false;
+            
+            item.style.display = visible ? '' : 'none';
         });
     }
+    
+    function filterAssignedOnly(templateId, isChecked) {
+        const searchInput = document.querySelector(`#access-template-${templateId} input[type="text"]`);
+        const searchTerm = searchInput ? searchInput.value : '';
+        filterAssignUsers(templateId, searchTerm);
+    }
+
+    function updateCounter(templateId) {
+        const checkboxes = document.querySelectorAll(`.user-checkbox-${templateId}`);
+        const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const badge = document.getElementById(`counter-${templateId}`);
+        if (badge) {
+            badge.textContent = `${checkedCount} выбрано`;
+            badge.className = checkedCount > 0 ? 'badge bg-success rounded-pill' : 'badge bg-secondary rounded-pill';
+        }
+    }
+    
+    // Initialize counters on modal open
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('show.bs.modal', function() {
+                const modalId = this.id;
+                if (modalId.startsWith('access-template-')) {
+                    const tId = modalId.replace('access-template-', '');
+                    updateCounter(tId);
+                }
+            });
+        });
+    });
 
     function copyDebtorsList(templateId) {
         const listContainer = document.getElementById('debtorsList-' + templateId);

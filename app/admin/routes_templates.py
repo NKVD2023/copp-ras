@@ -36,8 +36,19 @@ def assign_template_users(template_id):
         if user and user not in template.assigned_users:
             template.assigned_users.append(user)
 
+    from flask_login import current_user
     for group_name in request.form.getlist('group_names'):
-        users_in_group = User.query.filter_by(group=group_name).all()
+        query = User.query.filter_by(group=group_name)
+        
+        if current_user.role == 'manager':
+            from app.utils import get_manager_department
+            dept = get_manager_department(current_user)
+            if dept:
+                query = query.filter_by(department_id=dept.id)
+            else:
+                continue
+                
+        users_in_group = query.all()
         for user in users_in_group:
             if user not in template.assigned_users:
                 template.assigned_users.append(user)

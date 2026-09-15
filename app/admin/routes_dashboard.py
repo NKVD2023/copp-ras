@@ -106,11 +106,17 @@ def dashboard():
     # 5. Загружаем последние 500 записей журнала действий
     logs_list = ActionLog.query.order_by(ActionLog.timestamp.desc()).limit(500).all()
 
-    # 6. Получение всех уникальных существующих групп
-    groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
-    all_groups = sorted([g[0] for g in groups_query if g[0]])
-    if not all_groups:
-        all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+    # 6. Получение уникальных групп (с учетом изоляции руководителя)
+    if current_user.role == 'manager' and dept:
+        dept_users = dept.members.all()
+        all_groups = sorted(list(set([u.group for u in dept_users if u.group])))
+    elif current_user.role == 'manager' and not dept:
+        all_groups = []
+    else:
+        groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
+        all_groups = sorted([g[0] for g in groups_query if g[0]])
+        if not all_groups:
+            all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
 
     # 6. Файлы
     if current_user.role == 'manager' and dept:
