@@ -79,7 +79,7 @@
                             </div>
 
                             <!-- Правая колонка: Участники -->
-                            <div class="col-lg-8 border-start border-light-subtle">
+                            <div class="col-lg-4 border-start border-light-subtle">
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-people me-2 text-muted"></i>2. Состав отдела</h6>
                                     <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm" style="font-weight: 500;">
@@ -107,6 +107,39 @@
                                             </label>
                                         </div>
                                     </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Третья колонка: Шаблоны отчетов (только pure templates) -->
+                            <div class="col-lg-4 border-start border-light-subtle">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-file-earmark-bar-graph me-2 text-muted"></i>3. Отчеты отдела</h6>
+                                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm" style="font-weight: 500;">
+                                        Выбрано: <span id="count-templates-create">0</span>
+                                    </span>
+                                </div>
+                                
+                                <div class="input-group mb-2 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
+                                    <span class="input-group-text bg-white border-0 pe-2"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 ps-1 js-search-templates search-input" data-target="list-templates-create" placeholder="Поиск отчета...">
+                                </div>
+                                <div class="form-check form-switch mb-3 ms-1">
+                                    <input class="form-check-input js-filter-selected-templates" type="checkbox" id="showOnlySelected-templates-create" data-target="list-templates-create">
+                                    <label class="form-check-label text-muted small" for="showOnlySelected-templates-create">Только выбранные</label>
+                                </div>
+
+                                <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-templates-create" style="height: 400px;">
+                                    {% for t in pure_templates %}
+                                        <div class="js-template-item mb-1 rounded js-hover-bg p-2 px-3">
+                                            <div class="form-check m-0">
+                                                <input class="form-check-input mt-1 template-checkbox-create" type="checkbox" name="template_ids" value="{{ t.id }}" id="create_template{{ t.id }}" onchange="updateTemplateCount('create')">
+                                                <label class="form-check-label w-100" style="cursor:pointer;" for="create_template{{ t.id }}">
+                                                    <span class="d-block fw-bold text-dark js-search-text" style="font-size: 0.95rem;">{{ t.short_name }}</span>
+                                                    <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">{{ t.name }}</span>
+                                                </label>
+                                            </div>
+                                        </div>
                                     {% endfor %}
                                 </div>
                             </div>
@@ -193,7 +226,7 @@
                             </div>
 
                             <!-- Правая колонка: Участники -->
-                            <div class="col-lg-8 border-start border-light-subtle">
+                            <div class="col-lg-4 border-start border-light-subtle">
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-people me-2 text-muted"></i>2. Состав отдела</h6>
                                     <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm" style="font-weight: 500;">
@@ -222,6 +255,40 @@
                                             </label>
                                         </div>
                                     </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Третья колонка: Шаблоны отчетов (только pure templates) -->
+                            <div class="col-lg-4 border-start border-light-subtle">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-file-earmark-bar-graph me-2 text-muted"></i>3. Отчеты отдела</h6>
+                                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm" style="font-weight: 500;">
+                                        Выбрано: <span id="count-templates-{{ dept.id }}">0</span>
+                                    </span>
+                                </div>
+                                
+                                <div class="input-group mb-2 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
+                                    <span class="input-group-text bg-white border-0 pe-2"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 ps-1 js-search-templates search-input" data-target="list-templates-{{ dept.id }}" placeholder="Поиск отчета...">
+                                </div>
+                                <div class="form-check form-switch mb-3 ms-1">
+                                    <input class="form-check-input js-filter-selected-templates" type="checkbox" id="showOnlySelected-templates-{{ dept.id }}" data-target="list-templates-{{ dept.id }}" checked>
+                                    <label class="form-check-label text-muted small" for="showOnlySelected-templates-{{ dept.id }}">Только выбранные</label>
+                                </div>
+
+                                <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-templates-{{ dept.id }}" style="height: 400px;">
+                                    {% for t in pure_templates %}
+                                        <div class="js-template-item mb-1 rounded js-hover-bg p-2 px-3">
+                                            <div class="form-check m-0">
+                                                <input class="form-check-input mt-1 template-checkbox-{{ dept.id }}" type="checkbox" name="template_ids" value="{{ t.id }}" id="edit_{{ dept.id }}_template{{ t.id }}"
+                                                    {% if t in dept.templates %}checked{% endif %} onchange="updateTemplateCount('{{ dept.id }}')">
+                                                <label class="form-check-label w-100" style="cursor:pointer;" for="edit_{{ dept.id }}_template{{ t.id }}">
+                                                    <span class="d-block fw-bold text-dark js-search-text" style="font-size: 0.95rem;">{{ t.short_name }}</span>
+                                                    <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">{{ t.name }}</span>
+                                                </label>
+                                            </div>
+                                        </div>
                                     {% endfor %}
                                 </div>
                             </div>
@@ -283,11 +350,21 @@ function updateCount(deptPrefix) {
     }
 }
 
+function updateTemplateCount(deptPrefix) {
+    const checkboxes = document.querySelectorAll('.template-checkbox-' + deptPrefix + ':checked');
+    const countSpan = document.getElementById('count-templates-' + deptPrefix);
+    if (countSpan) {
+        countSpan.textContent = checkboxes.length;
+    }
+}
+
 // Инициализация при загрузке
 document.addEventListener("DOMContentLoaded", function() {
     updateCount('create');
+    updateTemplateCount('create');
     {% for dept in departments %}
     updateCount('{{ dept.id }}');
+    updateTemplateCount('{{ dept.id }}');
     {% endfor %}
 
     // Функция применения фильтров
@@ -301,7 +378,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const toggle = document.getElementById(toggleId);
         const showOnlySelected = toggle ? toggle.checked : false;
 
-        const userItems = listContainer.querySelectorAll('.js-user-item');
+        const userItems = listContainer.querySelectorAll('.js-user-item, .js-template-item');
         userItems.forEach(item => {
             const checkbox = item.querySelector('input[type="checkbox"]');
             const isChecked = checkbox && checkbox.checked;
@@ -325,7 +402,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Обработчик изменения тумблера "Показывать только участников"
-    const toggles = document.querySelectorAll('.js-filter-selected');
+    const toggles = document.querySelectorAll('.js-filter-selected, .js-filter-selected-templates');
     toggles.forEach(toggle => {
         toggle.addEventListener('change', function(e) {
             const targetId = e.target.getAttribute('data-target');
@@ -339,7 +416,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Но для счетчика мы уже вызываем updateCount().
 
     // Живой поиск
-    const searchInputs = document.querySelectorAll('.js-search-users');
+    const searchInputs = document.querySelectorAll('.js-search-users, .js-search-templates');
     searchInputs.forEach(input => {
         input.addEventListener('input', function(e) {
             const targetId = e.target.getAttribute('data-target');
@@ -359,7 +436,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Первичное применение фильтров при загрузке (чтобы скрыть лишних в редактировании)
     setTimeout(() => {
         const uniqueTargets = new Set();
-        document.querySelectorAll('.js-search-users').forEach(input => {
+        document.querySelectorAll('.js-search-users, .js-search-templates').forEach(input => {
             uniqueTargets.add(input.getAttribute('data-target'));
         });
         uniqueTargets.forEach(targetId => applyListFilters(targetId));
