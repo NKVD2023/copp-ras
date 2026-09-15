@@ -1,0 +1,58 @@
+<div class="card bg-white border shadow-sm mx-auto" style="max-width: 1200px; border-radius: 12px;">
+    <div class="card-body p-4 p-lg-5">
+        <div class="d-flex align-items-center mb-5 pb-3 border-bottom border-light">
+            <div class="bg-light text-primary rounded d-flex justify-content-center align-items-center shadow-sm me-3" style="width: 48px; height: 48px; background-color: #f8f9fa;">
+                <i class="bi bi-file-earmark-excel fs-5" style="color: #00334e;"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold mb-1 text-dark">Массовая загрузка пользователей</h5>
+                <p class="text-muted small mb-0">Загрузка списка аккаунтов из Excel файла (.xlsx)</p>
+            </div>
+        </div>
+
+        <div class="row g-5">
+            <div class="col-lg-5">
+                <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-info-circle me-2 text-muted"></i>Инструкция</h6>
+                
+                <div class="alert alert-light border border-light-subtle shadow-sm mb-4" style="border-radius: 8px;">
+                    <p class="small mb-2 text-dark">Для массовой загрузки пользователей скачайте шаблон, заполните его и загрузите в форму.</p>
+                    <ul class="small text-muted mb-0 ps-3">
+                        <li class="mb-1">Столбцы: <strong>Логин</strong>, <strong>Пароль</strong>, <strong>Описание</strong>, <strong>группа</strong>.</li>
+                        <li class="mb-1">Если логин уже существует в базе, система его пропустит (дубликаты не заменят текущие данные).</li>
+                        <li>Логин и Пароль обязательны. Описание и группа — по желанию.</li>
+                    </ul>
+                </div>
+                
+                <a href="{{ url_for('admin.download_template') }}" class="btn btn-outline-secondary py-2 px-4 shadow-sm w-100 mb-2" style="border-radius: 8px;">
+                    <i class="bi bi-download me-2"></i> Скачать шаблон Excel
+                </a>
+            </div>
+
+            <div class="col-lg-7 border-start border-light-subtle">
+                <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-cloud-upload me-2 text-muted"></i>Загрузка данных</h6>
+                
+                <form action="{{ url_for('admin.bulk_upload') }}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Файл со списком (.xlsx) <span class="text-danger">*</span></label>
+                        <input type="file" name="file" class="form-control px-3 py-2 bg-light border-light-subtle" accept=".xlsx" required>
+                    </div>
+                    
+                    <div class="mb-5">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Назначить всем роль <span class="text-danger">*</span></label>
+                        <select name="role" class="form-select px-3 py-2 bg-light border-light-subtle">
+                            <option value="user">Пользователь (Заполнение данных)</option>
+                            <option value="manager">Руководитель отдела (Только просмотр)</option>
+                        </select>
+                        <div class="form-text small mt-2 text-muted"><i class="bi bi-exclamation-triangle me-1"></i>Все загружаемые аккаунты получат выбранную роль.</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-copp py-2 px-4 shadow-sm" style="border-radius: 8px;">
+                        <i class="bi bi-upload me-2"></i> Загрузить и создать аккаунты
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

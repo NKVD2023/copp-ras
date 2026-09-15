@@ -1,39 +1,63 @@
-<div>
-    <h6 class="fw-bold mb-4">Регистрация учетной записи</h6>
-    <div class="row">
-        <div class="col-md-6 col-lg-4">
-            <form action="{{ url_for('admin.create_user') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="mb-3">
-                    <label class="form-label small text-muted">Идентификатор (Логин)</label>
-                    <input type="text" name="username" class="form-control" required autocomplete="off">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small text-muted">Пароль доступа</label>
-                    <input type="text" name="password" class="form-control" required autocomplete="off">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small text-muted">Описание</label>
-                    <input type="text" name="description" class="form-control" autocomplete="off">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small text-muted">Группа</label>
-                    <input type="text" name="group" class="form-control" list="groupsDataListReg" placeholder="Выберите или введите новую">
-                    <datalist id="groupsDataListReg">
-                        {% for g in all_groups %}
-                        <option value="{{ g }}">
-                        {% endfor %}
-                    </datalist>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label small text-muted">Тип пользователя (Роль)</label>
-                    <select name="role" class="form-select">
-                        <option value="user">Пользователь (Заполнение данных)</option>
-                        <option value="manager">Руководитель отдела (Только просмотр)</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-copp w-100">Создать аккаунт</button>
-            </form>
+<div class="card bg-white border shadow-sm mx-auto" style="max-width: 1200px; border-radius: 12px;">
+    <div class="card-body p-4 p-lg-5">
+        <div class="d-flex align-items-center mb-5 pb-3 border-bottom border-light">
+            <div class="bg-light text-primary rounded d-flex justify-content-center align-items-center shadow-sm me-3" style="width: 48px; height: 48px; background-color: #f8f9fa;">
+                <i class="bi bi-person-plus fs-5" style="color: #00334e;"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold mb-1 text-dark">Регистрация учетной записи</h5>
+                <p class="text-muted small mb-0">Создание нового одиночного пользователя или руководителя</p>
+            </div>
         </div>
+
+        <form action="{{ url_for('admin.create_user') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="row g-5">
+                <div class="col-lg-5">
+                    <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-card-text me-2 text-muted"></i>Основные данные</h6>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Идентификатор (Логин) <span class="text-danger">*</span></label>
+                        <input type="text" name="username" class="form-control px-3 py-2 bg-light border-light-subtle" required autocomplete="off">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Пароль доступа <span class="text-danger">*</span></label>
+                        <input type="text" name="password" class="form-control px-3 py-2 bg-light border-light-subtle" required autocomplete="off">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Описание</label>
+                        <input type="text" name="description" class="form-control px-3 py-2 bg-light border-light-subtle" autocomplete="off" placeholder="Название учреждения или ФИО">
+                    </div>
+                </div>
+
+                <div class="col-lg-5 border-start border-light-subtle">
+                    <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-sliders me-2 text-muted"></i>Права и группировка</h6>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Тип пользователя (Роль)</label>
+                        <select name="role" class="form-select px-3 py-2 bg-light border-light-subtle">
+                            <option value="user">Пользователь (Заполнение данных)</option>
+                            <option value="manager">Руководитель отдела (Только просмотр)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Группа</label>
+                        <input type="text" name="group" class="form-control px-3 py-2 bg-light border-light-subtle" list="groupsDataListReg" placeholder="Выберите или введите новую">
+                        <datalist id="groupsDataListReg">
+                            {% for g in all_groups %}
+                            <option value="{{ g }}">
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-copp py-2 px-4 shadow-sm w-100" style="border-radius: 8px;">
+                        Создать аккаунт
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>

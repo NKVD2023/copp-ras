@@ -3,8 +3,10 @@
 Содержит логику создания, удаления пользователей, принудительного сброса паролей
 и массового назначения отчетов конкретному пользователю.
 """
-from flask import request, redirect, url_for, flash
+from flask import request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
+import io
+import openpyxl
 from app.extensions import db, limiter
 from app.admin import admin_bp
 from app.models import User, ReportSubmission, ReportTemplate
@@ -146,3 +148,102 @@ def change_my_password():
         log_action('Смена пароля', f'Пользователь {current_user.username} сменил свой пароль')
     # Защита от Open Redirect: возвращаемся только на внутренний маршрут 
     return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/users/download_template', methods=['GET'])
+@login_required
+@roles_required('admin')
+def download_template():
+    """Генерирует и скачивает шаблон Excel для массовой загрузки."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Пользователи"
+    
+    # Заголовки (точно как на скриншоте)
+    headers = ["Логин", "Пароль", "Описание", "группа"]
+    ws.append(headers)
+    
+    # Стилизация заголовков (полужирный)
+    from openpyxl.styles import Font
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    
+    # Настраиваем ширину колонок для красоты
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 40
+    ws.column_dimensions['D'].width = 20
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="Шаблон_Пользователи.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@admin_bp.route('/users/bulk_upload', methods=['POST'])
+@login_required
+@roles_required('admin')
+def bulk_upload():
+    """Обработка загруженного Excel-файла."""
+    if 'file' not in request.files:
+        flash("Файл не выбран")
+        return redirect(url_for('admin.dashboard') + '#usersTab')
+        
+    file = request.files['file']
+    if file.filename == '':
+        flash("Файл не выбран")
+        return redirect(url_for('admin.dashboard') + '#usersTab')
+        
+    role = request.form.get('role', 'user')
+    if role not in ['user', 'manager']:
+        role = 'user'
+        
+    try:
+        wb = openpyxl.load_workbook(file)
+        ws = wb.active
+        
+        added_count = 0
+        skipped_count = 0
+        
+        # Читаем со второй строки (пропуская заголовки)
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row or not row[0]: # Если строка пустая или нет логина
+                continue
+                
+            username = str(row[0]).strip()
+            password = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ""
+            description = str(row[2]).strip() if len(row) > 2 and row[2] is not None else ""
+            group = str(row[3]).strip() if len(row) > 3 and row[3] is not None else None
+            
+            if group == '':
+                group = None
+                
+            if not username or not password:
+                skipped_count += 1
+                continue
+                
+            # Проверка дубликата
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                skipped_count += 1
+                continue
+                
+            # Создание
+            new_user = User(username=username, role=role, description=description, group=group)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            added_count += 1
+            
+        db.session.commit()
+        log_action('Массовая загрузка', f'Добавлено пользователей: {added_count}, пропущено: {skipped_count}')
+        flash(f"Успешно загружено: {added_count}. Пропущено (уже существуют или ошибка данных): {skipped_count}")
+        
+    except Exception as e:
+        flash(f"Ошибка при обработке файла: {str(e)}")
+        
+    return redirect(url_for('admin.dashboard') + '#usersTab')
