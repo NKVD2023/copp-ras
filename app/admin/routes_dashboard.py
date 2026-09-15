@@ -273,8 +273,19 @@ def export_admin_statistics():
 def repair_db():
     from app.models import ReportTemplate
     from sqlalchemy.orm.attributes import flag_modified
+    from sqlalchemy import text
     import json
     
+    # 1. Починка структуры БД (добавление колонки department_id)
+    try:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL;"))
+        db.session.commit()
+    except Exception as e:
+        # Если колонка уже есть, будет ошибка, это нормально
+        db.session.rollback()
+        pass
+
+    # 2. Починка JSON схемы отчетов
     templates = ReportTemplate.query.all()
     repaired_count = 0
     
