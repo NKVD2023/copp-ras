@@ -72,6 +72,13 @@ def constructor():
         )
         db.session.add(template)
         
+        # Если создает руководитель - прикрепляем шаблон к его отделу
+        if current_user.role == 'manager':
+            from app.utils import get_manager_department
+            dept = get_manager_department(current_user)
+            if dept:
+                dept.templates.append(template)
+        
 
         
         # Назначаем пользователей, выбранных галочками на фронтенде
@@ -139,13 +146,22 @@ def constructor():
         log_action('Создание отчета (Конструктор)', f'Создан новый шаблон отчета: {template.short_name}')
         return jsonify({'status': 'success'})
         
-    # GET запрос - просто отдаем пустую страницу конструктора
-    users = User.query.filter(User.role == 'user').all()
-    
-    groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
-    all_groups = sorted([g[0] for g in groups_query if g[0]])
-    if not all_groups:
-        all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+    # GET запрос - отдаем пустую страницу конструктора
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            users = User.query.filter(User.role == 'user', User.department_id == dept.id).all()
+            all_groups = sorted(list(set([u.group for u in users if u.group])))
+        else:
+            users = []
+            all_groups = []
+    else:
+        users = User.query.filter(User.role == 'user').all()
+        groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
+        all_groups = sorted([g[0] for g in groups_query if g[0]])
+        if not all_groups:
+            all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
         
     from app.models import UploadedFile, Dictionary
     all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
@@ -250,12 +266,21 @@ def edit_constructor(template_id):
         return jsonify({'status': 'success'})
 
     # GET запрос - загружаем форму и передаем в неё старый шаблон
-    users = User.query.filter(User.role == 'user').all()
-    
-    groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
-    all_groups = sorted([g[0] for g in groups_query if g[0]])
-    if not all_groups:
-        all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            users = User.query.filter(User.role == 'user', User.department_id == dept.id).all()
+            all_groups = sorted(list(set([u.group for u in users if u.group])))
+        else:
+            users = []
+            all_groups = []
+    else:
+        users = User.query.filter(User.role == 'user').all()
+        groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
+        all_groups = sorted([g[0] for g in groups_query if g[0]])
+        if not all_groups:
+            all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
         
     from app.models import UploadedFile, Dictionary
     all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
@@ -326,6 +351,14 @@ def import_excel_template():
             schema=schema
         )
         db.session.add(template)
+        
+        from flask_login import current_user
+        if current_user.role == 'manager':
+            from app.utils import get_manager_department
+            dept = get_manager_department(current_user)
+            if dept:
+                dept.templates.append(template)
+                
         db.session.commit()
         
         log_action('Импорт структуры из Excel', f'Загружен шаблон из файла {file.filename}')

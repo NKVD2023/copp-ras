@@ -206,6 +206,9 @@ def clone_template(template_id):
         flag_modified(new_template, 'schema')
             
     db.session.add(new_template)
+    # Копируем связи с отделами
+    for dept in original.departments:
+        new_template.departments.append(dept)
     db.session.commit()
     log_action('Копирование отчета', f'Создана копия отчета {original.short_name} с новым именем {new_template.short_name}')
     return redirect(url_for('admin.dashboard') + '#reportsTab')
