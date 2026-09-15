@@ -52,12 +52,7 @@ def create_department():
         if u:
             u.department_id = dept.id
 
-    # Назначаем выбранные шаблоны
-    template_ids = request.form.getlist('template_ids')
-    for tid in template_ids:
-        t = ReportTemplate.query.get(int(tid))
-        if t:
-            dept.templates.append(t)
+
 
     db.session.commit()
     log_action('Создание отдела', f'Создан отдел: {name}')
@@ -103,13 +98,7 @@ def edit_department(dept_id):
         if u:
             u.department_id = dept.id
 
-    # Пересобираем шаблоны
-    dept.templates = []
-    template_ids = request.form.getlist('template_ids')
-    for tid in template_ids:
-        t = ReportTemplate.query.get(int(tid))
-        if t:
-            dept.templates.append(t)
+
 
     db.session.commit()
     log_action('Редактирование отдела', f'Обновлён отдел: {dept.name}')

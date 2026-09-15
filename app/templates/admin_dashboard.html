@@ -125,9 +125,8 @@
 
     {% if current_user.role == 'admin' %}
     <div class="tab-pane fade" id="departmentsTab" role="tabpanel">
-        <div class="card p-4 bg-white border-0">
-            {% include 'admin_tabs/departments_tabs.html' %}
-        </div>
+        <!-- Убран белый фон карточки -->
+        {% include 'admin_tabs/departments_tabs.html' %}
     </div>
     {% endif %}
 
