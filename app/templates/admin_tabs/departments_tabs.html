@@ -130,7 +130,8 @@
                                 </div>
 
                                 <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-templates-create" style="height: 400px;">
-                                    {% for t in templates %}
+                                    {% set target_templates = pure_templates + published_templates + completed_templates %}
+                                    {% for t in target_templates %}
                                         <div class="js-template-item mb-1 rounded js-hover-bg p-2 px-3">
                                             <div class="form-check m-0">
                                                 <input class="form-check-input mt-1 template-checkbox-create" type="checkbox" name="template_ids" value="{{ t.id }}" id="create_template{{ t.id }}" onchange="updateTemplateCount('create')">
@@ -139,6 +140,8 @@
                                                     <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">
                                                         {% if t.is_template %}
                                                             <span class="badge bg-primary text-white border" style="font-size: 0.65rem;">Конструктор</span>
+                                                        {% elif t.is_completed %}
+                                                            <span class="badge bg-secondary text-white border" style="font-size: 0.65rem;">Завершен</span>
                                                         {% elif t.is_published %}
                                                             <span class="badge bg-success text-white border" style="font-size: 0.65rem;">Опубликован</span>
                                                         {% else %}
@@ -287,7 +290,8 @@
                                 </div>
 
                                 <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-templates-{{ dept.id }}" style="height: 400px;">
-                                    {% for t in templates %}
+                                    {% set target_templates = pure_templates + published_templates + completed_templates %}
+                                    {% for t in target_templates %}
                                         <div class="js-template-item mb-1 rounded js-hover-bg p-2 px-3">
                                             <div class="form-check m-0">
                                                 <input class="form-check-input mt-1 template-checkbox-{{ dept.id }}" type="checkbox" name="template_ids" value="{{ t.id }}" id="edit_{{ dept.id }}_template{{ t.id }}"
@@ -297,6 +301,8 @@
                                                     <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">
                                                         {% if t.is_template %}
                                                             <span class="badge bg-primary text-white border" style="font-size: 0.65rem;">Конструктор</span>
+                                                        {% elif t.is_completed %}
+                                                            <span class="badge bg-secondary text-white border" style="font-size: 0.65rem;">Завершен</span>
                                                         {% elif t.is_published %}
                                                             <span class="badge bg-success text-white border" style="font-size: 0.65rem;">Опубликован</span>
                                                         {% else %}
