@@ -1,110 +1,170 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">Шаблоны выпадающих списков</h4>
-    <button class="btn btn-copp shadow-sm" data-bs-toggle="modal" data-bs-target="#addDictModal">
-        <i class="bi bi-plus-lg me-1"></i>Создать шаблон
-    </button>
-</div>
 
-{% if dictionaries %}
-<div class="row">
-    {% for dict in dictionaries %}
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card shadow-sm h-100 hoverable">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">{{ dict.name }}</h5>
-                <div class="dropdown">
-                    <button class="btn btn-link text-muted p-0 border-0 icon-nav" type="button" data-bs-toggle="dropdown" >
-                        &#8942;
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editDictModal{{ dict.id }}">✎ Редактировать</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form action="{{ url_for('admin.delete_dictionary', dict_id=dict.id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот шаблон?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="dropdown-item text-danger">✖ Удалить</button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small mb-2">Вариантов: {{ dict.items|length }}</p>
-                <div class="bg-light p-2 rounded scrollable-xs">
-                    <ul class="list-unstyled mb-0 small">
-                        {% for item in dict.items[:10] %}
-                        <li>&bull; {{ item }}</li>
-                        {% endfor %}
-                        {% if dict.items|length > 10 %}
-                        <li class="text-muted fst-italic">...и еще {{ dict.items|length - 10 }}</li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </div>
+<style>
+.dict-sidebar {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+}
+.dict-nav-link {
+    color: #495057;
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+.dict-nav-link:hover {
+    background-color: #f8f9fa;
+    color: #003366;
+}
+.dict-nav-link.active {
+    background-color: #e9ecef !important;
+    color: #003366 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.dict-nav-link.create-btn {
+    background-color: #003366;
+    color: white;
+}
+.dict-nav-link.create-btn:hover {
+    background-color: #002244;
+    color: white;
+}
+.dict-nav-link.create-btn.active {
+    background-color: #001a33 !important;
+    color: white !important;
+}
+.list-textarea {
+    font-family: Consolas, Monaco, monospace;
+    line-height: 1.6;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    resize: vertical;
+}
+</style>
+
+<div class="row g-4 dictionaries-master-detail">
+    <!-- Левая панель: Справочники -->
+    <div class="col-md-4 col-lg-3 col-xl-2 border-end pb-4 dict-sidebar custom-scrollbar">
+        <h5 class="fw-bold mb-4 text-dark px-2">Справочники</h5>
+        
+        <div class="nav flex-column nav-pills" id="dictionariesSidebar" role="tablist" aria-orientation="vertical">
+            <button class="nav-link dict-nav-link create-btn active mb-3 shadow-sm d-flex justify-content-between align-items-center" id="dict-create-tab" data-bs-toggle="pill" data-bs-target="#dict-create" type="button" role="tab">
+                <span><i class="bi bi-plus-circle me-2"></i>Новый список</span>
+            </button>
+            
+            <div class="text-muted small fw-bold mb-2 px-2 text-uppercase letter-spacing-1">Существующие</div>
+            {% if dictionaries %}
+                {% for dict in dictionaries %}
+                <button class="nav-link dict-nav-link d-flex justify-content-between align-items-center" id="dict-{{ dict.id }}-tab" data-bs-toggle="pill" data-bs-target="#dict-{{ dict.id }}" type="button" role="tab">
+                    <span class="text-truncate" title="{{ dict.name }}"><i class="bi bi-list-task me-2"></i>{{ dict.name }}</span>
+                    <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">{{ dict.items|length }}</span>
+                </button>
+                {% endfor %}
+            {% else %}
+                <div class="px-2 text-muted small fst-italic">Нет справочников</div>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Модальное окно редактирования шаблона -->
-    <div class="modal fade" id="editDictModal{{ dict.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="{{ url_for('admin.edit_dictionary', dict_id=dict.id) }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <div class="modal-header">
-                        <h5 class="modal-title">Редактирование шаблона списка</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Название шаблона</label>
-                            <input type="text" name="name" class="form-control" value="{{ dict.name }}" required>
+    <!-- Правая панель: Рабочая область -->
+    <div class="col-md-8 col-lg-9 col-xl-10">
+        <div class="tab-content" id="dictionariesContent">
+            
+            <!-- ВКЛАДКА: СОЗДАТЬ СПРАВОЧНИК -->
+            <div class="tab-pane fade show active" id="dict-create" role="tabpanel">
+                <div class="card bg-white border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 56px; height: 56px;">
+                                <i class="bi bi-list-stars fs-3"></i>
+                            </div>
+                            <div>
+                                <h3 class="fw-bold mb-1 text-dark">Новый справочник</h3>
+                                <p class="text-muted mb-0">Справочники используются для создания выпадающих списков в конструкторе отчетов.</p>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Варианты выбора (каждый с новой строки)</label>
-                            <textarea name="items" class="form-control" rows="8" required>{{ dict.items | join('\n') }}</textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button type="submit" class="btn btn-copp">Сохранить</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% else %}
-<div class="alert alert-info border-0 shadow-sm">
-    <i class="bi bi-info-circle me-2"></i>Нет созданных шаблонов выпадающих списков. Создайте первый шаблон, чтобы использовать списки в конструкторе отчетов.
-</div>
-{% endif %}
+                        
+                        <form method="POST" action="{{ url_for('admin.add_dictionary') }}" class="needs-validation" novalidate>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            
+                            <div class="mb-4 max-w-800">
+                                <label class="form-label text-dark fw-bold small">НАЗВАНИЕ СПРАВОЧНИКА <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control form-control-lg bg-light border-0" required placeholder="Например: Школы города, Программы обучения...">
+                            </div>
+                            
+                            <div class="mb-4 max-w-800">
+                                <label class="form-label text-dark fw-bold small d-flex justify-content-between align-items-end">
+                                    <span>ЭЛЕМЕНТЫ СПИСКА <span class="text-danger">*</span></span>
+                                    <span class="badge bg-secondary fw-normal">Каждый вариант с новой строки</span>
+                                </label>
+                                <textarea name="items" class="form-control list-textarea p-3" rows="10" required placeholder="Вариант 1&#10;Вариант 2&#10;Вариант 3"></textarea>
+                            </div>
 
-<!-- Модальное окно добавления шаблона -->
-<div class="modal fade" id="addDictModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ url_for('admin.add_dictionary') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="modal-header">
-                    <h5 class="modal-title">Новый шаблон выпадающего списка</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Название (например: Школы города)</label>
-                        <input type="text" name="name" class="form-control" required placeholder="Введите название">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Варианты выбора (каждый с новой строки)</label>
-                        <textarea name="items" class="form-control" rows="8" required placeholder="Вариант 1&#10;Вариант 2&#10;Вариант 3"></textarea>
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                                <i class="bi bi-check2-circle me-2"></i>Сохранить справочник
+                            </button>
+                        </form>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-copp">Создать</button>
+            </div>
+
+            <!-- ВКЛАДКИ СУЩЕСТВУЮЩИХ СПРАВОЧНИКОВ -->
+            {% for dict in dictionaries %}
+            <div class="tab-pane fade" id="dict-{{ dict.id }}" role="tabpanel">
+                <div class="card bg-white border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4 p-lg-5">
+                        
+                        <form method="POST" action="{{ url_for('admin.edit_dictionary', dict_id=dict.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            
+                            <div class="d-flex justify-content-between align-items-start mb-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light text-primary rounded-3 d-flex justify-content-center align-items-center shadow-sm me-3 border" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-list-task fs-3 text-copp"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="fw-bold mb-1 text-dark">{{ dict.name }}</h3>
+                                        {% if current_user.role == 'admin' %}
+                                            {% if dict.department_id %}
+                                                <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1"><i class="bi bi-diagram-3 me-1"></i>Привязан к отделу (ID: {{ dict.department_id }})</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-muted border border-secondary-subtle px-2 py-1"><i class="bi bi-diagram-3 me-1"></i>Без отдела</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" formaction="{{ url_for('admin.delete_dictionary', dict_id=dict.id) }}" class="btn btn-outline-danger rounded-pill fw-medium" onclick="return confirm('Удалить этот шаблон? Это может повлиять на отчеты, использующие его.');">
+                                        <i class="bi bi-trash3 me-1"></i>Удалить
+                                    </button>
+                                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                        <i class="bi bi-save me-1"></i>Сохранить изменения
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-4 max-w-800">
+                                <label class="form-label text-dark fw-bold small">НАЗВАНИЕ СПРАВОЧНИКА <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control form-control-lg bg-light border-0" value="{{ dict.name }}" required>
+                            </div>
+                            
+                            <div class="mb-4 max-w-800">
+                                <label class="form-label text-dark fw-bold small d-flex justify-content-between align-items-end">
+                                    <span>ЭЛЕМЕНТЫ СПИСКА <span class="text-danger">*</span></span>
+                                    <span class="badge bg-secondary fw-normal">Каждый вариант с новой строки ({{ dict.items|length }} эл.)</span>
+                                </label>
+                                <textarea name="items" class="form-control list-textarea p-3" rows="12" required>{{ dict.items | join('
+') }}</textarea>
+                            </div>
+                        </form>
+                        
+                    </div>
                 </div>
-            </form>
+            </div>
+            {% endfor %}
+            
         </div>
     </div>
 </div>
