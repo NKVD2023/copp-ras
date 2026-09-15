@@ -222,20 +222,21 @@
     function updateSections() {
         let hash = window.location.hash || '#active';
         
-        document.getElementById('section-active').style.display = 'none';
-        document.getElementById('section-filled').style.display = 'none';
-        document.getElementById('section-profile').style.display = 'none';
-        document.getElementById('section-analytics').style.display = 'none';
+        ['section-active', 'section-filled', 'section-profile', 'section-analytics'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('d-none');
+        });
         
         if (hash.includes('filled')) {
-            document.getElementById('section-filled').style.display = 'block';
+            document.getElementById('section-filled').classList.remove('d-none');
         } else if (hash.includes('profile')) {
-            document.getElementById('section-profile').style.display = 'block';
+            document.getElementById('section-profile').classList.remove('d-none');
         } else if (hash.includes('analytics')) {
-            document.getElementById('section-analytics').style.display = 'block';
+            document.getElementById('section-analytics').classList.remove('d-none');
         } else {
-            document.getElementById('section-active').style.display = 'block';
+            document.getElementById('section-active').classList.remove('d-none');
         }
+        window.scrollTo(0, 0);
     }
     
     window.addEventListener('hashchange', updateSections);

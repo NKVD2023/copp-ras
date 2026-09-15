@@ -264,17 +264,21 @@
         });
         
         // Show/hide buttons
-        document.getElementById('btn-prev').style.display = currentStep > 1 ? 'block' : 'none';
+        if (currentStep > 1) {
+            document.getElementById('btn-prev').classList.remove('d-none');
+        } else {
+            document.getElementById('btn-prev').classList.add('d-none');
+        }
         
         if (currentStep === totalSteps) {
-            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('btn-next').classList.add('d-none');
             {% if not is_locked %}
-            document.getElementById('btn-submit').style.display = 'block';
+            document.getElementById('btn-submit').classList.remove('d-none');
             {% endif %}
         } else {
-            document.getElementById('btn-next').style.display = 'block';
+            document.getElementById('btn-next').classList.remove('d-none');
             {% if not is_locked %}
-            document.getElementById('btn-submit').style.display = 'none';
+            document.getElementById('btn-submit').classList.add('d-none');
             {% endif %}
         }
         
