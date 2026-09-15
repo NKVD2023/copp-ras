@@ -31,6 +31,7 @@ class UploadedFile(db.Model):
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id')) # Кто загрузил
     file_size = db.Column(db.Integer)             # Размер в байтах
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True) # Отдел, к которому привязан файл
 
     uploader = db.relationship('User', backref='uploaded_files')
 
@@ -138,6 +139,7 @@ class Dictionary(db.Model):
     name = db.Column(db.String(128), nullable=False)
     items = db.Column(JSON, nullable=False, default=list) # Список строк (вариантов ответа)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True) # Отдел, к которому привязан справочник
 
 class ReportDraft(db.Model):
     """

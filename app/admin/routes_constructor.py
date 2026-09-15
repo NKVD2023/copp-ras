@@ -49,6 +49,15 @@ def constructor():
     from flask import abort
     if current_user.role not in ['admin', 'manager']:
         abort(403)
+        
+    from app.utils import get_manager_department
+    if current_user.role == 'manager':
+        dept = get_manager_department(current_user)
+        if not dept:
+            from flask import flash
+            flash('Ваша учетная запись не привязана ни к одному отделу в качестве руководителя. Создание отчетов недоступно.', 'danger')
+            return redirect(url_for('admin.dashboard'))
+            
     if request.method == 'POST':
         import json
         data = request.form
@@ -164,8 +173,18 @@ def constructor():
             all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
         
     from app.models import UploadedFile, Dictionary
-    all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
-    all_dictionaries = Dictionary.query.order_by(Dictionary.name).all()
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            all_files = UploadedFile.query.filter_by(department_id=dept.id).order_by(UploadedFile.upload_date.desc()).all()
+            all_dictionaries = Dictionary.query.filter_by(department_id=dept.id).order_by(Dictionary.name).all()
+        else:
+            all_files = []
+            all_dictionaries = []
+    else:
+        all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
+        all_dictionaries = Dictionary.query.order_by(Dictionary.name).all()
         
     return render_template('constructor.html', users=users, all_groups=all_groups, all_files=all_files, all_dictionaries=all_dictionaries)
 
@@ -182,7 +201,11 @@ def edit_constructor(template_id):
     if current_user.role == 'manager':
         from app.utils import get_manager_department
         dept = get_manager_department(current_user)
-        if not dept or template not in dept.templates:
+        if not dept:
+            from flask import flash
+            flash('Ваша учетная запись не привязана ни к одному отделу в качестве руководителя.', 'danger')
+            return redirect(url_for('admin.dashboard'))
+        if template not in dept.templates:
             return "Доступ запрещен", 403
     
     if request.method == 'POST':
@@ -283,8 +306,18 @@ def edit_constructor(template_id):
             all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
         
     from app.models import UploadedFile, Dictionary
-    all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
-    all_dictionaries = Dictionary.query.order_by(Dictionary.name).all()
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            all_files = UploadedFile.query.filter_by(department_id=dept.id).order_by(UploadedFile.upload_date.desc()).all()
+            all_dictionaries = Dictionary.query.filter_by(department_id=dept.id).order_by(Dictionary.name).all()
+        else:
+            all_files = []
+            all_dictionaries = []
+    else:
+        all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
+        all_dictionaries = Dictionary.query.order_by(Dictionary.name).all()
         
     return render_template('constructor.html', users=users, template=template, all_groups=all_groups, all_files=all_files, all_dictionaries=all_dictionaries)
 

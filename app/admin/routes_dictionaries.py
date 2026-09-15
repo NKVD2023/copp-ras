@@ -27,7 +27,14 @@ def add_dictionary():
         flash('Список вариантов пуст.', 'danger')
         return redirect(url_for('admin.dashboard') + '#listsTab')
         
-    new_dict = Dictionary(name=name, items=items)
+    dept_id = None
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            dept_id = dept.id
+            
+    new_dict = Dictionary(name=name, items=items, department_id=dept_id)
     db.session.add(new_dict)
     db.session.commit()
     
@@ -42,6 +49,12 @@ def edit_dictionary(dict_id):
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         
     dictionary = Dictionary.query.get_or_404(dict_id)
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept or dictionary.department_id != dept.id:
+            flash('Доступ запрещен', 'danger')
+            return redirect(url_for('admin.dashboard') + '#listsTab')
     
     name = request.form.get('name')
     items_raw = request.form.get('items', '')
@@ -103,6 +116,12 @@ def delete_dictionary(dict_id):
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         
     dictionary = Dictionary.query.get_or_404(dict_id)
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept or dictionary.department_id != dept.id:
+            flash('Доступ запрещен', 'danger')
+            return redirect(url_for('admin.dashboard') + '#listsTab')
     try:
         name = dictionary.name
         db.session.delete(dictionary)
@@ -123,6 +142,14 @@ def api_get_dictionaries():
     if current_user.role not in ['admin', 'manager']:
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         
-    dictionaries = Dictionary.query.order_by(Dictionary.name).all()
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            dictionaries = Dictionary.query.filter_by(department_id=dept.id).order_by(Dictionary.name).all()
+        else:
+            dictionaries = []
+    else:
+        dictionaries = Dictionary.query.order_by(Dictionary.name).all()
     result = [{'id': d.id, 'name': d.name, 'items': d.items} for d in dictionaries]
     return jsonify({'status': 'success', 'dictionaries': result})

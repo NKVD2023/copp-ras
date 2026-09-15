@@ -113,10 +113,20 @@ def dashboard():
         all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
 
     # 6. Файлы
-    all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
+    if current_user.role == 'manager' and dept:
+        all_files = UploadedFile.query.filter_by(department_id=dept.id).order_by(UploadedFile.upload_date.desc()).all()
+    elif current_user.role == 'manager' and not dept:
+        all_files = []
+    else:
+        all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
 
     from app.models import Dictionary
-    dictionaries = Dictionary.query.order_by(Dictionary.name).all()
+    if current_user.role == 'manager' and dept:
+        dictionaries = Dictionary.query.filter_by(department_id=dept.id).order_by(Dictionary.name).all()
+    elif current_user.role == 'manager' and not dept:
+        dictionaries = []
+    else:
+        dictionaries = Dictionary.query.order_by(Dictionary.name).all()
 
     # 9. Модуль статистики (Динамика)
     selected_user_id = request.args.get('user_id')

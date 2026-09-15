@@ -46,11 +46,19 @@ def upload_file():
             try:
                 file.save(file_path)
                 
+                dept_id = None
+                if current_user.role == 'manager':
+                    from app.utils import get_manager_department
+                    dept = get_manager_department(current_user)
+                    if dept:
+                        dept_id = dept.id
+                        
                 new_file = UploadedFile(
                     filename=file.filename,
                     filepath=unique_filename,
                     uploader_id=current_user.id,
-                    file_size=size
+                    file_size=size,
+                    department_id=dept_id
                 )
                 db.session.add(new_file)
                 uploaded_count += 1
@@ -77,6 +85,12 @@ def upload_file():
 @admin_bp.route('/delete_file/<int:file_id>', methods=['POST'])
 def delete_file(file_id):
     file_obj = UploadedFile.query.get_or_404(file_id)
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept or file_obj.department_id != dept.id:
+            flash('Доступ запрещен', 'danger')
+            return redirect(url_for('admin.dashboard'))
     
     # Check if attached to any reports
     if file_obj.reports.count() > 0:
