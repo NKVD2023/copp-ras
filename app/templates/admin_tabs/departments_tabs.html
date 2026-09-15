@@ -1,14 +1,14 @@
 <div class="departments-sub-tabs">
     <!-- Капсульная навигация -->
-    <ul class="nav nav-pills segmented-control bg-light p-1 rounded-pill flex-nowrap overflow-auto mb-4 gap-sm-nowrap" id="departmentsSubTabs" role="tablist">
+    <ul class="nav nav-pills segmented-control bg-light p-1 rounded-pill flex-nowrap overflow-auto mb-4 gap-sm-nowrap" id="departmentsSubTabs" role="tablist" style="width: max-content;">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active rounded-pill px-3 py-2" id="dept-create-tab" data-bs-toggle="tab" data-bs-target="#dept-create" type="button" role="tab">
+            <button class="nav-link active rounded-pill px-4 py-2 fw-medium" id="dept-create-tab" data-bs-toggle="tab" data-bs-target="#dept-create" type="button" role="tab">
                 <i class="bi bi-plus-circle me-1"></i> Создание отдела
             </button>
         </li>
         {% for dept in departments %}
         <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-pill px-3 py-2" id="dept-{{ dept.id }}-tab" data-bs-toggle="tab" data-bs-target="#dept-{{ dept.id }}" type="button" role="tab">
+            <button class="nav-link rounded-pill px-4 py-2 fw-medium" id="dept-{{ dept.id }}-tab" data-bs-toggle="tab" data-bs-target="#dept-{{ dept.id }}" type="button" role="tab">
                 <i class="bi bi-diagram-3 me-1"></i> {{ dept.name }}
             </button>
         </li>
@@ -20,157 +20,203 @@
         
         <!-- Вкладка: СОЗДАТЬ ОТДЕЛ -->
         <div class="tab-pane fade show active" id="dept-create" role="tabpanel">
-            <h6 class="fw-bold mb-4">Создать новый отдел</h6>
-
-            <form action="{{ url_for('admin.create_department') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                
-                <div class="row">
-                    <!-- Левая колонка: Настройки -->
-                    <div class="col-md-5 col-lg-4 mb-4">
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Название отдела <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" placeholder="Например: Муниципальные администраторы" required autocomplete="off">
+            <div class="card bg-white border-0 shadow-sm mx-auto" style="max-width: 1200px; border-radius: 12px;">
+                <div class="card-body p-4 p-lg-5">
+                    
+                    <div class="d-flex align-items-center mb-5 pb-3 border-bottom border-light">
+                        <div class="bg-light text-primary rounded d-flex justify-content-center align-items-center shadow-sm me-3" style="width: 48px; height: 48px; background-color: #f8f9fa;">
+                            <i class="bi bi-diagram-3 fs-5" style="color: #00334e;"></i>
                         </div>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">Создать новый отдел</h5>
+                            <p class="text-muted small mb-0">Заполните данные отдела и добавьте участников (учреждения)</p>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('admin.create_department') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Руководитель отдела</label>
-                            <select name="manager_id" class="form-select">
-                                <option value="">-- Без руководителя --</option>
-                                {% for u in all_users if u.role == 'manager' %}
-                                    <option value="{{ u.id }}">{{ u.username }} ({{ u.description or 'без описания' }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        {% if all_groups %}
-                        <div class="mb-4">
-                            <label class="form-label small text-muted d-block">Массовое добавление групп</label>
-                            <div class="p-3 bg-light rounded border">
-                                {% for g in all_groups %}
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" name="groups" value="{{ g }}" id="create_group_{{ loop.index }}" onchange="toggleGroupUsers('create', '{{ g }}', this.checked)">
-                                        <label class="form-check-label" for="create_group_{{ loop.index }}">{{ g }}</label>
+                        <div class="row g-5">
+                            <!-- Левая колонка: Настройки -->
+                            <div class="col-lg-4">
+                                <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-sliders me-2 text-muted"></i>1. Настройки</h6>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Название отдела <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" class="form-control px-3 py-2 bg-light border-light-subtle" placeholder="Например: Муниципальные администраторы" required autocomplete="off">
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Руководитель отдела</label>
+                                    <select name="manager_id" class="form-select px-3 py-2 bg-light border-light-subtle">
+                                        <option value="">-- Без руководителя --</option>
+                                        {% for u in all_users if u.role == 'manager' %}
+                                            <option value="{{ u.id }}">{{ u.username }} ({{ u.description or 'без описания' }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                {% if all_groups %}
+                                <div class="mb-5">
+                                    <label class="form-label small fw-medium text-muted text-uppercase d-block" style="letter-spacing: 0.5px;">Массовое добавление групп</label>
+                                    <div class="p-3 bg-light rounded-3 border border-light-subtle">
+                                        <div class="d-flex flex-wrap gap-3">
+                                            {% for g in all_groups %}
+                                                <div class="form-check m-0">
+                                                    <input class="form-check-input" type="checkbox" name="groups" value="{{ g }}" id="create_group_{{ loop.index }}" onchange="toggleGroupUsers('create', '{{ g }}', this.checked)">
+                                                    <label class="form-check-label text-dark" for="create_group_{{ loop.index }}">{{ g }}</label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="form-text small mt-3 text-muted"><i class="bi bi-info-circle me-1"></i>Выберите группу, чтобы автоматически отметить ее учреждения в списке справа.</div>
                                     </div>
-                                {% endfor %}
-                                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>При выборе группы учреждения будут автоматически отмечены.</div>
+                                </div>
+                                {% endif %}
+                                
+                                <button type="submit" class="btn btn-copp py-2 px-4 shadow-sm w-100" style="border-radius: 8px;">
+                                    Создать отдел
+                                </button>
+                            </div>
+
+                            <!-- Правая колонка: Участники -->
+                            <div class="col-lg-8 border-start border-light-subtle">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-people me-2 text-muted"></i>2. Состав отдела</h6>
+                                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm" style="font-weight: 500;">
+                                        Выбрано: <span id="count-create">0</span>
+                                    </span>
+                                </div>
+                                
+                                <div class="input-group mb-4 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
+                                    <span class="input-group-text bg-white border-0 pe-2"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 ps-1 js-search-users search-input" data-target="list-create" placeholder="Поиск учреждения по логину или названию...">
+                                </div>
+
+                                <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-create" style="height: 400px;">
+                                    {% for u in all_users if u.role == 'user' %}
+                                        <div class="form-check mb-2 js-user-item px-3 py-2 rounded js-hover-bg d-flex align-items-start m-0">
+                                            <input class="form-check-input mt-1 user-checkbox-create me-3" data-group="{{ u.group or '' }}" type="checkbox" name="user_ids" value="{{ u.id }}" id="create_user{{ u.id }}" onchange="updateCount('create')">
+                                            <label class="form-check-label w-100" style="cursor:pointer;" for="create_user{{ u.id }}">
+                                                <span class="d-block fw-bold text-dark js-search-text" style="font-size: 0.95rem;">{{ u.username }}</span>
+                                                <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">{{ u.description }}</span>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
                             </div>
                         </div>
-                        {% endif %}
-                        
-                        <button type="submit" class="btn btn-copp w-100">Создать отдел</button>
-                    </div>
-
-                    <!-- Правая колонка: Участники -->
-                    <div class="col-md-7 col-lg-8 border-start">
-                        <div class="d-flex justify-content-between align-items-end mb-3">
-                            <label class="form-label small text-muted mb-0">Состав отдела (учреждения)</label>
-                            <span class="badge bg-light text-dark border px-2 py-1">Выбрано: <span id="count-create">0</span></span>
-                        </div>
-                        
-                        <div class="input-group mb-3">
-                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" class="form-control border-start-0 ps-0 js-search-users" data-target="list-create" placeholder="Поиск учреждения по логину или названию...">
-                        </div>
-
-                        <div class="p-2 border rounded overflow-auto" id="list-create" style="height: 450px;">
-                            {% for u in all_users if u.role == 'user' %}
-                                <div class="form-check mb-2 js-user-item px-3 py-2 rounded js-hover-bg">
-                                    <input class="form-check-input mt-1 user-checkbox-create me-2" data-group="{{ u.group or '' }}" type="checkbox" name="user_ids" value="{{ u.id }}" id="create_user{{ u.id }}" onchange="updateCount('create')">
-                                    <label class="form-check-label w-100" style="cursor:pointer;" for="create_user{{ u.id }}">
-                                        <span class="d-block fw-medium text-dark js-search-text">{{ u.username }}</span>
-                                        <small class="text-muted js-search-desc" style="font-size: 0.8rem; display: block;">{{ u.description }}</small>
-                                    </label>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
 
         <!-- Вкладки: РЕДАКТИРОВАНИЕ ОТДЕЛОВ -->
         {% for dept in departments %}
         <div class="tab-pane fade" id="dept-{{ dept.id }}" role="tabpanel">
-            
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h6 class="fw-bold mb-0">Редактирование отдела «{{ dept.name }}»</h6>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="text-muted small">Всего участников: <strong>{{ dept.members.count() }}</strong></span>
-                    <form action="{{ url_for('admin.delete_department', dept_id=dept.id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот отдел?');">
+            <div class="card bg-white border-0 shadow-sm mx-auto" style="max-width: 1200px; border-radius: 12px;">
+                <div class="card-body p-4 p-lg-5">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom border-light">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light text-primary rounded d-flex justify-content-center align-items-center shadow-sm me-3" style="width: 48px; height: 48px; background-color: #f8f9fa;">
+                                <i class="bi bi-diagram-3 fs-5" style="color: #00334e;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-1 text-dark">Редактирование отдела</h5>
+                                <p class="text-muted small mb-0">«{{ dept.name }}»</p>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-4">
+                            <div class="text-end d-none d-sm-block border-end border-light-subtle pe-4">
+                                <div class="small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Участников</div>
+                                <div class="fs-5 fw-bold text-dark">{{ dept.members.count() }}</div>
+                            </div>
+                            <form action="{{ url_for('admin.delete_department', dept_id=dept.id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот отдел?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-outline-danger py-2 px-3" style="border-radius: 8px; font-weight: 500;">
+                                    <i class="bi bi-trash3 me-1"></i> Удалить отдел
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('admin.edit_department', dept_id=dept.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Удалить отдел</button>
+                        
+                        <div class="row g-5">
+                            <!-- Левая колонка: Настройки -->
+                            <div class="col-lg-4">
+                                <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-sliders me-2 text-muted"></i>1. Настройки</h6>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Название отдела <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" class="form-control px-3 py-2 bg-light border-light-subtle" value="{{ dept.name }}" required autocomplete="off">
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Руководитель отдела</label>
+                                    <select name="manager_id" class="form-select px-3 py-2 bg-light border-light-subtle">
+                                        <option value="">-- Без руководителя --</option>
+                                        {% for u in all_users if u.role == 'manager' %}
+                                            <option value="{{ u.id }}" {% if dept.manager_id == u.id %}selected{% endif %}>
+                                                {{ u.username }} ({{ u.description or 'без описания' }})
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                {% if all_groups %}
+                                <div class="mb-5">
+                                    <label class="form-label small fw-medium text-muted text-uppercase d-block" style="letter-spacing: 0.5px;">Массовое добавление групп</label>
+                                    <div class="p-3 bg-light rounded-3 border border-light-subtle">
+                                        <div class="d-flex flex-wrap gap-3">
+                                            {% for g in all_groups %}
+                                                <div class="form-check m-0">
+                                                    <input class="form-check-input" type="checkbox" name="groups" value="{{ g }}" id="edit_{{ dept.id }}_group_{{ loop.index }}" onchange="toggleGroupUsers('{{ dept.id }}', '{{ g }}', this.checked)">
+                                                    <label class="form-check-label text-dark" for="edit_{{ dept.id }}_group_{{ loop.index }}">{{ g }}</label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <button type="submit" class="btn btn-copp py-2 px-4 shadow-sm w-100" style="border-radius: 8px;">
+                                    Сохранить изменения
+                                </button>
+                            </div>
+
+                            <!-- Правая колонка: Участники -->
+                            <div class="col-lg-8 border-start border-light-subtle">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-people me-2 text-muted"></i>2. Состав отдела</h6>
+                                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm" style="font-weight: 500;">
+                                        Выбрано: <span id="count-{{ dept.id }}">0</span>
+                                    </span>
+                                </div>
+                                
+                                <div class="input-group mb-4 shadow-sm rounded-pill overflow-hidden border border-light-subtle">
+                                    <span class="input-group-text bg-white border-0 pe-2"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 ps-1 js-search-users search-input" data-target="list-{{ dept.id }}" placeholder="Поиск учреждения по логину или названию...">
+                                </div>
+
+                                <div class="p-2 border border-light-subtle rounded-3 bg-light overflow-auto custom-scrollbar" id="list-{{ dept.id }}" style="height: 400px;">
+                                    {% for u in all_users if u.role == 'user' %}
+                                        <div class="form-check mb-2 js-user-item px-3 py-2 rounded js-hover-bg d-flex align-items-start m-0">
+                                            <input class="form-check-input mt-1 user-checkbox-{{ dept.id }} me-3" data-group="{{ u.group or '' }}" type="checkbox" name="user_ids" value="{{ u.id }}" id="edit_{{ dept.id }}_user{{ u.id }}"
+                                                {% if u.department_id == dept.id %}checked{% endif %} onchange="updateCount('{{ dept.id }}')">
+                                            <label class="form-check-label w-100" style="cursor:pointer;" for="edit_{{ dept.id }}_user{{ u.id }}">
+                                                <span class="d-block fw-bold text-dark js-search-text" style="font-size: 0.95rem;">{{ u.username }}</span>
+                                                <span class="text-muted js-search-desc" style="font-size: 0.85rem; display: block; line-height: 1.3;">{{ u.description }}</span>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>
-
-            <form action="{{ url_for('admin.edit_department', dept_id=dept.id) }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                
-                <div class="row">
-                    <!-- Левая колонка: Настройки -->
-                    <div class="col-md-5 col-lg-4 mb-4">
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Название отдела <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" value="{{ dept.name }}" required autocomplete="off">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Руководитель отдела</label>
-                            <select name="manager_id" class="form-select">
-                                <option value="">-- Без руководителя --</option>
-                                {% for u in all_users if u.role == 'manager' %}
-                                    <option value="{{ u.id }}" {% if dept.manager_id == u.id %}selected{% endif %}>
-                                        {{ u.username }} ({{ u.description or 'без описания' }})
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        {% if all_groups %}
-                        <div class="mb-4">
-                            <label class="form-label small text-muted d-block">Массовое добавление групп</label>
-                            <div class="p-3 bg-light rounded border">
-                                {% for g in all_groups %}
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" name="groups" value="{{ g }}" id="edit_{{ dept.id }}_group_{{ loop.index }}" onchange="toggleGroupUsers('{{ dept.id }}', '{{ g }}', this.checked)">
-                                        <label class="form-check-label" for="edit_{{ dept.id }}_group_{{ loop.index }}">{{ g }}</label>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        <button type="submit" class="btn btn-copp w-100">Сохранить изменения</button>
-                    </div>
-
-                    <!-- Правая колонка: Участники -->
-                    <div class="col-md-7 col-lg-8 border-start">
-                        <div class="d-flex justify-content-between align-items-end mb-3">
-                            <label class="form-label small text-muted mb-0">Состав отдела (учреждения)</label>
-                            <span class="badge bg-light text-dark border px-2 py-1">Выбрано: <span id="count-{{ dept.id }}">0</span></span>
-                        </div>
-                        
-                        <div class="input-group mb-3">
-                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" class="form-control border-start-0 ps-0 js-search-users" data-target="list-{{ dept.id }}" placeholder="Поиск учреждения по логину или названию...">
-                        </div>
-
-                        <div class="p-2 border rounded overflow-auto" id="list-{{ dept.id }}" style="height: 450px;">
-                            {% for u in all_users if u.role == 'user' %}
-                                <div class="form-check mb-2 js-user-item px-3 py-2 rounded js-hover-bg">
-                                    <input class="form-check-input mt-1 user-checkbox-{{ dept.id }} me-2" data-group="{{ u.group or '' }}" type="checkbox" name="user_ids" value="{{ u.id }}" id="edit_{{ dept.id }}_user{{ u.id }}"
-                                        {% if u.department_id == dept.id %}checked{% endif %} onchange="updateCount('{{ dept.id }}')">
-                                    <label class="form-check-label w-100" style="cursor:pointer;" for="edit_{{ dept.id }}_user{{ u.id }}">
-                                        <span class="d-block fw-medium text-dark js-search-text">{{ u.username }}</span>
-                                        <small class="text-muted js-search-desc" style="font-size: 0.8rem; display: block;">{{ u.description }}</small>
-                                    </label>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </form>
         </div>
         {% endfor %}
         
@@ -178,8 +224,29 @@
 </div>
 
 <style>
+.js-hover-bg {
+    transition: background-color 0.15s ease-in-out;
+}
 .js-hover-bg:hover {
-    background-color: #f8f9fa;
+    background-color: #e9ecef !important;
+}
+.search-input:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1; 
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8; 
 }
 </style>
 
@@ -227,7 +294,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const desc = item.querySelector('.js-search-desc').textContent.toLowerCase();
                 
                 if (title.includes(searchTerm) || desc.includes(searchTerm)) {
-                    item.style.display = '';
+                    item.style.display = 'flex';
                 } else {
                     item.style.display = 'none';
                 }
