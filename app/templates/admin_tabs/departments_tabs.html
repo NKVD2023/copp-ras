@@ -176,9 +176,9 @@
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            <a href="{{ url_for('admin.delete_department', dept_id=dept.id) }}" class="btn btn-outline-danger rounded-pill fw-medium" onclick="return confirm('Удалить этот отдел? Пользователи не будут удалены, но потеряют привязку.');">
+                            <button type="submit" formaction="{{ url_for('admin.delete_department', dept_id=dept.id) }}" class="btn btn-outline-danger rounded-pill fw-medium" onclick="return confirm('Удалить этот отдел? Пользователи не будут удалены, но потеряют привязку.');">
                                 <i class="bi bi-trash3 me-1"></i>Удалить
-                            </a>
+                            </button>
                             <button type="submit" class="btn btn-copp rounded-pill px-4 fw-bold shadow-sm">
                                 <i class="bi bi-save me-1"></i>Сохранить изменения
                             </button>
