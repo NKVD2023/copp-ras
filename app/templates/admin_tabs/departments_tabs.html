@@ -1,5 +1,7 @@
 
 <style>
+.text-copp { color: var(--primary-color) !important; }
+.bg-copp { background-color: var(--primary-color) !important; color: white !important; }
 .dept-sidebar {
     position: sticky;
     top: 20px;
@@ -85,7 +87,7 @@
                 <div class="card bg-white border-0 shadow-sm rounded-4">
                     <div class="card-body p-4 p-lg-5">
                         <div class="d-flex align-items-center mb-4">
-                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 56px; height: 56px;">
+                            <div style="background-color: rgba(0, 51, 78, 0.1);" class="text-copp rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 56px; height: 56px;">
                                 <i class="bi bi-plus-lg fs-3"></i>
                             </div>
                             <div>
@@ -124,7 +126,7 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                            <button type="submit" class="btn btn-copp btn-lg rounded-pill px-5 fw-bold shadow-sm">
                                 <i class="bi bi-check2-circle me-2"></i>Создать отдел
                             </button>
                         </form>
@@ -140,7 +142,7 @@
                     
                     <div class="d-flex justify-content-between align-items-start mb-4">
                         <div class="d-flex align-items-center">
-                            <div class="bg-light text-primary rounded-3 d-flex justify-content-center align-items-center shadow-sm me-3 border" style="width: 56px; height: 56px;">
+                            <div class="bg-light text-copp rounded-3 d-flex justify-content-center align-items-center shadow-sm me-3 border" style="width: 56px; height: 56px;">
                                 <i class="bi bi-diagram-3 fs-3 text-copp"></i>
                             </div>
                             <div>
@@ -152,7 +154,7 @@
                             <a href="{{ url_for('admin.delete_department', dept_id=dept.id) }}" class="btn btn-outline-danger rounded-pill fw-medium" onclick="return confirm('Удалить этот отдел? Пользователи не будут удалены, но потеряют привязку.');">
                                 <i class="bi bi-trash3 me-1"></i>Удалить
                             </a>
-                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                            <button type="submit" class="btn btn-copp rounded-pill px-4 fw-bold shadow-sm">
                                 <i class="bi bi-save me-1"></i>Сохранить изменения
                             </button>
                         </div>
@@ -294,7 +296,7 @@
                                                                 <div class="d-flex justify-content-between align-items-start mb-1">
                                                                     <span class="fw-bold text-dark js-search-text text-truncate pe-2" title="{{ t.short_name }}">{{ t.short_name }}</span>
                                                                     {% if t.is_template %}
-                                                                        <span class="badge bg-primary text-white border" style="font-size: 0.65rem;">Конструктор</span>
+                                                                        <span class="badge bg-copp text-white border" style="font-size: 0.65rem;">Шаблон</span>
                                                                     {% elif t.is_completed %}
                                                                         <span class="badge bg-secondary text-white border" style="font-size: 0.65rem;">Завершен</span>
                                                                     {% elif t.is_published %}

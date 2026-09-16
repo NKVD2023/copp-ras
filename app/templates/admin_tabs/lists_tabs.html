@@ -1,5 +1,7 @@
 
 <style>
+.text-copp { color: var(--primary-color) !important; }
+.bg-copp { background-color: var(--primary-color) !important; color: white !important; }
 .dict-sidebar {
     position: sticky;
     top: 20px;
@@ -77,7 +79,7 @@
                 <div class="card bg-white border-0 shadow-sm rounded-4">
                     <div class="card-body p-4 p-lg-5">
                         <div class="d-flex align-items-center mb-4">
-                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 56px; height: 56px;">
+                            <div style="background-color: rgba(0, 51, 78, 0.1);" class="text-copp rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 56px; height: 56px;">
                                 <i class="bi bi-list-stars fs-3"></i>
                             </div>
                             <div>
@@ -102,7 +104,7 @@
                                 <textarea name="items" class="form-control list-textarea p-3" rows="10" required placeholder="Вариант 1&#10;Вариант 2&#10;Вариант 3"></textarea>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                            <button type="submit" class="btn btn-copp btn-lg rounded-pill px-5 fw-bold shadow-sm">
                                 <i class="bi bi-check2-circle me-2"></i>Сохранить справочник
                             </button>
                         </form>
@@ -121,7 +123,7 @@
                             
                             <div class="d-flex justify-content-between align-items-start mb-4">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-light text-primary rounded-3 d-flex justify-content-center align-items-center shadow-sm me-3 border" style="width: 56px; height: 56px;">
+                                    <div class="bg-light text-copp rounded-3 d-flex justify-content-center align-items-center shadow-sm me-3 border" style="width: 56px; height: 56px;">
                                         <i class="bi bi-list-task fs-3 text-copp"></i>
                                     </div>
                                     <div>
@@ -139,7 +141,7 @@
                                     <button type="submit" formaction="{{ url_for('admin.delete_dictionary', dict_id=dict.id) }}" class="btn btn-outline-danger rounded-pill fw-medium" onclick="return confirm('Удалить этот шаблон? Это может повлиять на отчеты, использующие его.');">
                                         <i class="bi bi-trash3 me-1"></i>Удалить
                                     </button>
-                                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                    <button type="submit" class="btn btn-copp rounded-pill px-4 fw-bold shadow-sm">
                                         <i class="bi bi-save me-1"></i>Сохранить изменения
                                     </button>
                                 </div>

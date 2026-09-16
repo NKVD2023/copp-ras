@@ -71,7 +71,7 @@
                     <li>
                         <form action="{{ url_for('admin.reset_to_pure', template_id=t.id) }}" method="POST" onsubmit="event.preventDefault(); coppConfirm('Отчет будет перенесен во вкладку Шаблоны. Период, дедлайн и исполнители будут очищены. Продолжить?', () => { this.submit(); });">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 text-primary">
+                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 text-copp">
                                 <i class="bi bi-arrow-counterclockwise"></i>В чистые шаблоны
                             </button>
                         </form>
@@ -81,7 +81,7 @@
                     <li>
                         <form action="{{ url_for('admin.toggle_complete', template_id=t.id) }}" method="POST" {% if not t.is_completed %}onsubmit="event.preventDefault(); coppConfirm('Отчет будет помечен как завершенный и пропадет из просроченных у должников. Продолжить?', () => { this.submit(); });"{% endif %}>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_completed %}text-primary{% else %}text-success{% endif %}">
+                            <button type="submit" class="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 {% if t.is_completed %}text-copp{% else %}text-success{% endif %}">
                                 <i class="bi {% if t.is_completed %}bi-play-circle-fill{% else %}bi-check-circle-fill{% endif %}"></i>
                                 {% if t.is_completed %}Возобновить сбор{% else %}Завершить сбор{% endif %}
                             </button>
@@ -123,11 +123,11 @@
 
                     <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                         {% if is_fully_completed %}
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 badge-status">Сбор завершен</span>
+                        <span class="badge bg-light text-copp border border-secondary-subtle px-2 py-1 badge-status">Сбор завершен</span>
                         {% elif t.is_published %}
                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 badge-status">Опубликовано</span>
                         {% elif t.is_template %}
-                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1 badge-status">Шаблон</span>
+                        <span class="badge bg-copp bg-opacity-10 text-copp border border-copp-subtle px-2 py-1 badge-status">Шаблон</span>
                         {% else %}
                         <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 badge-status">Черновик</span>
                         {% endif %}
