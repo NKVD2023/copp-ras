@@ -132,3 +132,9 @@ future_plans_hierarchy.md
 
 # Docs
 docs/*.md
+
+# User-uploaded files (runtime data, not source)
+app/uploads/
+app/static/uploads/tasks/
+*.xlsx
+*.pdf
