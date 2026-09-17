@@ -132,12 +132,11 @@
                                     <input type="text" class="form-control form-control-lg bg-light border-0" name="name" required placeholder="Например: Учебно-методический отдел">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label text-dark fw-bold small">РУКОВОДИТЕЛЬ ОТДЕЛА</label>
-                                    <select class="form-select form-select-lg bg-light border-0" name="manager_id">
-                                        <option value="">-- Без руководителя --</option>
+                                    <label class="form-label text-dark fw-bold small">РУКОВОДИТЕЛИ ОТДЕЛА</label>
+                                    <select class="ts-managers" name="manager_ids" multiple>
                                         {% for u in users %}
                                             {% if u.role in ['manager', 'admin'] %}
-                                            <option value="{{ u.id }}">{{ u.username }} {% if u.description %}({{ u.description }}){% endif %}</option>
+                                            <option value="{{ u.id }}">{{ u.username }}{% if u.description %} ({{ u.description }}){% endif %}</option>
                                             {% endif %}
                                         {% endfor %}
                                     </select>
@@ -229,11 +228,10 @@
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label text-dark fw-bold small">РУКОВОДИТЕЛЬ ОТДЕЛА</label>
-                                            <select class="form-select form-select-lg bg-light border-0" name="manager_id">
-                                                <option value="">-- Без руководителя --</option>
+                                            <select class="ts-managers" name="manager_ids" multiple>
                                                 {% for u in users %}
                                                     {% if u.role in ['manager', 'admin'] %}
-                                                    <option value="{{ u.id }}" {% if dept.manager_id == u.id %}selected{% endif %}>{{ u.username }} {% if u.description %}({{ u.description }}){% endif %}</option>
+                                                    <option value="{{ u.id }}" {% if u.id in dept.manager_ids_list %}selected{% endif %}>{{ u.username }}{% if u.description %} ({{ u.description }}){% endif %}</option>
                                                     {% endif %}
                                                 {% endfor %}
                                             </select>
@@ -505,4 +503,15 @@ document.addEventListener('DOMContentLoaded', function() {
         toggle.dispatchEvent(new Event('change'));
     });
 });
+
+    // TomSelect для выбора руководителей
+    document.querySelectorAll('.ts-managers').forEach(function(el) {
+        if (el.tomselect) return;
+        new TomSelect(el, {
+            plugins: ['remove_button'],
+            maxItems: null,
+            placeholder: 'Выберите руководителей...',
+            create: false,
+        });
+    });
 </script>

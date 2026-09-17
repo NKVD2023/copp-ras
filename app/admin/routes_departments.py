@@ -30,11 +30,10 @@ def create_department():
         flash(f'Отдел «{name}» уже существует.')
         return redirect(url_for('admin.dashboard') + '#departmentsTab')
 
-    manager_id = request.form.get('manager_id') or None
-    if manager_id:
-        manager_id = int(manager_id)
+    manager_ids = request.form.getlist('manager_ids')
 
-    dept = Department(name=name, manager_id=manager_id)
+    dept = Department(name=name)
+    dept.manager_ids_list = manager_ids
     db.session.add(dept)
     db.session.flush()  # получаем dept.id до commit
 
@@ -97,8 +96,8 @@ def edit_department(dept_id):
             return redirect(url_for('admin.dashboard') + '#departmentsTab')
         dept.name = name
 
-    manager_id = request.form.get('manager_id') or None
-    dept.manager_id = int(manager_id) if manager_id else None
+    manager_ids = request.form.getlist('manager_ids')
+    dept.manager_ids_list = manager_ids
 
     # Пересобираем список пользователей:
     # 1) Снимаем department_id у всех текущих участников

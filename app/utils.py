@@ -174,12 +174,20 @@ def build_table_headers(fields):
 
 def get_manager_department(user):
     """
-    Возвращает отдел менеджера или None.
-    Если пользователь - менеджер, то возвращает отдел, которым он руководит.
+    Возвращает первый отдел, которым руководит пользователь, или None.
+    Поддерживает несколько руководителей: ищет отделы, у которых user.id
+    входит в JSON-список manager_ids.
     """
-    if getattr(user, 'role', '') == 'manager':
-        from app.models import Department
-        # user.managed_department это relationship uselist=False
-        return getattr(user, 'managed_department', None)
+    if getattr(user, 'role', '') not in ('manager', 'admin'):
+        return None
+    from app.models import Department
+    import json
+    for dept in Department.query.all():
+        try:
+            ids = json.loads(dept.manager_ids or '[]')
+        except Exception:
+            ids = []
+        if user.id in ids:
+            return dept
     return None
 
