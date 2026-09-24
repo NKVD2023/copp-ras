@@ -186,8 +186,10 @@ def export_my_excel(template_id):
 def return_revision(template_id, user_id):
     """
     Возврат отчета на доработку.
-    Переносит данные из ReportSubmission обратно в ReportDraft и удаляет Submission.
+    Запись ReportSubmission НЕ удаляется, а помечается флагом is_revision=True и сохраняет комментарий куратора.
     """
+    from datetime import datetime
+
     if current_user.role not in ['admin', 'manager']:
         return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         
@@ -197,20 +199,21 @@ def return_revision(template_id, user_id):
     if not submission:
         return jsonify({'status': 'error', 'message': 'Сданный отчет не найден'}), 404
         
-    # Создаем или обновляем черновик
-    draft = ReportDraft.query.filter_by(template_id=template_id, user_id=user_id).first()
-    if not draft:
-        draft = ReportDraft(template_id=template_id, user_id=user_id)
-        db.session.add(draft)
-        
-    draft.data = submission.data
+    req_data = request.get_json(silent=True) or {}
+    comment = req_data.get('comment', '').strip()
+    if not comment:
+        return jsonify({'status': 'error', 'message': 'Необходимо указать причину возврата на доработку'}), 400
+
+    submission.is_revision = True
+    submission.revision_comment = comment
+    submission.returned_at = datetime.utcnow()
+    submission.returned_by_id = current_user.id
     
     target_user = User.query.get(user_id)
     org_name = target_user.description or target_user.username if target_user else str(user_id)
     
-    db.session.delete(submission)
-    log_action('Возврат отчета на доработку', f'Отчет "{template.short_name}" возвращен учреждению {org_name}')
+    log_action('Возврат отчета на доработку', f'Отчет "{template.short_name}" возвращен учреждению {org_name}. Замечание: {comment}')
     
     db.session.commit()
     
-    return jsonify({'status': 'success'})
+    return jsonify({'status': 'success', 'message': 'Отчет возвращен на доработку'})

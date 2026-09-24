@@ -42,7 +42,7 @@ def create_user():
 
     if User.query.filter_by(username=username).first():
         flash('Пользователь с таким логином уже существует')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
 
     user = User(username=username, role=role, description=description, group=group)
     user.set_password(password)
@@ -53,11 +53,15 @@ def create_user():
         dept = get_manager_department(current_user)
         if dept:
             user.department_id = dept.id
+    elif current_user.role == 'admin':
+        dept_id_val = request.form.get('department_id')
+        if dept_id_val and dept_id_val.isdigit():
+            user.department_id = int(dept_id_val)
             
     db.session.add(user)
     db.session.commit()
     log_action('Создание пользователя', f'Создан новый пользователь: {username} с ролью {role}')
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.dashboard', tab='usersTab'))
 
 @admin_bp.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
@@ -75,14 +79,14 @@ def delete_user(user_id):
         dept = get_manager_department(current_user)
         if not dept or user.department_id != dept.id:
             flash('Доступ запрещен')
-            return redirect(url_for('admin.dashboard'))
+            return redirect(url_for('admin.dashboard', tab='usersTab'))
     # Очищаем связанные данные, чтобы не сломать внешние ключи
     ReportSubmission.query.filter_by(user_id=user.id).delete()
     username = user.username
     db.session.delete(user)
     db.session.commit()
     log_action('Удаление пользователя', f'Пользователь {username} и все его отчеты удалены')
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.dashboard', tab='usersTab'))
 
 @admin_bp.route('/edit_user/<int:user_id>', methods=['POST'])
 @login_required
@@ -97,7 +101,7 @@ def edit_user(user_id):
         dept = get_manager_department(current_user)
         if not dept or user.department_id != dept.id:
             flash('Доступ запрещен')
-            return redirect(url_for('admin.dashboard'))
+            return redirect(url_for('admin.dashboard', tab='usersTab'))
     
     # 1. Основные данные
     username = request.form.get('username')
@@ -105,7 +109,7 @@ def edit_user(user_id):
         # Проверяем уникальность логина, если он был изменен
         if username != user.username and User.query.filter_by(username=username).first():
             flash('Пользователь с таким логином уже существует')
-            return redirect(url_for('admin.dashboard') + '#usersTab')
+            return redirect(url_for('admin.dashboard', tab='usersTab'))
         user.username = username
         
     user.description = request.form.get('description', '').strip()
@@ -119,6 +123,10 @@ def edit_user(user_id):
     if group == '':
         group = None
     user.group = group
+
+    if current_user.role == 'admin':
+        dept_id_val = request.form.get('department_id')
+        user.department_id = int(dept_id_val) if (dept_id_val and dept_id_val.isdigit()) else None
 
     # 2. Сброс пароля (если заполнено поле)
     new_password = request.form.get('new_password')
@@ -134,7 +142,7 @@ def edit_user(user_id):
 
     db.session.commit()
     log_action('Редактирование пользователя', f'Обновлен профиль пользователя {user.username}')
-    return redirect(url_for('admin.dashboard') + '#usersTab')
+    return redirect(url_for('admin.dashboard', tab='usersTab'))
 
 @admin_bp.route('/change_my_password', methods=['POST'])
 @login_required
@@ -147,7 +155,7 @@ def change_my_password():
         db.session.commit()
         log_action('Смена пароля', f'Пользователь {current_user.username} сменил свой пароль')
     # Защита от Open Redirect: возвращаемся только на внутренний маршрут 
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.dashboard', tab='usersTab'))
 
 
 @admin_bp.route('/users/download_template', methods=['GET'])
@@ -192,12 +200,12 @@ def bulk_upload():
     """Обработка загруженного Excel-файла."""
     if 'file' not in request.files:
         flash("Файл не выбран")
-        return redirect(url_for('admin.dashboard') + '#usersTab')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
         
     file = request.files['file']
     if file.filename == '':
         flash("Файл не выбран")
-        return redirect(url_for('admin.dashboard') + '#usersTab')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
         
     role = request.form.get('role', 'user')
     if role not in ['user', 'manager']:
@@ -246,4 +254,80 @@ def bulk_upload():
     except Exception as e:
         flash(f"Ошибка при обработке файла: {str(e)}")
         
-    return redirect(url_for('admin.dashboard') + '#usersTab')
+    return redirect(url_for('admin.dashboard', tab='usersTab'))
+
+
+@admin_bp.route('/users/bulk_delete', methods=['POST'])
+@login_required
+@roles_required('admin', 'manager')
+def bulk_delete_users():
+    """
+    Массовое удаление выбранных пользователей.
+    Каскадно удаляет связанные отчеты и черновики, очищает внешние ключи.
+    """
+    user_ids = request.form.getlist('user_ids')
+    if not user_ids:
+        flash('Не выбрано ни одного пользователя для удаления', 'warning')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+        
+    try:
+        user_ids = [int(uid) for uid in user_ids if uid and str(uid).isdigit()]
+    except (ValueError, TypeError):
+        flash('Некорректный список идентификаторов', 'danger')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+        
+    if not user_ids:
+        flash('Не выбрано ни одного пользователя', 'warning')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+        
+    # Защита: нельзя удалить самого себя
+    if current_user.id in user_ids:
+        user_ids.remove(current_user.id)
+        
+    if not user_ids:
+        flash('Нельзя удалить собственную учетную запись', 'danger')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+
+    # Защита для менеджера: только пользователи его отдела
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept:
+            flash('Доступ запрещен', 'danger')
+            return redirect(url_for('admin.dashboard', tab='usersTab'))
+        allowed_users = User.query.filter(User.id.in_(user_ids), User.department_id == dept.id, User.role == 'user').all()
+        target_ids = [u.id for u in allowed_users]
+    else:
+        # Для админа: исключаем других пользователей с ролью admin во избежание случайного удаления
+        target_users = User.query.filter(User.id.in_(user_ids), User.role != 'admin').all()
+        target_ids = [u.id for u in target_users]
+        
+    if not target_ids:
+        flash('Нет доступных для удаления пользователей (аккаунты администраторов защищены)', 'warning')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+        
+    from app.models import ReportDraft, ActionLog, UploadedFile
+    from app.models.tasks import BackgroundTask
+    
+    # Каскадная очистка связанных записей
+    ReportSubmission.query.filter(ReportSubmission.user_id.in_(target_ids)).delete(synchronize_session=False)
+    ReportDraft.query.filter(ReportDraft.user_id.in_(target_ids)).delete(synchronize_session=False)
+    ActionLog.query.filter(ActionLog.user_id.in_(target_ids)).update({'user_id': None}, synchronize_session=False)
+    BackgroundTask.query.filter(BackgroundTask.user_id.in_(target_ids)).update({'user_id': None}, synchronize_session=False)
+    UploadedFile.query.filter(UploadedFile.uploader_id.in_(target_ids)).update({'uploader_id': None}, synchronize_session=False)
+    
+    users_to_delete = User.query.filter(User.id.in_(target_ids)).all()
+    deleted_count = len(users_to_delete)
+    usernames_sample = ', '.join([u.username for u in users_to_delete[:5]])
+    if deleted_count > 5:
+        usernames_sample += f' и еще {deleted_count - 5}'
+        
+    for u in users_to_delete:
+        u.assigned_templates = []
+        db.session.delete(u)
+        
+    db.session.commit()
+    log_action('Массовое удаление', f'Удалено пользователей: {deleted_count} ({usernames_sample})')
+    flash(f'Успешно удалено пользователей: {deleted_count}', 'success')
+    return redirect(url_for('admin.dashboard', tab='usersTab'))
+

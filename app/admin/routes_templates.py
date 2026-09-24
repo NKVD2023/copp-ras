@@ -75,7 +75,7 @@ def reset_to_pure(template_id):
     
     db.session.commit()
     log_action('Сброс в Шаблоны', f'Отчет {template.short_name} очищен и перенесен в шаблоны')
-    return redirect(request.referrer or url_for('admin.dashboard'))
+    return redirect(request.referrer or url_for('admin.dashboard', tab='reportsTab'))
 
 
 @admin_bp.route('/toggle_publish/<int:template_id>', methods=['POST'])
@@ -89,7 +89,7 @@ def toggle_publish(template_id):
     
     if not template.is_published and (not template.period or template.period == 'None') and not template.period_data:
         flash('Невозможно опубликовать отчет: не задан период.', 'danger')
-        return redirect(url_for('admin.dashboard') + '#reportsTab')
+        return redirect(url_for('admin.dashboard', tab='reportsTab'))
         
     template.is_published = not template.is_published
     if template.is_published:
@@ -112,7 +112,7 @@ def toggle_publish(template_id):
     db.session.commit()
     status_str = "опубликован" if template.is_published else "скрыт"
     log_action('Публикация отчета', f'Отчет {template.short_name} {status_str}')
-    return redirect(url_for('admin.dashboard') + '#reportsTab')
+    return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/toggle_complete/<int:template_id>', methods=['POST'])
 @login_required
@@ -127,7 +127,7 @@ def toggle_complete(template_id):
     db.session.commit()
     status_str = "завершен" if template.is_completed else "возобновлен"
     log_action('Изменение статуса отчета', f'Сбор данных для отчета {template.short_name} {status_str}')
-    return redirect(request.referrer or (url_for('admin.dashboard') + '#reportsTab'))
+    return redirect(request.referrer or url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/toggle_archive/<int:template_id>', methods=['POST'])
 @login_required
@@ -141,7 +141,7 @@ def toggle_archive(template_id):
     db.session.commit()
     status_str = "в архив" if template.is_archived else "из архива"
     log_action('Архивация отчета', f'Отчет {template.short_name} перенесен {status_str}')
-    return redirect(url_for('admin.dashboard') + '#reportsTab')
+    return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/archive_submission/<int:submission_id>', methods=['POST'])
 @login_required
@@ -155,7 +155,7 @@ def archive_submission(submission_id):
     sub.is_archived = True
     db.session.commit()
     log_action('Архивация сданного отчета', f'Сданный отчет {sub.id} от пользователя {sub.user.username} перенесен в архив')
-    return redirect(url_for('admin.dashboard') + '#reportsTab')
+    return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/clone_template/<int:template_id>', methods=['POST'])
 @login_required
@@ -222,7 +222,7 @@ def clone_template(template_id):
         new_template.departments.append(dept)
     db.session.commit()
     log_action('Копирование отчета', f'Создана копия отчета {original.short_name} с новым именем {new_template.short_name}')
-    return redirect(url_for('admin.dashboard') + '#reportsTab')
+    return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/delete_template/<int:template_id>', methods=['POST'])
 @login_required
@@ -241,7 +241,7 @@ def delete_template(template_id):
     db.session.delete(template)
     db.session.commit()
     log_action('Удаление отчета', f'Отчет {name} удален')
-    return redirect(url_for('admin.dashboard') + '#reportsTab')
+    return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/edit_template_meta/<int:template_id>', methods=['POST'])
 @login_required
@@ -296,7 +296,7 @@ def edit_template_meta(template_id):
     db.session.commit()
     log_action('Редактирование отчета', f'Изменены метаданные отчета {template.short_name}')
     # Возвращаемся обратно на вкладку отчетов с якорем
-    return redirect(url_for('admin.dashboard') + '#reportsTab')
+    return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/export_debtors/<int:template_id>', methods=['GET'])
 @login_required

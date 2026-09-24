@@ -190,10 +190,45 @@ def dashboard():
                                     pass
 
     if current_user.role == 'admin':
-        from app.models import Department
-        all_departments = Department.query.all()
+        from app.models import Department, ReportDraft, BackgroundTask, MaintenanceSetting
+        import sqlite3
+        all_departments = Department.query.order_by(Department.name).all()
+        all_drafts = ReportDraft.query.order_by(ReportDraft.updated_at.desc()).all()
+        all_tasks = BackgroundTask.query.order_by(BackgroundTask.created_at.desc()).limit(100).all()
+        all_maintenance = MaintenanceSetting.query.all()
+
+        db_path = os.path.join(basedir, 'reports.db')
+        db_size_mb = 0.0
+        if os.path.exists(db_path):
+            db_size_mb = round(os.path.getsize(db_path) / (1024 * 1024), 2)
+            
+        total_records = (
+            len(all_users) + len(all_templates) + len(all_submissions) + 
+            len(all_departments) + len(all_drafts) + len(dictionaries) + 
+            len(all_files) + len(all_tasks)
+        )
+        
+        db_stats = {
+            'size_mb': db_size_mb,
+            'total_records': total_records,
+            'sqlite_version': sqlite3.sqlite_version,
+            'backups_count': len(backups_list),
+            'latest_backup': backups_list[0] if backups_list else None,
+            'tables_count': 9
+        }
     else:
         all_departments = []
+        all_drafts = []
+        all_tasks = []
+        all_maintenance = []
+        db_stats = {
+            'size_mb': 0,
+            'total_records': 0,
+            'sqlite_version': '',
+            'backups_count': 0,
+            'latest_backup': None,
+            'tables_count': 0
+        }
 
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
@@ -213,6 +248,10 @@ def dashboard():
                            all_groups=all_groups,
                            all_files=all_files,
                            dictionaries=dictionaries,
+                           all_drafts=all_drafts,
+                           all_tasks=all_tasks,
+                           all_maintenance=all_maintenance,
+                           db_stats=db_stats,
                            stat_short_names=stat_short_names,
                            selected_user_id=int(selected_user_id) if selected_user_id and selected_user_id.isdigit() else None,
                            selected_short_name=selected_short_name,
@@ -240,7 +279,7 @@ def clear_logs():
     from app.utils import log_action
     log_action('Очистка логов', f'Администратор {current_user.username} полностью очистил журнал действий')
     
-    return redirect(url_for('admin.dashboard') + '#logsTab')
+    return redirect(url_for('admin.dashboard', tab='logsTab'))
 
 @admin_bp.route('/export_statistics', methods=['GET'])
 @login_required

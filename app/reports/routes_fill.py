@@ -56,6 +56,9 @@ def fill_report(template_id):
     
     # Блокировка редактирования, если прошел срок сдачи
     is_locked = template.deadline and date.today() > template.deadline
+    if submission and submission.is_revision:
+        # Для исправления замечаний куратора редактирование разблокировано
+        is_locked = False
     
     if not submission:
         # Если нет ответа, то проверяем строго: форма должна быть назначена и опубликована
@@ -63,7 +66,7 @@ def fill_report(template_id):
             return "Доступ ограничен или форма не опубликована", 403
     else:
         # Если ответ есть (архивная запись), но форма больше не актуальна, просто блокируем редактирование
-        if template not in current_user.assigned_templates or not template.is_published:
+        if (template not in current_user.assigned_templates or not template.is_published) and not submission.is_revision:
             is_locked = True
     
     # Сохранение данных (AJAX запрос из JS)
@@ -156,13 +159,20 @@ def fill_report(template_id):
             return jsonify({'status': 'error', 'message': error_msg}), 400
 
         submission.data = json_data
+        # Сбрасываем статус доработки при успешной сдаче
+        was_revision = bool(submission.is_revision)
+        submission.is_revision = False
+        submission.revision_comment = None
+        submission.returned_at = None
+        submission.returned_by_id = None
         db.session.commit()
         # Удаляем облачный черновик после успешной финальной сдачи
         draft = ReportDraft.query.filter_by(template_id=template.id, user_id=current_user.id).first()
         if draft:
             db.session.delete(draft)
             db.session.commit()
-        log_action('Заполнение отчета', f'Отправлены данные для отчета {template.short_name}')
+        action_name = 'Исправление отчета' if was_revision else 'Заполнение отчета'
+        log_action(action_name, f'Отправлены данные для отчета {template.short_name}')
         return jsonify({'status': 'success'})
         
     # Отрисовка формы для пользователя (GET запрос)
@@ -212,6 +222,10 @@ def fill_report(template_id):
             
     schema_tree = build_schema_tree(schema_obj)
     
+    revision_comment = submission.revision_comment if (submission and submission.is_revision) else None
+    revision_date = submission.returned_at if (submission and submission.is_revision) else None
+    revision_author = (submission.returned_by.description or submission.returned_by.username) if (submission and submission.is_revision and submission.returned_by) else None
+
     template_name = 'mobile/fill_report.html' if is_mobile(request) else 'fill_report.html'
     return render_template(
         template_name,
@@ -220,7 +234,11 @@ def fill_report(template_id):
         submission=virtual_submission,
         is_locked=is_locked,
         has_cloud_draft=has_cloud_draft,
-        cloud_draft_time=cloud_draft_time
+        cloud_draft_time=cloud_draft_time,
+        is_revision=(submission.is_revision if submission else False),
+        revision_comment=revision_comment,
+        revision_date=revision_date,
+        revision_author=revision_author
     )
 
 @reports_bp.route('/fill/<int:template_id>/past_submissions', methods=['GET'])

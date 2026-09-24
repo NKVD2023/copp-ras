@@ -298,19 +298,45 @@
 
                             {% if ns.has_data or sub.id %}
                             {% for i in range(ns.max_len) %}
-                            <tr data-org-name="{{ (sub.user.description or sub.user.username)|lower }}">
+                            <tr data-org-name="{{ (sub.user.description or sub.user.username)|lower }}" {% if sub.is_revision %}style="background-color: #fffbe6;"{% endif %}>
                                 {% if i == 0 %}
-                                <td class="p-3 fw-bold sticky-col align-middle" rowspan="{{ ns.max_len }}">
-                                    {{ sub.user.description }}
-                                    <!-- Временно скрыто
-                                    {% if sub.id %}
-                                    <div class="mt-2">
-                                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p" onclick="returnForRevision({{ template.id }}, {{ sub.user.id }}, '{{ sub.user.description }}')" title="Вернуть отчет на доработку" >
-                                            <i class="bi bi-arrow-counterclockwise"></i> На доработку
-                                        </button>
+                                <td class="p-3 fw-bold sticky-col align-middle {% if sub.is_revision %}bg-warning bg-opacity-10{% endif %}" rowspan="{{ ns.max_len }}">
+                                    <div>{{ sub.user.description or sub.user.username }}</div>
+                                    {% if sub.is_revision %}
+                                    <div class="mt-1 d-flex flex-column gap-1">
+                                        <span class="badge text-dark border border-warning border-opacity-50 px-2 py-1" style="background-color: #fff3cd; width: fit-content;">
+                                            <i class="bi bi-clock-history me-1 text-warning"></i>На доработке
+                                        </span>
+                                        {% if sub.revision_comment %}
+                                        <div class="small text-muted fst-italic p-2 rounded bg-white border border-warning border-opacity-25" style="font-size: 0.75rem; font-weight: normal; line-height: 1.25;" title="{{ sub.revision_comment }}">
+                                            <i class="bi bi-chat-left-quote me-1 text-warning"></i>{{ sub.revision_comment }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                     {% endif %}
-                                    -->
+                                    {% if sub.id %}
+                                    <div class="mt-2">
+                                        {% if sub.is_revision %}
+                                        <button class="btn btn-sm btn-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p shadow-sm btn-return-revision" 
+                                                data-template-id="{{ template.id }}" 
+                                                data-user-id="{{ sub.user.id }}" 
+                                                data-org-name="{{ sub.user.description or sub.user.username }}" 
+                                                data-comment="{{ sub.revision_comment or '' }}" 
+                                                title="Изменить комментарий к доработке">
+                                            <i class="bi bi-pencil-square"></i> Изменить замечание
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p btn-return-revision" 
+                                                data-template-id="{{ template.id }}" 
+                                                data-user-id="{{ sub.user.id }}" 
+                                                data-org-name="{{ sub.user.description or sub.user.username }}" 
+                                                data-comment="" 
+                                                title="Вернуть отчет на доработку">
+                                            <i class="bi bi-arrow-counterclockwise"></i> На доработку
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
                                 </td>
                                 {% endif %}
                                 
@@ -786,20 +812,29 @@
                     setTimeout(() => pollTaskStatus(taskId, btn, originalHtml), 1000);
                 });
         }
-        function returnForRevision(templateId, userId, orgName) {
+        function returnForRevision(templateId, userId, orgName, currentComment = '') {
             Swal.fire({
-                title: 'Вернуть на доработку?',
-                html: `Вы уверены, что хотите вернуть отчет учреждения <br><b class="text-primary">${orgName}</b><br> на доработку?<br><br><small class="text-muted">Отчет исчезнет из этой сводки и снова появится у учреждения в виде черновика.</small>`,
+                title: 'Вернуть отчет на доработку',
+                html: `Укажите замечания и причину возврата для:<br><b class="text-primary">${orgName}</b>`,
+                input: 'textarea',
+                inputValue: currentComment || '',
+                inputPlaceholder: 'Опишите, какие данные необходимо исправить (обязательно)...',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#f39c12',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Да, вернуть',
+                confirmButtonText: '<i class="bi bi-arrow-counterclockwise me-1"></i> Вернуть на доработку',
                 cancelButtonText: 'Отмена',
+                inputValidator: (value) => {
+                    if (!value || !value.trim()) {
+                        return 'Необходимо указать причину возврата!';
+                    }
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
+                    const comment = result.value.trim();
                     Swal.fire({
-                        title: 'Возврат...',
+                        title: 'Сохранение...',
                         allowOutsideClick: false,
                         didOpen: () => {
                             Swal.showLoading()
@@ -811,14 +846,15 @@
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': '{{ csrf_token() }}'
-                        }
+                        },
+                        body: JSON.stringify({ comment: comment })
                     })
                     .then(r => r.json())
                     .then(data => {
                         if (data.status === 'success') {
                             Swal.fire({
                                 title: 'Успешно',
-                                text: 'Отчет возвращен на доработку.',
+                                text: 'Отчет возвращен на доработку. Учреждение увидит замечание в форме.',
                                 icon: 'success',
                                 confirmButtonColor: '#003366'
                             }).then(() => {
@@ -829,11 +865,22 @@
                         }
                     })
                     .catch(err => {
-                        Swal.fire('Ошибка', 'Произошла ошибка сети', 'error');
+                        Swal.fire('Ошибка', 'Произошла ошибка сети: ' + err, 'error');
                     });
                 }
             });
         }
+
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-return-revision');
+            if (btn) {
+                const templateId = btn.getAttribute('data-template-id');
+                const userId = btn.getAttribute('data-user-id');
+                const orgName = btn.getAttribute('data-org-name');
+                const currentComment = btn.getAttribute('data-comment') || '';
+                returnForRevision(templateId, userId, orgName, currentComment);
+            }
+        });
     </script>
 </body>
 

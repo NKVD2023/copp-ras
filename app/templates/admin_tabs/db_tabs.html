@@ -1,285 +1,789 @@
-<div class="row align-items-center mb-4">
-    <div class="col-md-6 d-flex gap-2">
-        <a href="{{ url_for('admin.download_current_db') }}" class="btn btn-copp shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download me-1 mb-1" viewBox="0 0 16 16">
-              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-            </svg>
-            Полный бэкап
-        </a>
-        <button type="button" class="btn btn-outline-secondary shadow-sm" onclick="document.getElementById('backupFileInput').click()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload me-1 mb-1" viewBox="0 0 16 16">
-              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-              <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-            </svg>
-            Восстановить
-        </button>
-        <form id="restoreForm" action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-none">
+<!-- 
+  DB_TABS.HTML — Обновленная панель управления базой данных ЦОПП РАС.
+  Включает:
+    - Сводные метрики БД (размер, записи, бэкапы, статус)
+    - Режим технических работ (Maintenance Mode)
+    - Капсульная навигация: Таблицы данных | Резервные копии | Инструменты обслуживания
+    - Просмотр и редактирование всех таблиц + JSON-просмотрщик
+    - Управление бэкапами (создание, скачивание, восстановление, удаление)
+    - Инструменты оптимизации (VACUUM, PRAGMA integrity_check, очистка логов)
+-->
+
+
+
+<!-- 2. КАРТОЧКА УПРАВЛЕНИЯ ТЕХНИЧЕСКИМИ РАБОТАМИ -->
+<div class="card mb-4 border-0 shadow-sm overflow-hidden" style="border-radius: 16px;">
+    <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center" style="background-color: #ffffff; border-bottom: 1px solid var(--border-color);">
+        <div class="d-flex align-items-center gap-3">
+            <span class="p-2 rounded-3 text-white d-flex align-items-center justify-content-center" style="background-color: var(--primary-color); width: 38px; height: 38px;">
+                <i class="bi bi-tools fs-5"></i>
+            </span>
+            <div>
+                <h6 class="fw-bold mb-0 text-dark">Режим технических работ (Maintenance Mode)</h6>
+                <small class="text-muted">Блокировка доступа для всех пользователей и менеджеров на время проведения обновлений</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            {% if maintenance_status.in_maintenance %}
+                <span class="badge bg-danger rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm">
+                    <span class="spinner-grow spinner-grow-sm text-light" style="width: 0.7rem; height: 0.7rem;" role="status"></span>
+                    ТЕХРАБОТЫ АКТИВНЫ
+                </span>
+                <form action="{{ url_for('admin.disable_maintenance') }}" method="POST" class="d-inline" onsubmit="return confirm('Завершить технические работы досрочно и открыть сайт прямо сейчас?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-sm btn-outline-danger bg-white shadow-sm rounded-pill px-3 fw-bold">
+                        <i class="bi bi-power me-1"></i> Выключить техработы
+                    </button>
+                </form>
+            {% elif maintenance_status.is_scheduled %}
+                <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-sm">
+                    <i class="bi bi-clock me-1"></i> ЗАПЛАНИРОВАНЫ
+                </span>
+                <form action="{{ url_for('admin.disable_maintenance') }}" method="POST" class="d-inline" onsubmit="return confirm('Отменить запланированные технические работы и обнулить даты?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-sm btn-outline-danger bg-white shadow-sm rounded-pill px-3 fw-bold">
+                        <i class="bi bi-x-circle me-1"></i> Отменить расписание
+                    </button>
+                </form>
+            {% else %}
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2 fw-medium">
+                    <i class="bi bi-check-circle me-1"></i> Штатный режим
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-4 bg-white">
+        <form action="{{ url_for('admin.save_maintenance') }}" method="POST" id="maintenanceForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <input type="file" name="backup_file" id="backupFileInput" accept=".zip" required onchange="promptRestorePassword()">
-            <input type="hidden" name="password" id="restorePasswordHidden">
+            
+            <div class="row g-4 align-items-center">
+                <!-- Тумблер немедленного включения -->
+                <div class="col-12 col-lg-4">
+                    <div class="p-3 rounded-3 border bg-light-subtle h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="form-check form-switch form-switch-copp mb-2">
+                                <input class="form-check-input" type="checkbox" role="switch" id="maintenanceSwitch" name="is_active" {% if maintenance_status.is_active_toggle %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-dark" for="maintenanceSwitch">
+                                    Включить прямо сейчас
+                                </label>
+                            </div>
+                            <p class="text-muted small mb-0">Мгновенно переводит сайт в режим заглушки для всех пользователей и наблюдателей.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Период проведения (От и До) -->
+                <div class="col-12 col-lg-8">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold text-dark mb-0">
+                                    <i class="bi bi-calendar-event me-1 text-muted"></i> Начало работ (МСК):
+                                </label>
+                                <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 text-muted small" onclick="clearDateInput('start_at')" title="Очистить дату начала">
+                                    <i class="bi bi-x me-1"></i>Очистить
+                                </button>
+                            </div>
+                            <input type="datetime-local" class="form-control" name="start_at" id="maintenanceStartAt" value="{{ maintenance_status.start_input }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold text-dark mb-0">
+                                    <i class="bi bi-calendar-check me-1 text-muted"></i> Окончание работ (МСК):
+                                </label>
+                                <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 text-muted small" onclick="clearDateInput('end_at')" title="Очистить дату окончания">
+                                    <i class="bi bi-x me-1"></i>Очистить
+                                </button>
+                            </div>
+                            <input type="datetime-local" class="form-control" name="end_at" id="maintenanceEndAt" value="{{ maintenance_status.end_input }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark mb-1">Сообщение для пользователей:</label>
+                            <input type="text" class="form-control" name="message" value="{{ maintenance_status.message }}" placeholder="Причина или описание работ">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
+                <div class="text-muted small">
+                    <i class="bi bi-shield-check text-success me-1"></i> Администратор всегда сохраняет доступ ко всем разделам сайта.
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill" onclick="clearAllMaintenanceDates()" title="Очистить оба поля дат">
+                        <i class="bi bi-eraser me-1"></i> Обнулить даты
+                    </button>
+                    {% if maintenance_status.in_maintenance or maintenance_status.is_scheduled %}
+                    <button type="button" class="btn btn-outline-danger btn-sm px-3 rounded-pill fw-medium" onclick="disableMaintenanceNow()">
+                        <i class="bi bi-power me-1"></i> Завершить досрочно
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('admin.preview_maintenance') }}" target="_blank" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
+                        <i class="bi bi-eye me-1"></i> Предпросмотр страницы
+                    </a>
+                    <button type="submit" class="btn btn-copp btn-sm px-4 rounded-pill fw-bold shadow-sm">
+                        <i class="bi bi-check2 me-1"></i> Сохранить настройки
+                    </button>
+                </div>
+            </div>
         </form>
     </div>
-    <div class="col-md-6 text-end">
-        <button type="button" class="btn btn-copp btn-sm px-4 shadow-sm text-nowrap" id="saveDbChangesBtn" onclick="saveDbChanges()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save me-1 mb-1" viewBox="0 0 16 16">
-              <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
-            </svg>
-            Сохранить изменения
+</div>
+
+<!-- Скрытая форма досрочного отключения техработ -->
+<form id="disableMaintenanceForm" action="{{ url_for('admin.disable_maintenance') }}" method="POST" class="d-none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+</form>
+
+<script>
+    function clearDateInput(inputName) {
+        const el = document.querySelector(`input[name="${inputName}"]`);
+        if (el) el.value = '';
+    }
+    function clearAllMaintenanceDates() {
+        clearDateInput('start_at');
+        clearDateInput('end_at');
+    }
+    function disableMaintenanceNow() {
+        if (typeof coppConfirm === 'function') {
+            coppConfirm(
+                'Завершить технические работы прямо сейчас и открыть доступ к сайту для всех пользователей? Расписание и даты будут обнулены.',
+                function() {
+                    document.getElementById('disableMaintenanceForm').submit();
+                }
+            );
+        } else if (confirm('Завершить технические работы прямо сейчас и открыть доступ к сайту для всех пользователей? Расписание и даты будут обнулены.')) {
+            document.getElementById('disableMaintenanceForm').submit();
+        }
+    }
+</script>
+
+<!-- 3. КАПСУЛЬНАЯ НАВИГАЦИЯ (SEGMENTED CONTROL) -->
+<ul class="nav nav-pills segmented-control bg-white border shadow-sm p-1 rounded-pill flex-nowrap overflow-auto mb-4 gap-sm-nowrap" id="dbMainTabs" role="tablist" style="width: max-content;">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active rounded-pill px-4 py-2 fw-medium" id="db-tab-tables" data-bs-toggle="tab" data-bs-target="#dbPaneTables" type="button" role="tab">
+            <i class="bi bi-table me-2"></i>Таблицы данных
         </button>
-    </div>
-</div>
-
-<div class="alert bg-white border border-light-subtle small mb-4 py-2 text-muted shadow-sm w-100">
-    <strong>Режим БД:</strong> Прямое редактирование таблиц. JSON поля (schema, data) доступны только для чтения.
-</div>
-
-<ul class="nav nav-pills mb-3 small" id="dbTablesTabs" role="tablist">
-    <li class="nav-item">
-        <button class="nav-link active py-1 px-3" data-bs-toggle="pill" data-bs-target="#dbUsers" type="button">users</button>
     </li>
-    <li class="nav-item">
-        <button class="nav-link py-1 px-3" data-bs-toggle="pill" data-bs-target="#dbTemplates" type="button">report_templates</button>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4 py-2 fw-medium" id="db-tab-backups" data-bs-toggle="tab" data-bs-target="#dbPaneBackups" type="button" role="tab">
+            <i class="bi bi-archive me-2"></i>Резервные копии <span class="badge bg-secondary rounded-pill ms-1">{{ backups_list|length }}</span>
+        </button>
     </li>
-    <li class="nav-item">
-        <button class="nav-link py-1 px-3" data-bs-toggle="pill" data-bs-target="#dbSubmissions" type="button">report_submissions</button>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4 py-2 fw-medium" id="db-tab-stats" data-bs-toggle="tab" data-bs-target="#dbPaneStats" type="button" role="tab">
+            <i class="bi bi-bar-chart-fill me-2"></i>Статистика по отчетам
+        </button>
     </li>
-
 </ul>
 
-<div class="tab-content" id="dbTablesContent">
-    <!-- USERS TABLE -->
-    <div class="tab-pane fade show active" id="dbUsers" role="tabpanel">
-        <div class="db-table-container">
-            <div class="p-0">
-                <div class="table-responsive table-scrollable">
-                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table table-compact">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th class="px-3 col-id">id</th>
-                                <th>username</th>
-                                <th>role</th>
-                                <th>description</th>
-                                <th>password_hash</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for u in all_users %}
-                            <tr>
-                                <td class="fw-bold px-3 text-muted bg-light">{{ u.id }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="username">{{ u.username or '' }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="role">{{ u.role or '' }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="description">{{ u.description or '' }}</td>
-                                <td class="text-muted text-truncate bg-light cell-truncate-md" title="Хэш пароля (только для чтения)">{{ u.password_hash }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<!-- 4. КОНТЕНТ ВКЛАДОК -->
+<div class="tab-content" id="dbMainTabsContent">
+
+    <!-- ============================================================== -->
+    <!-- ПОДВКЛАДКА 1: ТАБЛИЦЫ ДАННЫХ (РЕДАКТОР)                        -->
+    <!-- ============================================================== -->
+    <div class="tab-pane fade show active" id="dbPaneTables" role="tabpanel">
+        <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+            
+            <!-- Панель инструментов: список таблиц и действия -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div class="overflow-auto pb-2 pb-md-0">
+                    <ul class="nav nav-pills small flex-nowrap gap-1" id="dbTablesSelector" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-users">
+                                users <span class="badge bg-secondary rounded-pill ms-1">{{ all_users|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-departments">
+                                departments <span class="badge bg-secondary rounded-pill ms-1">{{ departments|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-templates">
+                                templates <span class="badge bg-secondary rounded-pill ms-1">{{ templates|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-submissions">
+                                submissions <span class="badge bg-secondary rounded-pill ms-1">{{ all_submissions|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-drafts">
+                                drafts <span class="badge bg-secondary rounded-pill ms-1">{{ all_drafts|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-dictionaries">
+                                dictionaries <span class="badge bg-secondary rounded-pill ms-1">{{ dictionaries|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-files">
+                                files <span class="badge bg-secondary rounded-pill ms-1">{{ all_files|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-tasks">
+                                tasks <span class="badge bg-secondary rounded-pill ms-1">{{ all_tasks|length }}</span>
+                            </button>
+                        </li>
+                    </ul>
                 </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <div class="input-group input-group-sm" style="max-width: 260px;">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 bg-light" id="dbTableSearchInput" placeholder="Поиск по строкам...">
+                    </div>
+                    <button type="button" class="btn btn-copp btn-sm px-3 shadow-sm text-nowrap rounded-pill" id="saveDbChangesBtn" onclick="saveDbChanges()">
+                        <i class="bi bi-save me-1"></i> Сохранить правки
+                    </button>
+                </div>
+            </div>
+
+            <!-- Сами таблицы -->
+            <div class="tab-content" id="dbTablesSubContent">
+                
+                <!-- 1. USERS -->
+                <div class="tab-pane fade show active" id="table-users" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3 col-id">ID</th>
+                                    <th>Имя (username)</th>
+                                    <th>Роль</th>
+                                    <th>Отдел (ID)</th>
+                                    <th>Группа</th>
+                                    <th>Описание</th>
+                                    <th>Хэш пароля</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in all_users %}
+                                <tr class="db-row">
+                                    <td class="px-3"><span class="badge bg-light text-dark border">#{{ u.id }}</span></td>
+                                    <td class="db-editable fw-bold text-dark" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="username">{{ u.username or '' }}</td>
+                                    <td>
+                                        <span class="db-editable badge {% if u.role == 'admin' %}bg-primary{% elif u.role == 'manager' %}bg-info text-dark{% else %}bg-secondary{% endif %}" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="role">{{ u.role or 'user' }}</span>
+                                    </td>
+                                    <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="department_id">{{ u.department_id or '' }}</td>
+                                    <td class="db-editable" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="group">{{ u.group or '' }}</td>
+                                    <td class="db-editable text-muted" contenteditable="true" data-model="User" data-id="{{ u.id }}" data-field="description">{{ u.description or '' }}</td>
+                                    <td class="text-muted font-monospace small text-truncate cell-truncate-md" title="{{ u.password_hash }}">{{ u.password_hash }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. DEPARTMENTS -->
+                <div class="tab-pane fade" id="table-departments" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3 col-id">ID</th>
+                                    <th>Название отдела</th>
+                                    <th>Руководители (ID менеджеров)</th>
+                                    <th>Участников</th>
+                                    <th>Привязано шаблонов</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in departments %}
+                                <tr class="db-row">
+                                    <td class="px-3"><span class="badge bg-light text-dark border">#{{ d.id }}</span></td>
+                                    <td class="db-editable fw-bold text-dark" contenteditable="true" data-model="Department" data-id="{{ d.id }}" data-field="name">{{ d.name }}</td>
+                                    <td class="font-monospace small text-muted">{{ d.manager_ids or '[]' }}</td>
+                                    <td><span class="badge bg-secondary rounded-pill">{{ d.members.count() }} учреждений</span></td>
+                                    <td><span class="badge bg-light text-dark border rounded-pill">{{ d.templates.count() }} шаблонов</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. REPORT TEMPLATES -->
+                <div class="tab-pane fade" id="table-templates" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3 col-id">ID</th>
+                                    <th>Название</th>
+                                    <th>Краткое имя</th>
+                                    <th>Период</th>
+                                    <th>Дедлайн</th>
+                                    <th>Опубликован</th>
+                                    <th>Шаблон</th>
+                                    <th>Схема полей (JSON)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in templates %}
+                                <tr class="db-row">
+                                    <td class="px-3"><span class="badge bg-light text-dark border">#{{ t.id }}</span></td>
+                                    <td class="db-editable fw-bold text-dark" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="name">{{ t.name or '' }}</td>
+                                    <td class="db-editable text-muted" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="short_name">{{ t.short_name or '' }}</td>
+                                    <td class="db-editable text-muted" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="period">{{ t.period or '' }}</td>
+                                    <td class="db-editable text-muted font-monospace small" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="deadline">{{ t.deadline or '' }}</td>
+                                    <td>
+                                        <span class="db-editable badge {% if t.is_published %}bg-success{% else %}bg-secondary{% endif %}" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="is_published">{{ t.is_published }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="db-editable badge {% if t.is_template %}bg-primary{% else %}bg-light text-dark border{% endif %}" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="is_template">{{ t.is_template }}</span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Схема шаблона #{{ t.id }}", {{ t.schema|tojson|safe }})'>
+                                            <i class="bi bi-code-slash me-1"></i> Просмотр JSON
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. SUBMISSIONS -->
+                <div class="tab-pane fade" id="table-submissions" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3 col-id">ID</th>
+                                    <th>Шаблон (ID)</th>
+                                    <th>Пользователь (ID)</th>
+                                    <th>Данные отчета (JSON)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in all_submissions %}
+                                <tr class="db-row">
+                                    <td class="px-3"><span class="badge bg-light text-dark border">#{{ s.id }}</span></td>
+                                    <td class="db-editable" contenteditable="true" data-model="ReportSubmission" data-id="{{ s.id }}" data-field="template_id">
+                                        {{ s.template_id }} {% if s.template %}<span class="text-muted small">({{ s.template.name }})</span>{% endif %}
+                                    </td>
+                                    <td class="db-editable" contenteditable="true" data-model="ReportSubmission" data-id="{{ s.id }}" data-field="user_id">
+                                        {{ s.user_id }} {% if s.user %}<span class="text-muted small">({{ s.user.username }})</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Отчет #{{ s.id }} ({{ s.user.username if s.user else "user" }})", {{ s.data|tojson|safe }})'>
+                                            <i class="bi bi-file-earmark-text me-1"></i> Просмотр данных JSON
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. DRAFTS -->
+                <div class="tab-pane fade" id="table-drafts" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3 col-id">ID</th>
+                                    <th>Шаблон</th>
+                                    <th>Пользователь</th>
+                                    <th>Время обновления</th>
+                                    <th>Черновик (JSON)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in all_drafts %}
+                                <tr class="db-row">
+                                    <td class="px-3"><span class="badge bg-light text-dark border">#{{ d.id }}</span></td>
+                                    <td>{{ d.template.name if d.template else d.template_id }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ d.user.username if d.user else d.user_id }}</span></td>
+                                    <td class="text-muted small font-monospace">{{ d.updated_at|msk_time }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Черновик #{{ d.id }}", {{ d.data|tojson|safe }})'>
+                                            <i class="bi bi-file-earmark-code me-1"></i> Просмотр черновика
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">Активных черновиков в базе нет</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 6. DICTIONARIES -->
+                <div class="tab-pane fade" id="table-dictionaries" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3 col-id">ID</th>
+                                    <th>Название справочника</th>
+                                    <th>Элементов</th>
+                                    <th>Отдел ID</th>
+                                    <th>Элементы списка (JSON)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dict_item in dictionaries %}
+                                <tr class="db-row">
+                                    <td class="px-3"><span class="badge bg-light text-dark border">#{{ dict_item.id }}</span></td>
+                                    <td class="db-editable fw-bold text-dark" contenteditable="true" data-model="Dictionary" data-id="{{ dict_item.id }}" data-field="name">{{ dict_item.name }}</td>
+                                    <td><span class="badge bg-secondary rounded-pill">{{ dict_item.items|length }} элементов</span></td>
+                                    <td class="text-muted">{{ dict_item.department_id or 'Общий' }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Справочник «{{ dict_item.name }}»", {{ dict_item.items|tojson|safe }})'>
+                                            <i class="bi bi-list-ul me-1"></i> Просмотр вариантов
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 7. UPLOADED FILES -->
+                <div class="tab-pane fade" id="table-files" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3 col-id">ID</th>
+                                    <th>Имя файла</th>
+                                    <th>Размер</th>
+                                    <th>Дата загрузки</th>
+                                    <th>Загрузил</th>
+                                    <th>Отдел ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for f in all_files %}
+                                <tr class="db-row">
+                                    <td class="px-3"><span class="badge bg-light text-dark border">#{{ f.id }}</span></td>
+                                    <td class="fw-bold text-dark">{{ f.filename }}</td>
+                                    <td class="text-muted small">
+                                        {% if f.file_size %}
+                                            {{ (f.file_size / 1024)|round(1) }} КБ
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small font-monospace">{{ f.upload_date|msk_time }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ f.uploader.username if f.uploader else f.uploader_id }}</span></td>
+                                    <td class="text-muted">{{ f.department_id or '—' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 8. BACKGROUND TASKS -->
+                <div class="tab-pane fade" id="table-tasks" role="tabpanel">
+                    <div class="table-responsive table-scrollable-lg rounded-3 border">
+                        <table class="table table-sm table-hover mb-0 db-table align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="px-3">ID задачи</th>
+                                    <th>Название</th>
+                                    <th>Статус</th>
+                                    <th>Создана</th>
+                                    <th>Результат / Ошибка</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in all_tasks %}
+                                <tr class="db-row">
+                                    <td class="px-3 font-monospace small text-muted">{{ task.id[:8] }}...</td>
+                                    <td class="fw-bold text-dark">{{ task.name }}</td>
+                                    <td>
+                                        <span class="badge {% if task.status == 'SUCCESS' %}bg-success{% elif task.status == 'RUNNING' %}bg-primary{% elif task.status == 'PENDING' %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill">
+                                            {{ task.status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small font-monospace">{{ task.created_at|msk_time }}</td>
+                                    <td class="text-muted small text-truncate cell-truncate-lg" title="{{ task.error_message or task.result_path or '' }}">
+                                        {{ task.error_message or task.result_path or '—' }}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">Фоновых задач не зафиксировано</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
-    <!-- TEMPLATES TABLE -->
-    <div class="tab-pane fade" id="dbTemplates" role="tabpanel">
-        <div class="db-table-container">
-            <div class="p-0">
-                <div class="table-responsive table-scrollable">
-                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table table-compact">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th class="px-3 col-id">id</th>
-                                <th>name</th>
-                                <th>short_name</th>
-                                <th>period</th>
-                                <th>deadline</th>
-                                <th>is_published</th>
-                                <th>schema (JSON)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for t in templates %}
-                            <tr>
-                                <td class="fw-bold px-3 text-muted bg-light">{{ t.id }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="name">{{ t.name or '' }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="short_name">{{ t.short_name or '' }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="period">{{ t.period or '' }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="deadline">{{ t.deadline or '' }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="is_published">{{ t.is_published }}</td>
-                                <td class="text-muted text-truncate bg-light cell-truncate-lg" title="Только для чтения">[JSON Object]</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <!-- ============================================================== -->
+    <!-- ПОДВКЛАДКА 2: РЕЗЕРВНЫЕ КОПИИ (БЭКАПЫ)                          -->
+    <!-- ============================================================== -->
+    <div class="tab-pane fade" id="dbPaneBackups" role="tabpanel">
+        <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+            
+            <!-- Панель быстрых действий с бэкапами -->
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-copp rounded-pill shadow-sm" onclick="triggerCreateBackup()">
+                        <i class="bi bi-camera me-1"></i> Создать снимок БД сейчас
+                    </button>
+                    <a href="{{ url_for('admin.download_current_db') }}" class="btn btn-outline-primary rounded-pill shadow-sm">
+                        <i class="bi bi-cloud-arrow-down me-1"></i> Скачать полный архив (БД + файлы)
+                    </a>
+                </div>
+
+                <div>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill shadow-sm" onclick="document.getElementById('backupFileInput').click()">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Восстановить из ZIP архива
+                    </button>
+                    <form id="restoreForm" action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-none">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="file" name="backup_file" id="backupFileInput" accept=".zip" required onchange="promptRestorePassword()">
+                        <input type="hidden" name="password" id="restorePasswordHidden">
+                    </form>
                 </div>
             </div>
+
+            <!-- Таблица файлов бэкапов -->
+            <div class="table-responsive rounded-3 border">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-3">Имя файла архива</th>
+                            <th>Размер файла</th>
+                            <th>Дата создания (МСК)</th>
+                            <th class="text-end px-3">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in backups_list %}
+                        <tr>
+                            <td class="px-3 fw-bold text-dark">
+                                <i class="bi bi-file-earmark-zip text-primary me-2 fs-5"></i>{{ b.name }}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ (b.size / 1024 / 1024)|round(2) }} МБ ({{ (b.size / 1024)|round(0)|int }} КБ)
+                                </span>
+                            </td>
+                            <td class="text-muted small font-monospace">
+                                <!-- Форматирование времени mtime через фильтр или JS -->
+                                <span class="js-mtime" data-ts="{{ b.mtime }}">{{ b.name }}</span>
+                            </td>
+                            <td class="text-end px-3">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('admin.download_backup', filename=b.name) }}" class="btn btn-outline-primary rounded-pill px-3 me-1" title="Скачать">
+                                        <i class="bi bi-download me-1"></i> Скачать
+                                    </a>
+                                    <button type="button" class="btn btn-outline-warning rounded-pill px-3 me-1 text-dark" onclick="triggerRestoreBackup('{{ b.name }}')" title="Восстановить">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Восстановить
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger rounded-pill px-2" onclick="triggerDeleteBackup('{{ b.name }}')" title="Удалить">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-archive fs-1 text-muted d-block mb-2 opacity-50"></i>
+                                В папке /backups еще нет созданных снимков базы данных.<br>
+                                Нажмите <strong>«Создать снимок БД сейчас»</strong>, чтобы сделать первую резервную копию.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
         </div>
     </div>
 
-    <!-- SUBMISSIONS TABLE -->
-    <div class="tab-pane fade" id="dbSubmissions" role="tabpanel">
-        <div class="db-table-container">
-            <div class="p-0">
-                <div class="table-responsive table-scrollable">
-                    <table class="table table-sm table-bordered table-hover mb-0 font-monospace db-table table-compact">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th class="px-3 col-id">id</th>
-                                <th>template_id</th>
-                                <th>user_id</th>
-                                <th>data (JSON)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for s in all_submissions %}
-                            <tr>
-                                <td class="fw-bold px-3 text-muted bg-light">{{ s.id }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="ReportSubmission" data-id="{{ s.id }}" data-field="template_id">{{ s.template_id or '' }}</td>
-                                <td class="db-editable" contenteditable="true" data-model="ReportSubmission" data-id="{{ s.id }}" data-field="user_id">{{ s.user_id or '' }}</td>
-                                <td class="text-muted text-truncate bg-light cell-truncate-xl" title="Только для чтения">[JSON Object]</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <!-- ============================================================== -->
+    <!-- ПОДВКЛАДКА 3: СТАТИСТИКА ПО ОТЧЕТАМ (АКТИВНОСТЬ)             -->
+    <!-- ============================================================== -->
+    <div class="tab-pane fade" id="dbPaneStats" role="tabpanel">
+        <div class="card bg-white border-0 shadow-sm position-relative" style="border-radius: 14px; overflow: hidden;">
+            
+            <!-- Стартовый экран до формирования -->
+            <div id="statsInitialState" class="p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">Статистика активности подотчетных учреждений</h6>
+                        <p class="text-muted small mb-0">Сбор данных о входах в систему, сдаче отчетов и расчет процента выполнения (руководители и администраторы исключены)</p>
+                    </div>
                 </div>
+                
+                <div class="alert alert-info border-0 bg-primary bg-opacity-10 d-flex align-items-center gap-3 mb-4" role="alert">
+                    <i class="bi bi-info-circle-fill fs-3 text-primary"></i>
+                    <div>
+                        <strong>Сбор статистики выполняется по требованию.</strong>
+                        <div class="small mt-1">Формирование отчета требует выполнения ресурсоемких запросов к базе данных. Нажмите кнопку ниже, чтобы запустить сбор актуальных метрик.</div>
+                    </div>
+                </div>
+
+                <div class="text-center py-5">
+                    <button type="button" class="btn btn-copp rounded-pill px-5 py-3 fw-medium shadow-sm" onclick="generateActivityStats(this)">
+                        <i class="bi bi-lightning-charge me-2"></i> Сформировать статистику
+                    </button>
+                </div>
+            </div>
+
+            <!-- Контейнер для результатов (выводится без двойных рамок) -->
+            <div id="statsResultContainer" class="d-none">
+                <!-- Сюда подгрузится результат -->
             </div>
         </div>
     </div>
-
 
 </div>
 
-<!-- Password Confirmation Modal -->
-<div class="modal fade" id="dbPasswordModal" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title fw-bold">Подтверждение</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="small text-muted mb-2">Введите пароль для подтверждения операции с базой данных.</p>
-        <input type="password" id="dbPasswordInput" class="form-control form-control-sm" placeholder="Ваш пароль">
-      </div>
-      <div class="modal-footer py-1">
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Отмена</button>
-        <button type="button" class="btn btn-sm btn-copp" id="dbPasswordSubmit">Подтвердить</button>
-      </div>
+<!-- 5. МОДАЛЬНОЕ ОКНО ПРОСМОТРА JSON -->
+<div class="modal fade" id="jsonViewerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 20px; box-shadow: var(--shadow-md);">
+            <div class="modal-header py-3 px-4 bg-light border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="p-2 rounded-2 bg-primary text-white" style="font-size: 0.8rem;"><i class="bi bi-braces"></i></span>
+                    <h6 class="modal-title fw-bold text-dark" id="jsonModalTitle">Просмотр JSON структуры</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 bg-light-subtle">
+                <pre class="bg-dark text-light p-3 rounded-3 mb-0" style="max-height: 480px; overflow: auto; font-size: 0.85rem;"><code id="jsonModalContent"></code></pre>
+            </div>
+            <div class="modal-footer py-2 px-4 bg-white border-top justify-content-between">
+                <span class="text-muted small" id="jsonCopyStatus"></span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="copyJsonModalContent()">
+                        <i class="bi bi-clipboard me-1"></i> Скопировать
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+</div>
+
+<!-- 6. МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ПАРОЛЕМ -->
+<div class="modal fade" id="dbPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content" style="border-radius: 20px; box-shadow: var(--shadow-md);">
+            <div class="modal-header py-3 px-4 border-bottom">
+                <h6 class="modal-title fw-bold text-dark">Подтверждение действия</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-3">Для выполнения операции с базой данных подтвердите пароль администратора:</p>
+                <input type="password" id="dbPasswordInput" class="form-control" placeholder="Пароль администратора" autocomplete="current-password">
+            </div>
+            <div class="modal-footer py-2 px-4 bg-light border-top justify-content-end gap-2">
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-sm btn-copp rounded-pill px-4" id="dbPasswordSubmit">Подтвердить</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
     .db-table td.db-editable:focus {
-        background-color: #fff;
-        outline: 2px solid #0d6efd;
+        background-color: #fff !important;
+        outline: 2px solid var(--primary-color) !important;
         outline-offset: -2px;
     }
     .db-table td {
         vertical-align: middle;
-        word-break: break-all;
+        font-size: 0.85rem;
+    }
+    .db-table th {
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+    .cell-truncate-md {
+        max-width: 180px;
+    }
+    .cell-truncate-lg {
+        max-width: 250px;
     }
 </style>
 
 <script>
-    function saveDbChanges() {
-        const btn = document.getElementById('saveDbChangesBtn');
-        const cells = document.querySelectorAll('.db-table td.db-editable');
-        const updates = [];
-        const cellsToUpdate = [];
-        
-        cells.forEach(cell => {
-            const newValue = cell.innerText.trim();
-            const originalValue = cell.getAttribute('data-original-value') || (cell.getAttribute('data-initial') || '');
-            
-            // Set initial on first read if not set
-            if (!cell.hasAttribute('data-initial')) {
-                cell.setAttribute('data-initial', newValue);
-            }
-            
-            // Compare with original or initial
-            const baseValue = cell.hasAttribute('data-original-value') ? originalValue : cell.getAttribute('data-initial');
+    // 1. Поиск по активной таблице на лету
+    document.getElementById('dbTableSearchInput')?.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        const activeTabPane = document.querySelector('#dbTablesSubContent .tab-pane.active');
+        if (!activeTabPane) return;
 
-            if (newValue !== baseValue) {
-                updates.push({
-                    model: cell.getAttribute('data-model'),
-                    id: cell.getAttribute('data-id'),
-                    field: cell.getAttribute('data-field'),
-                    value: newValue
-                });
-                cellsToUpdate.push(cell);
-            }
+        const rows = activeTabPane.querySelectorAll('tbody tr.db-row');
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
         });
-        
-        if (Object.keys(window.pendingDbChanges).length === 0) {
-            coppAlert('Нет изменений для сохранения в БД.', 'info');
-            return;
-        }
-        
-        const originalBtnHTML = btn.innerHTML;
-        
-        withPassword(function(pwd) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Сохранение...';
-            
-            fetch('/admin/db_update', { headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-Password': pwd
-                , 'X-CSRFToken': '{{ csrf_token() }}'},
-                body: JSON.stringify(updates)
-            })
-        .then(res => res.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.innerHTML = originalBtnHTML;
-            
-            if (data.status === 'success') {
-                cellsToUpdate.forEach(cell => {
-                    cell.style.backgroundColor = '#d1e7dd';
-                    cell.setAttribute('data-original-value', cell.innerText.trim());
-                    setTimeout(() => { cell.style.backgroundColor = ''; }, 1000);
-                });
-            } else {
-                coppAlert('Ошибка при сохранении: ' + data.message, 'error');
-            }
-        })
-        .catch(err => {
-            btn.disabled = false;
-            btn.innerHTML = originalBtnHTML;
-            coppAlert('Ошибка сети: ' + err, 'error');
-        });
-        });
-    }
-    
-    // Highlight cell when user types to show it has unsaved changes
-    document.addEventListener('input', function(e) {
-        if(e.target && e.target.classList.contains('db-editable')) {
-            if(!e.target.hasAttribute('data-initial')) {
-                e.target.setAttribute('data-initial', e.target.innerText.trim());
-            }
-            
-            const newValue = e.target.innerText.trim();
-            const baseValue = e.target.hasAttribute('data-original-value') ? e.target.getAttribute('data-original-value') : e.target.getAttribute('data-initial');
-            
-            if (newValue !== baseValue) {
-                e.target.style.backgroundColor = '#fff3cd'; // Yellow-ish
-            } else {
-                e.target.style.backgroundColor = ''; 
-            }
-        }
     });
-    
-    document.addEventListener('focusin', function(e) {
-        if(e.target && e.target.classList.contains('db-editable')) {
-            if(!e.target.hasAttribute('data-original-value') && !e.target.hasAttribute('data-initial')) {
-                e.target.setAttribute('data-initial', e.target.innerText.trim());
+
+    // 2. Сброс поиска при переключении вкладки таблицы
+    document.querySelectorAll('#dbTablesSelector button').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', () => {
+            const searchInput = document.getElementById('dbTableSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
             }
+        });
+    });
+
+    // 3. Форматирование дат mtime для бэкапов в читаемый вид МСК
+    document.querySelectorAll('.js-mtime').forEach(el => {
+        const ts = parseFloat(el.getAttribute('data-ts'));
+        if (ts) {
+            const date = new Date(ts * 1000);
+            el.textContent = date.toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
         }
     });
 
-    // BACKUP FUNCTIONS
+    // 4. Просмотрщик JSON
+    let currentRawJson = '';
+    window.openJsonModal = function(title, jsonData) {
+        document.getElementById('jsonModalTitle').textContent = title;
+        currentRawJson = JSON.stringify(jsonData, null, 2);
+        document.getElementById('jsonModalContent').textContent = currentRawJson;
+        document.getElementById('jsonCopyStatus').textContent = '';
+        const modal = new bootstrap.Modal(document.getElementById('jsonViewerModal'));
+        modal.show();
+    };
+
+    window.copyJsonModalContent = function() {
+        if (!currentRawJson) return;
+        navigator.clipboard.writeText(currentRawJson).then(() => {
+            const status = document.getElementById('jsonCopyStatus');
+            status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Скопировано в буфер!</span>';
+            setTimeout(() => { status.textContent = ''; }, 2500);
+        });
+    };
+
+    // 5. Модалка ввода пароля
     function withPassword(callback) {
         const modalEl = document.getElementById('dbPasswordModal');
         const modal = new bootstrap.Modal(modalEl);
@@ -302,15 +806,210 @@
         });
         
         modal.show();
+        setTimeout(() => input.focus(), 300);
     }
+
+    // 6. Сохранение прямых правок ячеек в БД
+    function saveDbChanges() {
+        const btn = document.getElementById('saveDbChangesBtn');
+        const cells = document.querySelectorAll('.db-table td.db-editable, .db-table span.db-editable');
+        const updates = [];
+        const cellsToUpdate = [];
+        
+        cells.forEach(cell => {
+            const newValue = cell.innerText.trim();
+            const originalValue = cell.getAttribute('data-original-value') || (cell.getAttribute('data-initial') || '');
+            
+            if (!cell.hasAttribute('data-initial')) {
+                cell.setAttribute('data-initial', newValue);
+            }
+            
+            const baseValue = cell.hasAttribute('data-original-value') ? originalValue : cell.getAttribute('data-initial');
+
+            if (newValue !== baseValue) {
+                updates.push({
+                    model: cell.getAttribute('data-model'),
+                    id: cell.getAttribute('data-id'),
+                    field: cell.getAttribute('data-field'),
+                    value: newValue
+                });
+                cellsToUpdate.push(cell);
+            }
+        });
+        
+        if (updates.length === 0) {
+            coppAlert('Нет изменений для сохранения в базе данных.', 'info');
+            return;
+        }
+        
+        const originalBtnHTML = btn.innerHTML;
+        
+        withPassword(function(pwd) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+            
+            fetch('/admin/db_update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-User-Password': pwd,
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(updates)
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHTML;
+                
+                if (data.status === 'success') {
+                    cellsToUpdate.forEach(cell => {
+                        cell.style.backgroundColor = '#d1e7dd';
+                        cell.setAttribute('data-original-value', cell.innerText.trim());
+                        setTimeout(() => { cell.style.backgroundColor = ''; }, 1200);
+                    });
+                    coppAlert('Изменения успешно сохранены в базе данных!', 'success');
+                } else {
+                    coppAlert('Ошибка при сохранении: ' + data.message, 'error');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHTML;
+                coppAlert('Ошибка сети: ' + err, 'error');
+            });
+        });
+    }
+
+    // Подсветка несохраненных ячеек
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.classList.contains('db-editable')) {
+            if (!e.target.hasAttribute('data-initial')) {
+                e.target.setAttribute('data-initial', e.target.innerText.trim());
+            }
+            const newValue = e.target.innerText.trim();
+            const baseValue = e.target.hasAttribute('data-original-value') ? e.target.getAttribute('data-original-value') : e.target.getAttribute('data-initial');
+            e.target.style.backgroundColor = (newValue !== baseValue) ? '#fff3cd' : '';
+        }
+    });
+
+    // 7. Действия с бэкапами
+    window.triggerCreateBackup = function() {
+        withPassword(function(pwd) {
+            fetch('/admin/db/backup/create', {
+                method: 'POST',
+                headers: {
+                    'X-User-Password': pwd,
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    coppAlert('Резервная копия базы данных успешно создана!', 'success').then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    coppAlert(data.message || 'Ошибка создания бэкапа', 'error');
+                }
+            });
+        });
+    };
+
+    window.triggerRestoreBackup = function(filename) {
+        coppConfirm(`Вы уверены, что хотите восстановить базу данных из файла <strong>${filename}</strong>?<br><span class="text-danger small">Все текущие несохраненные изменения будут перезаписаны!</span>`, function() {
+            withPassword(function(pwd) {
+                fetch(`/admin/db/backup/restore/${filename}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-User-Password': pwd,
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        coppAlert('База данных успешно восстановлена!', 'success').then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        coppAlert(data.message || 'Ошибка восстановления', 'error');
+                    }
+                });
+            });
+        });
+    };
+
+    window.triggerDeleteBackup = function(filename) {
+        coppConfirm(`Удалить резервную копию <strong>${filename}</strong>?`, function() {
+            withPassword(function(pwd) {
+                fetch(`/admin/db/backup/delete/${filename}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-User-Password': pwd,
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        coppAlert('Резервная копия удалена', 'success').then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        coppAlert(data.message || 'Ошибка удаления', 'error');
+                    }
+                });
+            });
+        });
+    };
 
     function promptRestorePassword() {
         const fileInput = document.getElementById('backupFileInput');
         if (!fileInput.files.length) return;
-        
         withPassword(function(pwd) {
             document.getElementById('restorePasswordHidden').value = pwd;
             document.getElementById('restoreForm').submit();
         });
+    }
+
+    // 8. СТАТИСТИКА АКТИВНОСТИ
+    function generateActivityStats(btn) {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Сбор данных...';
+        btn.disabled = true;
+
+        fetch('/admin/db/activity/generate')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера');
+                }
+                return response.text();
+            })
+            .then(html => {
+                const initState = document.getElementById('statsInitialState');
+                if (initState) initState.classList.add('d-none');
+                
+                const resultContainer = document.getElementById('statsResultContainer');
+                resultContainer.innerHTML = html;
+                resultContainer.classList.remove('d-none');
+                
+                // Выполняем скрипты фильтрации внутри вставленного HTML
+                Array.from(resultContainer.querySelectorAll("script")).forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            })
+            .catch(error => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                coppAlert('Не удалось загрузить статистику: ' + error.message, 'error');
+            });
+    }
+
+    function exportActivityStats() {
+        window.location.href = '/admin/db/activity/export';
     }
 </script>

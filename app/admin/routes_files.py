@@ -19,12 +19,12 @@ def allowed_file(filename):
 def upload_file():
     if 'file' not in request.files:
         flash('Нет файла для загрузки', 'danger')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin.dashboard', tab='filesTab'))
         
     files = request.files.getlist('file')
     if not files or files[0].filename == '':
         flash('Файл не выбран', 'danger')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin.dashboard', tab='filesTab'))
         
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     
@@ -80,7 +80,7 @@ def upload_file():
         log_action('Загрузка файлов', f'Загружено {uploaded_count} файлов')
         flash(f'Успешно загружено файлов: {uploaded_count}', 'success')
         
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.dashboard', tab='filesTab'))
 
 @admin_bp.route('/delete_file/<int:file_id>', methods=['POST'])
 def delete_file(file_id):
@@ -90,12 +90,12 @@ def delete_file(file_id):
         dept = get_manager_department(current_user)
         if not dept or file_obj.department_id != dept.id:
             flash('Доступ запрещен', 'danger')
-            return redirect(url_for('admin.dashboard'))
+            return redirect(url_for('admin.dashboard', tab='filesTab'))
     
     # Check if attached to any reports
     if file_obj.reports.count() > 0:
         flash(f'Файл "{file_obj.filename}" прикреплен к отчетам и не может быть удален. Сначала открепите его.', 'danger')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin.dashboard', tab='filesTab'))
         
     try:
         file_path = os.path.join(UPLOAD_FOLDER, file_obj.filepath)
@@ -112,4 +112,4 @@ def delete_file(file_id):
         db.session.rollback()
         flash(f'Ошибка при удалении: {e}', 'danger')
         
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.dashboard', tab='filesTab'))

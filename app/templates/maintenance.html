@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Технические работы | ЦОПП РАС</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logoblue2.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --bg-body: #f6f6f5;
+            --bg-card: #ffffff;
+            --primary-color: #00334e;
+            --primary-hover: #007fbd;
+            --text-main: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border-color: #e2e8f0;
+            --shadow-modal: 0 24px 56px rgba(0, 51, 78, 0.16), 0 0 0 1px rgba(0, 51, 78, 0.05);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .maintenance-card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            box-shadow: var(--shadow-modal);
+            max-width: 620px;
+            width: 100%;
+            padding: 3rem 2.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .maintenance-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #00334e 0%, #007fbd 50%, #70c6d1 100%);
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            height: 52px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .brand-text {
+            text-align: left;
+            line-height: 1.15;
+        }
+
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: -0.2px;
+        }
+
+        .brand-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .icon-wrapper {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: rgba(0, 51, 78, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem auto;
+            color: var(--primary-color);
+            position: relative;
+        }
+
+        .icon-gear {
+            font-size: 2.8rem;
+            animation: spin-slow 12s linear infinite;
+        }
+
+        @keyframes spin-slow {
+            100% { transform: rotate(360deg); }
+        }
+
+        .main-heading {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.5px;
+        }
+
+        .message-box {
+            color: var(--text-main);
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 1.75rem;
+            opacity: 0.9;
+        }
+
+        .info-panel {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.92rem;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-value {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: rgba(220, 53, 69, 0.08);
+            color: #dc3545;
+            border-radius: 50rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #dc3545;
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        .refresh-notice {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .admin-link {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            margin-top: 2rem;
+            display: inline-block;
+        }
+
+        .admin-link:hover {
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="maintenance-card">
+        <!-- Логотип и брендинг ЦОПП -->
+        <div class="brand-badge">
+            <img src="{{ url_for('static', filename='img/logoblue2.png') }}" alt="Логотип ЦОПП" class="brand-logo">
+            <div class="brand-text">
+                <div class="brand-title">Республики Крым</div>
+                <div class="brand-sub">Региональная Аналитическая Система</div>
+            </div>
+        </div>
+
+        <!-- Иконка шестеренки -->
+        <div class="icon-wrapper">
+            <i class="bi bi-gear-wide-connected icon-gear"></i>
+        </div>
+
+        <div class="status-pill">
+            <span class="pulse-dot"></span>
+            Технические работы
+        </div>
+
+        <h1 class="main-heading">Сервис временно недоступен</h1>
+
+        <div class="message-box">
+            {{ maintenance.message }}
+        </div>
+
+        {% if maintenance.start_msk or maintenance.end_msk %}
+        <div class="info-panel">
+            {% if maintenance.start_msk %}
+            <div class="info-row">
+                <span class="info-label"><i class="bi bi-clock-history"></i> Начало работ:</span>
+                <span class="info-value">{{ maintenance.start_msk }} (МСК)</span>
+            </div>
+            {% endif %}
+            {% if maintenance.end_msk %}
+            <div class="info-row">
+                <span class="info-label"><i class="bi bi-check2-circle"></i> Плановое окончание:</span>
+                <span class="info-value">{{ maintenance.end_msk }} (МСК)</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="refresh-notice">
+            <i class="bi bi-arrow-repeat spin"></i> 
+            Страница автоматически обновится через <strong id="countdownSec">30</strong> сек.
+        </div>
+
+        <div>
+            <a href="{{ url_for('auth.login') }}" class="admin-link">
+                <i class="bi bi-shield-lock me-1"></i>Вход для администратора
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Автоматическое обновление страницы каждые 30 секунд
+        let timeLeft = 30;
+        const countdownEl = document.getElementById('countdownSec');
+        setInterval(() => {
+            timeLeft--;
+            if (countdownEl) countdownEl.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                window.location.reload();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

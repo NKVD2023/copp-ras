@@ -10,6 +10,7 @@ from app.models.logs import ActionLog
 from app.models.tasks import BackgroundTask
 from app.models.dictionaries import Dictionary
 from app.models.department import Department, department_templates
+from app.models.settings import MaintenanceSetting
 
 __all__ = [
     'User',
@@ -24,4 +25,5 @@ __all__ = [
     'Dictionary',
     'Department',
     'department_templates',
+    'MaintenanceSetting',
 ]

@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <!-- Custom Mobile CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.5">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile_app.css') }}">
     <!-- CSS-компоненты (карточки, кнопки, формы, таблицы, вкладки) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ range(1,99999)|random }}">
@@ -50,6 +50,10 @@
         {% block content %}{% endblock %}
     </div>
 
+    {% with footer_container="container-fluid px-3" %}
+    {% include 'footer.html' %}
+    {% endwith %}
+
     <!-- Bottom Navigation -->
     {% block bottom_nav %}
     <nav class="bottom-nav">
@@ -60,6 +64,10 @@
         <a href="{{ url_for('reports.dashboard') }}#filled" class="bottom-nav-item" id="nav-filled">
             <i class="bi bi-check-all"></i>
             Завершенные
+        </a>
+        <a href="{{ url_for('reports.dashboard') }}#files" class="bottom-nav-item" id="nav-files">
+            <i class="bi bi-folder2-open"></i>
+            Файлы
         </a>
         <a href="{{ url_for('reports.dashboard') }}#profile" class="bottom-nav-item" id="nav-profile">
             <i class="bi bi-person"></i>

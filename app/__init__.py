@@ -38,6 +38,35 @@ def create_app(config_class: type = Config) -> Flask:
         from app import models  # noqa: F401 — регистрирует модели в SQLAlchemy
         db.create_all()
 
+    # ── Режим технических работ ────────────────────────────────────────────────
+    @app.before_request
+    def check_maintenance():
+        from flask import request, render_template, jsonify
+        from flask_login import current_user
+        from app.services.maintenance import get_maintenance_status
+
+        # Статические файлы всегда доступны
+        if request.endpoint == 'static' or (request.path and request.path.startswith('/static/')):
+            return
+
+        # Авторизованный администратор имеет полный доступ
+        if current_user.is_authenticated and current_user.role == 'admin':
+            return
+
+        # Вход и выход разрешены (чтобы админ мог войти в систему)
+        if request.endpoint in ['auth.login', 'auth.logout'] or (request.path and request.path.startswith('/auth/')):
+            return
+
+        # Проверка активности техработ
+        status = get_maintenance_status()
+        if status.get('in_maintenance'):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+                return jsonify({
+                    'status': 'maintenance',
+                    'message': status.get('message')
+                }), 503
+            return render_template('maintenance.html', maintenance=status), 503
+
     # ── Security headers ──────────────────────────────────────────────────────
     @app.after_request
     def add_security_headers(response):
@@ -57,9 +86,13 @@ def create_app(config_class: type = Config) -> Flask:
 
     # ── Jinja2 Context Processors ─────────────────────────────────────────────
     @app.context_processor
-    def inject_config() -> dict:
-        """Прокидывает объект конфигурации в каждый шаблон."""
-        return dict(config=app.config)
+    def inject_global_data() -> dict:
+        """Прокидывает конфиг и статус техработ в каждый шаблон."""
+        from app.services.maintenance import get_maintenance_status
+        return dict(
+            config=app.config,
+            maintenance_status=get_maintenance_status()
+        )
 
     # ── Jinja2 Filters ────────────────────────────────────────────────────────
     from datetime import timedelta

@@ -18,7 +18,7 @@
             <div class="card-body p-4">
                 <h5 class="fw-bold text-dark mb-4 text-center">Авторизация в системе</h5>
 
-                {% with messages = get_flashed_messages() %}
+                {% with messages = get_flashed_messages(category_filter=['danger', 'error', 'auth']) %}
                 {% if messages %}
                 {% for message in messages %}
                 <div class="alert alert-danger py-2 small border-0">{{ message }}</div>

@@ -43,6 +43,18 @@
                         </select>
                     </div>
 
+                    {% if current_user.role == 'admin' %}
+                    <div class="mb-4">
+                        <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Отдел</label>
+                        <select name="department_id" class="form-select px-3 py-2 bg-light border-light-subtle">
+                            <option value="">Без отдела</option>
+                            {% for d in departments %}
+                            <option value="{{ d.id }}">{{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
                     <div class="mb-5">
                         <label class="form-label small fw-medium text-muted text-uppercase" style="letter-spacing: 0.5px;">Группа</label>
                         <input type="text" name="group" class="form-control px-3 py-2 bg-light border-light-subtle" list="groupsDataListReg" placeholder="Выберите или введите новую">

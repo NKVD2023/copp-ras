@@ -30,7 +30,9 @@ def dashboard():
     # === ЛОГИКА ДЛЯ УЧРЕЖДЕНИЯ (USER) ===
     # Получаем все сданные отчеты напрямую из таблицы отправленных данных
     submissions = ReportSubmission.query.filter_by(user_id=current_user.id).all()
-    filled_ids = [s.template_id for s in submissions]
+    # Отчет считается сданным только если он не находится на доработке
+    filled_ids = [s.template_id for s in submissions if not s.is_revision]
+    revision_submissions = {s.template_id: s for s in submissions if s.is_revision}
     
     # Активные отчеты: назначенные, опубликованные
     assigned = [t for t in current_user.assigned_templates if t.is_published]
@@ -48,16 +50,16 @@ def dashboard():
         db.session.commit()
     
     # Архив пользователя (теперь "Завершенные отчеты"):
-    # Сюда попадают отчеты, которые пользователь уже сдал ИЛИ которые глобально закрыты
-    filled = [t for t in assigned if t.id in filled_ids or t.is_completed]
+    # Сюда попадают отчеты, которые пользователь уже сдал (и не на доработке) ИЛИ которые глобально закрыты
+    filled = [t for t in assigned if (t.id in filled_ids and t.id not in revision_submissions) or t.is_completed]
     # Сортируем завершенные новые сверху
     filled.sort(key=lambda x: x.id, reverse=True)
     
-    # К заполнению: назначены, еще не сданные и не завершенные глобально
-    unfilled = [t for t in assigned if t.id not in filled_ids and not t.is_completed]
+    # К заполнению: назначены, еще не сданные (или отправленные на доработку!) и не завершенные глобально
+    unfilled = [t for t in assigned if (t.id not in filled_ids or t.id in revision_submissions) and not t.is_completed]
     
-    # Сортируем невыполненные по дедлайну (сначала те, что нужно сдать раньше)
-    unfilled.sort(key=lambda x: x.deadline or date.max)
+    # Сортируем невыполненные: отчеты на доработке показываем первыми!
+    unfilled.sort(key=lambda x: (0 if x.id in revision_submissions else 1, x.deadline or date.max))
     
     active = unfilled  # все неотправленные — активные
     
@@ -98,6 +100,7 @@ def dashboard():
                            stat_short_names=stat_short_names,
                            selected_short_name=selected_short_name,
                            stat_schema=stat_schema,
+                           revision_submissions=revision_submissions,
                            current_date=date.today())
 
 
@@ -139,3 +142,86 @@ def export_user_statistics():
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+
+@reports_bp.route('/api/calendar_events')
+@login_required
+def calendar_events():
+    """
+    Возвращает список событий (дедлайнов) для интерактивного календаря пользователя.
+    """
+    user = current_user
+    submissions = ReportSubmission.query.filter_by(user_id=user.id).all()
+    filled_ids = set([s.template_id for s in submissions if not s.is_revision])
+    revision_submissions = {s.template_id: s for s in submissions if s.is_revision}
+    
+    # Отчеты, назначенные пользователю, опубликованные и имеющие дедлайн
+    if user.role in ['admin', 'manager']:
+        assigned = ReportTemplate.query.filter(ReportTemplate.is_published == True, ReportTemplate.deadline != None).all()
+    else:
+        assigned = [t for t in user.assigned_templates if t.is_published and t.deadline]
+        
+    events = []
+    today = date.today()
+    
+    for t in assigned:
+        deadline_date = t.deadline.date() if hasattr(t.deadline, 'date') else t.deadline
+        deadline_str = deadline_date.strftime('%Y-%m-%d')
+        deadline_formatted = deadline_date.strftime('%d.%m.%Y')
+        days_left = (deadline_date - today).days
+        is_rev = t.id in revision_submissions
+        is_filled = t.id in filled_ids
+        
+        # Не показываем сданные отчеты (если они не на доработке)
+        if is_filled and not is_rev:
+            continue
+            
+        # Не показываем просроченные или завершенные отчеты (если они не на доработке)
+        if (days_left < 0 or t.is_completed) and not is_rev:
+            continue
+        
+        if is_rev:
+            status = 'revision'
+            status_label = 'Доработка'
+            color = '#ff0072'
+        elif days_left <= 3:
+            status = 'urgent'
+            status_label = f'Осталось {days_left} дн.' if days_left > 0 else 'Срок сегодня'
+            color = '#f59e0b'
+        else:
+            status = 'active'
+            status_label = 'В работе'
+            color = '#003366'
+            
+        rev_sub = revision_submissions.get(t.id)
+        events.append({
+            'id': str(t.id),
+            'title': t.short_name or t.name,
+            'start': deadline_str,
+            'allDay': True,
+            'backgroundColor': color,
+            'borderColor': color,
+            'textColor': '#ffffff',
+            'extendedProps': {
+                'templateId': t.id,
+                'name': t.name,
+                'shortName': t.short_name or t.name,
+                'period': t.period or 'не указан',
+                'deadline': deadline_formatted,
+                'daysLeft': days_left,
+                'status': status,
+                'statusLabel': status_label,
+                'statusColor': color,
+                'isRevision': is_rev,
+                'revisionComment': rev_sub.revision_comment if rev_sub else None,
+                'revisionDate': (rev_sub.returned_at.strftime('%d.%m.%Y %H:%M') if (rev_sub and rev_sub.returned_at) else None),
+                'attachmentsCount': len(t.attachments),
+                'fillUrl': url_for('reports.fill_report', template_id=t.id),
+                'isLocked': bool(t.is_completed or (days_left < 0 and not is_rev))
+            }
+        })
+        
+    # Сортируем: сначала отчеты на доработке, затем ближайшие по дедлайну
+    events.sort(key=lambda x: (0 if x['extendedProps']['isRevision'] else 1, x['start']))
+    return jsonify(events)
+

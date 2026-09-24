@@ -18,14 +18,14 @@ def add_dictionary():
     
     if not name or not items_raw:
         flash('Необходимо заполнить название и хотя бы один вариант.', 'danger')
-        return redirect(url_for('admin.dashboard') + '#listsTab')
+        return redirect(url_for('admin.dashboard', tab='listsTab'))
         
     # Разделяем по переносам строк, удаляем пустые и лишние пробелы
     items = [line.strip() for line in items_raw.replace('\r', '').split('\n') if line.strip()]
     
     if not items:
         flash('Список вариантов пуст.', 'danger')
-        return redirect(url_for('admin.dashboard') + '#listsTab')
+        return redirect(url_for('admin.dashboard', tab='listsTab'))
         
     dept_id = None
     if current_user.role == 'manager':
@@ -40,7 +40,7 @@ def add_dictionary():
     
     log_action('Создание шаблона', f'Создан новый шаблон выпадающего списка: {name}')
     flash('Шаблон успешно создан!', 'success')
-    return redirect(url_for('admin.dashboard') + '#listsTab')
+    return redirect(url_for('admin.dashboard', tab='listsTab'))
 
 @admin_bp.route('/dictionaries/<int:dict_id>/edit', methods=['POST'])
 @login_required
@@ -54,14 +54,14 @@ def edit_dictionary(dict_id):
         dept = get_manager_department(current_user)
         if not dept or dictionary.department_id != dept.id:
             flash('Доступ запрещен', 'danger')
-            return redirect(url_for('admin.dashboard') + '#listsTab')
+            return redirect(url_for('admin.dashboard', tab='listsTab'))
     
     name = request.form.get('name')
     items_raw = request.form.get('items', '')
     
     if not name or not items_raw:
         flash('Необходимо заполнить название и варианты.', 'danger')
-        return redirect(url_for('admin.dashboard') + '#listsTab')
+        return redirect(url_for('admin.dashboard', tab='listsTab'))
         
     items_list = [line.strip() for line in items_raw.replace('\r', '').split('\n') if line.strip()]
     
@@ -107,7 +107,7 @@ def edit_dictionary(dict_id):
     
     log_action('Редактирование шаблона', f'Отредактирован шаблон выпадающего списка: {name} с обновлением во всех отчетах')
     flash('Шаблон успешно обновлен! Все отчеты, использующие этот список, также были обновлены.', 'success')
-    return redirect(url_for('admin.dashboard') + '#listsTab')
+    return redirect(url_for('admin.dashboard', tab='listsTab'))
 
 @admin_bp.route('/dictionaries/<int:dict_id>/delete', methods=['POST'])
 @login_required
@@ -121,7 +121,7 @@ def delete_dictionary(dict_id):
         dept = get_manager_department(current_user)
         if not dept or dictionary.department_id != dept.id:
             flash('Доступ запрещен', 'danger')
-            return redirect(url_for('admin.dashboard') + '#listsTab')
+            return redirect(url_for('admin.dashboard', tab='listsTab'))
     try:
         name = dictionary.name
         db.session.delete(dictionary)
@@ -133,7 +133,7 @@ def delete_dictionary(dict_id):
         db.session.rollback()
         flash('Ошибка при удалении шаблона. Возможно, он используется в существующих отчетах.', 'danger')
         
-    return redirect(url_for('admin.dashboard') + '#listsTab')
+    return redirect(url_for('admin.dashboard', tab='listsTab'))
 
 @admin_bp.route('/dictionaries/api/list', methods=['GET'])
 @login_required

@@ -44,6 +44,9 @@ body {
     font-family: 'Inter', '-apple-system', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     color: var(--text-main);
     -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ==========================================================================
@@ -270,3 +273,61 @@ body .swal2-container .swal2-select:focus {
     padding-top: 0.2rem;
     padding-left: 0.5rem;
 }
+
+/* ==========================================================================
+   ПОДВАЛ САЙТА (Footer)
+   ========================================================================== */
+.app-footer {
+    background-color: #ffffff;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+    color: #334155;
+}
+
+.footer-logo {
+    height: 58px;
+    width: 58px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.footer-info {
+    line-height: 1.35;
+}
+
+.footer-developer {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 3px;
+}
+
+.footer-contact {
+    font-size: 0.82rem;
+    color: #475569;
+    margin-bottom: 2px;
+}
+
+.footer-contact:last-child {
+    margin-bottom: 0;
+}
+
+.footer-contact-link {
+    color: #334155;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s ease-in-out;
+}
+
+.footer-contact-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.footer-sep {
+    color: #94a3b8;
+    margin: 0 4px;
+}
+
+
+

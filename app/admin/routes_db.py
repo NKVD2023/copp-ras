@@ -39,17 +39,25 @@ def db_update():
     if not isinstance(updates, list):
         updates = [updates]
         
+    from app.models import User, ReportTemplate, ReportSubmission, Department, Dictionary, MaintenanceSetting
+
     model_map = {
         'User': User,
         'ReportTemplate': ReportTemplate,
-        'ReportSubmission': ReportSubmission
+        'ReportSubmission': ReportSubmission,
+        'Department': Department,
+        'Dictionary': Dictionary,
+        'MaintenanceSetting': MaintenanceSetting,
     }
     
     # Жесткий белый список полей, которые разрешено редактировать напрямую
     ALLOWED_UPDATE_FIELDS = {
-        'User': ['username', 'description'],
-        'ReportTemplate': ['name', 'short_name', 'period', 'deadline', 'is_published'],
-        'ReportSubmission': ['data']
+        'User': ['username', 'description', 'role', 'group', 'department_id'],
+        'ReportTemplate': ['name', 'short_name', 'period', 'deadline', 'is_published', 'is_template'],
+        'ReportSubmission': ['template_id', 'user_id'],
+        'Department': ['name'],
+        'Dictionary': ['name'],
+        'MaintenanceSetting': ['message', 'is_active']
     }
     
     for item in updates:
@@ -61,9 +69,9 @@ def db_update():
         if not all([model_name, row_id, field]):
             continue
             
-        # Защита от изменения критических полей (например пароля или роли)
+        # Защита от изменения критических полей
         if model_name not in ALLOWED_UPDATE_FIELDS or field not in ALLOWED_UPDATE_FIELDS[model_name]:
-            return jsonify({'status': 'error', 'message': f'Поле {field} запрещено для изменения напрямую'}), 403
+            return jsonify({'status': 'error', 'message': f'Поле {field} в модели {model_name} запрещено для изменения напрямую'}), 403
             
         ModelClass = model_map.get(model_name)
         if not ModelClass:
@@ -71,9 +79,14 @@ def db_update():
             
         record = ModelClass.query.get(row_id)
         if record and hasattr(record, field):
-            # Конвертация типов для некоторых специфичных полей
-            if field == 'is_published':
+            # Конвертация типов для специфичных полей
+            if field in ['is_published', 'is_template', 'is_active']:
                 value = str(value).lower() in ['true', '1', 'yes', 'да']
+            elif field in ['department_id', 'template_id', 'user_id']:
+                try:
+                    value = int(value) if value and str(value).strip() != '' else None
+                except (ValueError, TypeError):
+                    value = None
             elif field == 'deadline':
                 try:
                     value = datetime.strptime(value, '%Y-%m-%d').date() if value else None
@@ -89,6 +102,90 @@ def db_update():
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)})
+
+
+# ==========================================
+# РЕЖИМ ТЕХНИЧЕСКИХ РАБОТ (MAINTENANCE MODE)
+# ==========================================
+
+@admin_bp.route('/db/maintenance/save', methods=['POST'])
+@login_required
+@roles_required('admin')
+def save_maintenance():
+    """Сохранение параметров режима технических работ."""
+    from app.models.settings import MaintenanceSetting
+    from datetime import datetime, timedelta
+
+    setting = MaintenanceSetting.get_settings()
+    is_active = request.form.get('is_active') == 'on'
+    message = request.form.get('message', '').strip()
+    start_str = request.form.get('start_at', '').strip()
+    end_str = request.form.get('end_at', '').strip()
+
+    start_at_utc = None
+    end_at_utc = None
+
+    if start_str:
+        try:
+            dt_msk = datetime.strptime(start_str, '%Y-%m-%dT%H:%M')
+            start_at_utc = dt_msk - timedelta(hours=3)
+        except ValueError:
+            pass
+
+    if end_str:
+        try:
+            dt_msk = datetime.strptime(end_str, '%Y-%m-%dT%H:%M')
+            end_at_utc = dt_msk - timedelta(hours=3)
+        except ValueError:
+            pass
+
+    setting.is_active = is_active
+    setting.message = message if message else "Проводятся плановые технические работы. Приносим извинения за временные неудобства."
+    setting.start_at = start_at_utc
+    setting.end_at = end_at_utc
+
+    try:
+        db.session.commit()
+        status_text = "ВКЛЮЧЕН" if is_active else ("ЗАПЛАНИРОВАН" if (start_at_utc and end_at_utc) else "ВЫКЛЮЧЕН")
+        log_action('Режим техработ', f'Статус изменен: {status_text}')
+        flash('Параметры технических работ успешно обновлены', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка при сохранении: {e}', 'danger')
+
+    return redirect(url_for('admin.dashboard', tab='databaseTab'))
+
+@admin_bp.route('/db/maintenance/disable', methods=['POST'])
+@login_required
+@roles_required('admin')
+def disable_maintenance():
+    """Досрочное завершение и отключение технических работ со сбросом дат."""
+    from app.models.settings import MaintenanceSetting
+    setting = MaintenanceSetting.get_settings()
+    setting.is_active = False
+    setting.start_at = None
+    setting.end_at = None
+    try:
+        db.session.commit()
+        log_action('Режим техработ', 'Технические работы досрочно завершены и отключены. Доступ к сайту открыт.')
+        flash('Технические работы выключены, расписание очищено. Сайт работает в штатном режиме.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка при отключении техработ: {e}', 'danger')
+
+    return redirect(url_for('admin.dashboard', tab='databaseTab'))
+
+@admin_bp.route('/db/maintenance/preview')
+@login_required
+@roles_required('admin')
+def preview_maintenance():
+    """Предпросмотр страницы технических работ для администратора."""
+    from flask import render_template
+    from app.services.maintenance import get_maintenance_status
+    status = get_maintenance_status()
+    status['in_maintenance'] = True
+    return render_template('maintenance.html', maintenance=status)
+
 
 # ==========================================
 # РЕЗЕРВНОЕ КОПИРОВАНИЕ (BACKUPS)
@@ -252,22 +349,22 @@ def upload_backup():
     """
     if current_user.role != 'admin':
         flash('Доступ запрещен')
-        return redirect(url_for('admin.dashboard') + '#databaseTab')
+        return redirect(url_for('admin.dashboard', tab='databaseTab'))
         
     password = request.form.get('password')
     if not password or not current_user.check_password(password):
         flash('Неверный пароль')
-        return redirect(url_for('admin.dashboard') + '#databaseTab')
+        return redirect(url_for('admin.dashboard', tab='databaseTab'))
         
     file = request.files.get('backup_file')
     if not file or not file.filename.endswith('.zip'):
         flash('Неверный формат файла. Требуется .zip')
-        return redirect(url_for('admin.dashboard') + '#databaseTab')
+        return redirect(url_for('admin.dashboard', tab='databaseTab'))
         
     # Проверка на ZIP
     if not zipfile.is_zipfile(file):
         flash('Неверный формат архива. Это не ZIP.')
-        return redirect(url_for('admin.dashboard') + '#databaseTab')
+        return redirect(url_for('admin.dashboard', tab='databaseTab'))
         
     db_path = os.path.join(basedir, 'reports.db')
     uploads_dir = os.path.join(basedir, 'app', 'uploads')
@@ -284,14 +381,14 @@ def upload_backup():
             # Проверяем наличие reports.db в архиве
             if not os.path.exists(temp_db_path):
                 flash('Ошибка: В архиве отсутствует reports.db')
-                return redirect(url_for('admin.dashboard') + '#databaseTab')
+                return redirect(url_for('admin.dashboard', tab='databaseTab'))
                 
             # Проверка сигнатуры SQLite
             with open(temp_db_path, 'rb') as f:
                 header = f.read(16)
                 if header != b'SQLite format 3\000':
                     flash('Ошибка: reports.db в архиве поврежден или не является базой SQLite.')
-                    return redirect(url_for('admin.dashboard') + '#databaseTab')
+                    return redirect(url_for('admin.dashboard', tab='databaseTab'))
 
             # Закрываем сессию и отпускаем БД
             db.session.remove()
@@ -322,4 +419,4 @@ def upload_backup():
     except Exception as e:
         flash(f'Ошибка при восстановлении: {str(e)}')
         
-    return redirect(url_for('admin.dashboard') + '#databaseTab')
+    return redirect(url_for('admin.dashboard', tab='databaseTab'))

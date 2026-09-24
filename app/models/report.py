@@ -30,8 +30,14 @@ class ReportSubmission(db.Model):
     template_id = db.Column(db.Integer, db.ForeignKey('report_templates.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     data = db.Column(JSON)
+    is_revision = db.Column(db.Boolean, default=False)
+    revision_comment = db.Column(db.Text, nullable=True)
+    returned_at = db.Column(db.DateTime, nullable=True)
+    returned_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
     template = db.relationship('ReportTemplate', backref='submissions')
-    user = db.relationship('User', backref='submissions')
+    user = db.relationship('User', foreign_keys=[user_id], backref='submissions')
+    returned_by = db.relationship('User', foreign_keys=[returned_by_id])
 
 class ReportDraft(db.Model):
     """Облачный черновик отчёта. Один на пару (user, template)."""

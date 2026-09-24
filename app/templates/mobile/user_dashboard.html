@@ -7,11 +7,14 @@
     <h5 class="fw-bold mb-3 text-dark">К заполнению</h5>
     
     {% if unfilled_templates %}
-        <div class="d-flex flex-column gap-3">
+        <div id="unfilledContainer" class="d-flex flex-column gap-3">
             {% for template in unfilled_templates %}
+                {% set is_revision = revision_submissions and template.id in revision_submissions %}
                 {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
                 {% set card_style = "background: #ffffff; border-color: #edf2f7;" %}
-                {% if days_left != None %}
+                {% if is_revision %}
+                    {% set card_style = "background: #ffffff; border: 2px solid #ff0072 !important; box-shadow: 0 4px 14px rgba(255, 0, 114, 0.15) !important;" %}
+                {% elif days_left != None %}
                     {% if days_left == 0 %}
                         {% set card_style = "background: linear-gradient(135deg, #ffffff 0%, #ffe3e3 50%, #ffcaca 100%); border-color: #ffcaca;" %}
                     {% elif days_left == 1 %}
@@ -21,8 +24,13 @@
                     {% endif %}
                 {% endif %}
                 
-                <div class="card shadow-sm p-3 position-relative d-flex flex-column" style="{{ card_style }} border-radius: 12px;">
+                <div class="card shadow-sm p-3 position-relative d-flex flex-column user-report-item" data-deadline="{{ template.deadline.strftime('%Y-%m-%d') if template.deadline else '' }}" style="{{ card_style }} border-radius: 12px;">
                     <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                        {% if is_revision %}
+                        <span class="badge text-white px-2 py-1 fw-bold shadow-sm" style="background-color: #ff0072;">
+                            <i class="bi bi-arrow-repeat me-1"></i>Доработка
+                        </span>
+                        {% endif %}
                         <span class="badge bg-white text-dark border"><i class="bi bi-calendar"></i> Период: {{ template.period or 'не указан' }}</span>
                         {% if template.attachments|length > 0 %}
                         <span class="badge bg-secondary border"><i class="bi bi-paperclip"></i> Файлов: {{ template.attachments|length }}</span>
@@ -42,7 +50,9 @@
                                 {{ template.deadline.strftime('%d.%m.%Y') }}
                             </span>
                             {% if days_left != None %}
-                                {% if days_left == 0 %}
+                                {% if days_left < 0 %}
+                                <span class="badge bg-danger text-white border border-danger ms-1">Просрочено</span>
+                                {% elif days_left == 0 %}
                                 <span class="badge bg-danger text-white border border-danger ms-1">Осталось 0 дн.</span>
                                 {% elif days_left <= 3 %}
                                 <span class="badge bg-warning text-dark border border-warning ms-1">Осталось {{ days_left }} дн.</span>
@@ -55,6 +65,11 @@
                             {% endif %}
                         </div>
                         <div class="action-buttons-container" data-template-id="{{ template.id }}">
+                            {% if is_revision %}
+                            <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn text-white w-100 d-flex align-items-center justify-content-center gap-2 fw-bold shadow-sm" style="background-color: #ff0072; border-radius: 8px;">
+                                <i class="bi bi-pencil-square"></i> Исправить отчет
+                            </a>
+                            {% else %}
                             <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-100 d-flex align-items-center justify-content-center gap-2 btn-default-fill" style="background-color: #00334e; color: white; border-radius: 8px;">
                                 <i class="bi bi-pencil-square"></i> Заполнить форму
                             </a>
@@ -62,7 +77,9 @@
                                 <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-copp w-50 d-flex align-items-center justify-content-center" style="background-color: #00334e; color: white; border-radius: 8px;">Черновик</a>
                                 <a href="#" onclick="clearDraftAndStart('{{ template.id }}', '{{ url_for('reports.fill_report', template_id=template.id) }}'); return false;" class="btn btn-outline-secondary w-50 d-flex align-items-center justify-content-center rounded-btn">Заново</a>
                             </div>
+                            {% endif %}
                         </div>
+                    </div>
                     </div>
                 </div>
             {% endfor %}
@@ -74,8 +91,12 @@
         </div>
     {% endif %}
     
+</div>
+
+<!-- Files Section -->
+<div id="section-files" class="content-section d-none">
+    <h5 class="fw-bold mb-3 text-dark">Файлы</h5>
     {% if attached_files %}
-    <h5 class="fw-bold mb-3 mt-4 text-dark">Файлы</h5>
     <div class="d-flex flex-column gap-2">
     {% for item in attached_files %}
     <div class="card shadow-sm p-2 d-flex flex-row align-items-center gap-3 border-secondary border-opacity-25 bg-light rounded-card">
@@ -92,6 +113,11 @@
     </div>
     {% endfor %}
     </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-folder2-open fs-1 mb-2 d-block"></i>
+            <p>У вас нет прикрепленных файлов.</p>
+        </div>
     {% endif %}
 </div>
 
@@ -136,6 +162,7 @@
     {% endif %}
 </div>
 
+
 <!-- Profile Section -->
 <div id="section-profile" class="content-section d-none">
     <h5 class="fw-bold mb-3 text-dark">Личный кабинет</h5>
@@ -161,7 +188,6 @@
                 <i class="bi bi-box-arrow-right"></i> Выйти из аккаунта
             </a>
         </form>
-    </div>
     </div>
 </div>
 
@@ -222,13 +248,15 @@
     function updateSections() {
         let hash = window.location.hash || '#active';
         
-        ['section-active', 'section-filled', 'section-profile', 'section-analytics'].forEach(id => {
+        ['section-active', 'section-filled', 'section-files', 'section-profile', 'section-analytics'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('d-none');
         });
         
         if (hash.includes('filled')) {
             document.getElementById('section-filled').classList.remove('d-none');
+        } else if (hash.includes('files')) {
+            document.getElementById('section-files').classList.remove('d-none');
         } else if (hash.includes('profile')) {
             document.getElementById('section-profile').classList.remove('d-none');
         } else if (hash.includes('analytics')) {

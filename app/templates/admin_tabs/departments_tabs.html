@@ -502,16 +502,27 @@ document.addEventListener('DOMContentLoaded', function() {
         // Инициируем при загрузке
         toggle.dispatchEvent(new Event('change'));
     });
-});
 
     // TomSelect для выбора руководителей
-    document.querySelectorAll('.ts-managers').forEach(function(el) {
-        if (el.tomselect) return;
-        new TomSelect(el, {
-            plugins: ['remove_button'],
-            maxItems: null,
-            placeholder: 'Выберите руководителей...',
-            create: false,
+    function initDeptManagersTomSelect() {
+        if (typeof TomSelect === 'undefined') return;
+        document.querySelectorAll('.ts-managers').forEach(function(el) {
+            if (el.tomselect) return;
+            new TomSelect(el, {
+                plugins: ['remove_button'],
+                maxItems: null,
+                placeholder: 'Выберите руководителей...',
+                create: false,
+            });
+        });
+    }
+
+    initDeptManagersTomSelect();
+
+    document.querySelectorAll('[data-bs-toggle="tab"], [data-bs-toggle="pill"]').forEach(function(tab) {
+        tab.addEventListener('shown.bs.tab', function() {
+            initDeptManagersTomSelect();
         });
     });
+});
 </script>

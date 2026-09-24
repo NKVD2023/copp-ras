@@ -24,11 +24,11 @@ def create_department():
     name = request.form.get('name', '').strip()
     if not name:
         flash('Название отдела не может быть пустым.')
-        return redirect(url_for('admin.dashboard') + '#departmentsTab')
+        return redirect(url_for('admin.dashboard', tab='departmentsTab'))
 
     if Department.query.filter_by(name=name).first():
         flash(f'Отдел «{name}» уже существует.')
-        return redirect(url_for('admin.dashboard') + '#departmentsTab')
+        return redirect(url_for('admin.dashboard', tab='departmentsTab'))
 
     manager_ids = request.form.getlist('manager_ids')
 
@@ -75,7 +75,7 @@ def create_department():
 
     db.session.commit()
     log_action('Создание отдела', f'Создан отдел: {name}')
-    return redirect(url_for('admin.dashboard') + '#departmentsTab')
+    return redirect(url_for('admin.dashboard', tab='departmentsTab'))
 
 
 # ==========================================
@@ -93,7 +93,7 @@ def edit_department(dept_id):
         existing = Department.query.filter_by(name=name).first()
         if existing and existing.id != dept.id:
             flash(f'Отдел «{name}» уже существует.')
-            return redirect(url_for('admin.dashboard') + '#departmentsTab')
+            return redirect(url_for('admin.dashboard', tab='departmentsTab'))
         dept.name = name
 
     manager_ids = request.form.getlist('manager_ids')
@@ -146,7 +146,7 @@ def edit_department(dept_id):
 
     db.session.commit()
     log_action('Редактирование отдела', f'Обновлён отдел: {dept.name}')
-    return redirect(url_for('admin.dashboard') + '#departmentsTab')
+    return redirect(url_for('admin.dashboard', tab='departmentsTab'))
 
 
 # ==========================================
@@ -174,5 +174,5 @@ def delete_department(dept_id):
     db.session.delete(dept)
     db.session.commit()
     log_action('Удаление отдела', f'Удалён отдел: {dept_name}')
-    return redirect(url_for('admin.dashboard') + '#departmentsTab')
+    return redirect(url_for('admin.dashboard', tab='departmentsTab'))
 

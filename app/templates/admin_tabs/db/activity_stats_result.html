@@ -1,0 +1,268 @@
+<!-- Верхняя панель: Заголовок + Счётчики + Действия (в едином стиле с вкладкой Пользователи) -->
+<div class="p-4 border-bottom border-light-subtle">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <h6 class="fw-bold mb-1 text-dark">Статистика сдачи отчетов и активности</h6>
+            <p class="text-muted small mb-0">Показатели подотчетных учреждений и пользователей (руководители и администраторы исключены)</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-light text-secondary border px-3 py-2 fw-medium" id="statsCountBadge">
+                Показано: <strong class="text-dark" id="statsFilteredCount">{{ stats|length }}</strong> из {{ stats|length }}
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="statsResetFiltersBtn" title="Сбросить все фильтры" onclick="resetStatsFilters()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Сбросить
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary px-3 shadow-sm" onclick="exportActivityStats()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Экспорт в Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- Фильтры в один ряд -->
+    <div class="row g-2 align-items-center">
+        <!-- Поиск -->
+        <div class="col-12 col-md-4 col-lg-3">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" id="statsSearch" class="form-control bg-light border-start-0 ps-0" placeholder="Поиск по логину или названию..." autocomplete="off">
+                <button class="btn btn-light border border-start-0 text-muted d-none" type="button" id="statsClearSearchBtn" onclick="clearStatsSearch()">
+                    <i class="bi bi-x-lg" style="font-size: 0.75rem;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Фильтр по статусу -->
+        <div class="col-6 col-md-3 col-lg-3">
+            <select id="statsStatusFilter" class="form-select bg-light border-light-subtle text-secondary">
+                <option value="">Все статусы</option>
+                <option value="Сдано полностью">Сдано полностью</option>
+                <option value="В процессе">В процессе</option>
+                <option value="На доработке">На доработке</option>
+                <option value="Отчеты не сданы">Отчеты не сданы</option>
+                <option value="Не входил">Не входил</option>
+                <option value="Без назначений">Без назначений</option>
+            </select>
+        </div>
+
+        <!-- Фильтр по отделу -->
+        <div class="col-6 col-md-3 col-lg-3">
+            <select id="statsDeptFilter" class="form-select bg-light border-light-subtle text-secondary">
+                <option value="">Все отделы</option>
+                {% for d in all_departments %}
+                <option value="{{ d|lower }}">{{ d }}</option>
+                {% endfor %}
+                <option value="__none__">Без отдела</option>
+            </select>
+        </div>
+
+        <!-- Фильтр по группе -->
+        <div class="col-12 col-md-2 col-lg-3">
+            <select id="statsGroupFilter" class="form-select bg-light border-light-subtle text-secondary">
+                <option value="">Все группы</option>
+                {% for g in all_groups %}
+                <option value="{{ g }}">{{ g }}</option>
+                {% endfor %}
+                <option value="__none__">Без группы</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица (от края до края без вложенной рамки) -->
+<div class="table-responsive mb-0">
+    <table class="table table-hover align-middle mb-0" id="statsTable">
+        <thead class="table-light text-muted small text-uppercase">
+            <tr>
+                <th class="ps-4 py-3 fw-semibold border-bottom">Пользователь</th>
+                <th class="py-3 fw-semibold border-bottom">Отдел</th>
+                <th class="py-3 fw-semibold border-bottom">Группа</th>
+                <th class="py-3 fw-semibold border-bottom text-nowrap">Последний вход</th>
+                <th class="py-3 fw-semibold border-bottom text-center text-nowrap">Отчеты (Сдано/Назначено)</th>
+                <th class="py-3 fw-semibold border-bottom text-center" style="width: 130px;">Процент</th>
+                <th class="pe-4 py-3 fw-semibold border-bottom text-end">Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in stats %}
+            <tr class="stats-table-row"
+                data-username="{{ s.username|lower }}"
+                data-description="{{ s.description|lower }}"
+                data-status="{{ s.status }}"
+                data-dept="{{ s.department|lower }}"
+                data-group="{{ s.group }}">
+                <td class="ps-4 py-3">
+                    <div class="fw-bold text-dark">{{ s.username }}</div>
+                    {% if s.description %}
+                        <div class="text-muted small text-wrap">{{ s.description }}</div>
+                    {% endif %}
+                </td>
+                <td class="py-3">
+                    {% if s.department %}
+                        <span class="text-dark small d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-building text-muted"></i>
+                            <span>{{ s.department }}</span>
+                        </span>
+                    {% else %}
+                        <span class="text-muted small">—</span>
+                    {% endif %}
+                </td>
+                <td class="py-3">
+                    {% if s.group %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal">{{ s.group }}</span>
+                    {% else %}
+                        <span class="text-muted small">—</span>
+                    {% endif %}
+                </td>
+                <td class="py-3 text-nowrap">
+                    {% if s.last_login %}
+                        <span class="small text-dark">{{ s.last_login.strftime('%d.%m.%Y %H:%M') }}</span>
+                    {% else %}
+                        <span class="badge bg-light text-muted border px-2 py-1">Никогда</span>
+                    {% endif %}
+                </td>
+                <td class="py-3 text-center">
+                    <span class="fw-bold {% if s.submitted == 0 and s.assigned > 0 %}text-danger{% else %}text-dark{% endif %}">
+                        {{ s.submitted }}
+                    </span>
+                    <span class="text-muted mx-1">/</span>
+                    <span class="text-muted">{{ s.assigned }}</span>
+                </td>
+                <td class="py-3 text-center">
+                    <div class="d-flex flex-column align-items-center">
+                        <span class="fw-bold {% if s.completion_rate == 100 %}text-success{% elif s.completion_rate > 50 %}text-primary{% elif s.completion_rate > 0 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ s.completion_rate }}%
+                        </span>
+                        <div class="progress w-100 mt-1" style="height: 4px; max-width: 80px;">
+                            <div class="progress-bar {% if s.completion_rate == 100 %}bg-success{% elif s.completion_rate > 50 %}bg-primary{% elif s.completion_rate > 0 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ s.completion_rate }}%;" aria-valuenow="{{ s.completion_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="pe-4 py-3 text-end">
+                    {% if s.status == 'Сдано полностью' %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1"><i class="bi bi-check-circle me-1"></i>Сдано полностью</span>
+                    {% elif s.status == 'В процессе' %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>В процессе</span>
+                    {% elif s.status == 'На доработке' %}
+                        <span class="badge text-white rounded-pill px-2 py-1 shadow-sm" style="background-color: #ff0072;" title="Отчет возвращен учреждению на доработку"><i class="bi bi-arrow-repeat me-1"></i>На доработке</span>
+                    {% elif s.status == 'Отчеты не сданы' %}
+                        <span class="badge bg-warning bg-opacity-15 text-dark border border-warning border-opacity-50 rounded-pill px-2 py-1" title="Пользователь заходил в систему, но отчеты еще не сданы"><i class="bi bi-exclamation-triangle me-1"></i>Отчеты не сданы</span>
+                    {% elif s.status == 'Не входил' %}
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1" title="Пользователь ни разу не входил в систему"><i class="bi bi-dash-circle me-1"></i>Не входил</span>
+                    {% elif s.status == 'Без назначений' %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-1"><i class="bi bi-slash-circle me-1"></i>Без назначений</span>
+                    {% else %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-2 py-1">{{ s.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-bar-chart-steps fs-1 text-muted d-block mb-2 opacity-50"></i>
+                    Нет данных для отображения.
+                </td>
+            </tr>
+            {% endfor %}
+            <tr id="statsNoResultsRow" class="d-none">
+                <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-funnel fs-2 text-muted d-block mb-2 opacity-50"></i>
+                    По выбранным фильтрам ничего не найдено.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    (function() {
+        const searchInput = document.getElementById('statsSearch');
+        const clearBtn = document.getElementById('statsClearSearchBtn');
+        const statusFilter = document.getElementById('statsStatusFilter');
+        const deptFilter = document.getElementById('statsDeptFilter');
+        const groupFilter = document.getElementById('statsGroupFilter');
+        const resetBtn = document.getElementById('statsResetFiltersBtn');
+        const countSpan = document.getElementById('statsFilteredCount');
+        const noResults = document.getElementById('statsNoResultsRow');
+        const rows = document.querySelectorAll('#statsTable tbody tr.stats-table-row');
+        const totalRows = rows.length;
+
+        function applyFilters() {
+            const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+            const status = statusFilter ? statusFilter.value : '';
+            const dept = deptFilter ? deptFilter.value : '';
+            const group = groupFilter ? groupFilter.value : '';
+
+            if (clearBtn) {
+                clearBtn.classList.toggle('d-none', !query);
+            }
+
+            const hasActiveFilters = query || status || dept || group;
+            if (resetBtn) {
+                resetBtn.classList.toggle('d-none', !hasActiveFilters);
+            }
+
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const uName = row.getAttribute('data-username') || '';
+                const uDesc = row.getAttribute('data-description') || '';
+                const uStatus = row.getAttribute('data-status') || '';
+                const uDept = row.getAttribute('data-dept') || '';
+                const uGroup = row.getAttribute('data-group') || '';
+
+                // Search match
+                const matchSearch = !query || uName.includes(query) || uDesc.includes(query);
+
+                // Status match
+                const matchStatus = !status || uStatus === status;
+
+                // Department match
+                let matchDept = true;
+                if (dept === '__none__') {
+                    matchDept = !uDept;
+                } else if (dept) {
+                    matchDept = uDept === dept;
+                }
+
+                // Group match
+                let matchGroup = true;
+                if (group === '__none__') {
+                    matchGroup = !uGroup;
+                } else if (group) {
+                    matchGroup = uGroup === group;
+                }
+
+                const isVisible = matchSearch && matchStatus && matchDept && matchGroup;
+                row.classList.toggle('d-none', !isVisible);
+
+                if (isVisible) visibleCount++;
+            });
+
+            if (countSpan) countSpan.textContent = visibleCount;
+            if (noResults) noResults.classList.toggle('d-none', visibleCount > 0);
+        }
+
+        window.clearStatsSearch = function() {
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+                applyFilters();
+            }
+        };
+
+        window.resetStatsFilters = function() {
+            if (searchInput) searchInput.value = '';
+            if (statusFilter) statusFilter.value = '';
+            if (deptFilter) deptFilter.value = '';
+            if (groupFilter) groupFilter.value = '';
+            applyFilters();
+        };
+
+        if (searchInput) searchInput.addEventListener('input', applyFilters);
+        if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+        if (deptFilter) deptFilter.addEventListener('change', applyFilters);
+        if (groupFilter) groupFilter.addEventListener('change', applyFilters);
+    })();
+</script>

@@ -56,7 +56,7 @@ def constructor():
         if not dept:
             from flask import flash
             flash('Ваша учетная запись не привязана ни к одному отделу в качестве руководителя. Создание отчетов недоступно.', 'danger')
-            return redirect(url_for('admin.dashboard'))
+            return redirect(url_for('admin.dashboard', tab='reportsTab'))
             
     if request.method == 'POST':
         import json
@@ -204,7 +204,7 @@ def edit_constructor(template_id):
         if not dept:
             from flask import flash
             flash('Ваша учетная запись не привязана ни к одному отделу в качестве руководителя.', 'danger')
-            return redirect(url_for('admin.dashboard'))
+            return redirect(url_for('admin.dashboard', tab='reportsTab'))
         if template not in dept.templates:
             return "Доступ запрещен", 403
     

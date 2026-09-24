@@ -8,66 +8,76 @@
 {% extends "admin_base.html" %}
 
 {% block admin_navbar %}
+{% set req_tab = request.args.get('tab', '') %}
+{% if selected_user_id or selected_short_name %}
+    {% set active_tab = 'statisticsTab' %}
+{% elif req_tab %}
+    {% set active_tab = req_tab %}
+{% elif current_user.role == 'admin' %}
+    {% set active_tab = 'usersTab' %}
+{% else %}
+    {% set active_tab = 'reportsTab' %}
+{% endif %}
 <nav class="admin-top-nav sticky-top border-bottom navbar-glass">
     <div class="container-fluid px-4 overflow-x-auto">
         <ul class="admin-nav-list nav flex-nowrap mb-0 border-0 nav-gap-py" id="adminTabs" role="tablist" >
             {% if current_user.role == 'admin' %}
             <li class="admin-nav-item">
-                <button class="admin-nav-link active d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#usersTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'usersTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#usersTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>
                     Пользователи
                 </button>
             </li>
             {% endif %}
             <li class="admin-nav-item">
-                <button class="admin-nav-link {% if current_user.role == 'manager' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#reportsTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'reportsTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#reportsTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/></svg>
                     Отчеты
                 </button>
             </li>
             <li class="admin-nav-item">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#listsTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'listsTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#listsTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
                     Шаблоны списков
                 </button>
             </li>
             <li class="admin-nav-item">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#filesTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'filesTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#filesTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>
                     Файлы
                 </button>
             </li>
             {% if current_user.role == 'admin' %}
             <li class="admin-nav-item">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#departmentsTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'departmentsTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#departmentsTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M12.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h9zM12 4H4v8h8V4z"/></svg>
                     Отделы
                 </button>
             </li>
             {% endif %}
             <li class="admin-nav-item">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#statisticsTab" id="statisticsTabBtn" type="button">
+                <button class="admin-nav-link {% if active_tab == 'statisticsTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#statisticsTab" id="statisticsTabBtn" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M0 0h1v15h15v1H0V0Zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07Z"/></svg>
                     Статистика
                 </button>
             </li>
             {% if current_user.role == 'admin' %}
             <li class="admin-nav-item">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#databaseTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'databaseTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#databaseTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313ZM13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A4.92 4.92 0 0 0 13 5.698ZM14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13V4Zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A4.92 4.92 0 0 0 13 8.698Zm0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525Z"/></svg>
                     База данных
                 </button>
             </li>
 
             <li class="admin-nav-item">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#logsTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'logsTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#logsTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
                     Журнал действий
                 </button>
             </li>
             {% endif %}
             <li class="admin-nav-item">
-                <button class="admin-nav-link d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#profileTab" type="button">
+                <button class="admin-nav-link {% if active_tab == 'profileTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#profileTab" type="button">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/></svg>
                     Личный кабинет
                 </button>
@@ -79,42 +89,49 @@
 
 {% block content %}
 <div class="tab-content" id="adminTabsContent">
+    {% set req_tab = request.args.get('tab', '') %}
+    {% if selected_user_id or selected_short_name %}
+        {% set active_tab = 'statisticsTab' %}
+    {% elif req_tab %}
+        {% set active_tab = req_tab %}
+    {% elif current_user.role == 'admin' %}
+        {% set active_tab = 'usersTab' %}
+    {% else %}
+        {% set active_tab = 'reportsTab' %}
+    {% endif %}
+
     {% if current_user.role == 'admin' %}
-    <div class="tab-pane fade {% if not selected_user_id and not selected_short_name %}show active{% endif %}" id="usersTab" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'usersTab' %}show active{% endif %}" id="usersTab" role="tabpanel">
         {% include 'admin_tabs/users_tabs.html' %}
     </div>
     {% endif %}
     
-    <div class="tab-pane fade" id="statisticsTab" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'statisticsTab' %}show active{% endif %}" id="statisticsTab" role="tabpanel">
         {% include 'admin_tabs/statistics/statistics_main.html' %}
     </div>
 
-    <div class="tab-pane fade {% if current_user.role == 'manager' and not selected_user_id and not selected_short_name %}show active{% endif %}" id="reportsTab" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'reportsTab' %}show active{% endif %}" id="reportsTab" role="tabpanel">
         <div class="card p-4">
             {% include 'admin_tabs/reports_tabs.html' %}
         </div>
     </div>
     
-    <div class="tab-pane fade" id="listsTab" role="tabpanel">
-        <div class="card p-4 bg-white border-0">
-            {% include 'admin_tabs/lists_tabs.html' %}
-        </div>
+    <div class="tab-pane fade {% if active_tab == 'listsTab' %}show active{% endif %}" id="listsTab" role="tabpanel">
+        {% include 'admin_tabs/lists_tabs.html' %}
     </div>
     
-    <div class="tab-pane fade" id="filesTab" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'filesTab' %}show active{% endif %}" id="filesTab" role="tabpanel">
         <div class="card p-4">
             {% include 'admin_tabs/files_tabs.html' %}
         </div>
     </div>
 
     {% if current_user.role == 'admin' %}
-    <div class="tab-pane fade" id="databaseTab" role="tabpanel">
-        <div class="card p-4">
-            {% include 'admin_tabs/db_tabs.html' %}
-        </div>
+    <div class="tab-pane fade {% if active_tab == 'databaseTab' %}show active{% endif %}" id="databaseTab" role="tabpanel">
+        {% include 'admin_tabs/db_tabs.html' %}
     </div>
     
-    <div class="tab-pane fade" id="logsTab" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'logsTab' %}show active{% endif %}" id="logsTab" role="tabpanel">
         <div class="card p-4">
             {% include 'admin_tabs/logs_tabs.html' %}
         </div>
@@ -122,14 +139,14 @@
     {% endif %}
 
     {% if current_user.role == 'admin' %}
-    <div class="tab-pane fade" id="departmentsTab" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'departmentsTab' %}show active{% endif %}" id="departmentsTab" role="tabpanel">
         <!-- Убран белый фон карточки -->
         {% include 'admin_tabs/departments_tabs.html' %}
     </div>
     {% endif %}
 
-    <!-- Новая вкладка профиля -->
-    <div class="tab-pane fade" id="profileTab" role="tabpanel">
+    <!-- Вкладка профиля -->
+    <div class="tab-pane fade {% if active_tab == 'profileTab' %}show active{% endif %}" id="profileTab" role="tabpanel">
         <div class="card mw-500">
             <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
                 <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/></svg>
@@ -203,55 +220,75 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Флаг от сервера: нужно ли открыть вкладку статистики
+        const mainNav = document.getElementById('adminTabs');
+        const mainContent = document.getElementById('adminTabsContent');
         const openStats = {{ 'true' if (selected_user_id or selected_short_name) else 'false' }};
 
-        const navLists = document.querySelectorAll('.nav-tabs, .nav-pills, .admin-nav-list');
-        
-        navLists.forEach(nav => {
-            const navId = nav.id || 'defaultNav';
-            const storageKey = 'activeTab_' + navId;
-
-            let targetHash = null;
-
-            if (navId === 'adminTabs') {
-                if (openStats) {
-                    // Сервер вернул данные статистики — принудительно открываем эту вкладку
-                    targetHash = '#statisticsTab';
-                    localStorage.setItem(storageKey, targetHash);
-                } else if (window.location.hash) {
-                    targetHash = window.location.hash;
-                } else {
-                    targetHash = localStorage.getItem(storageKey);
-                }
-            } else {
-                targetHash = localStorage.getItem(storageKey);
-            }
-            
-            if (targetHash) {
-                let tabTrigger = nav.querySelector(`[data-bs-target="${targetHash}"]`);
-                if (tabTrigger) {
-                    tabTrigger.click();
-                }
-            }
-            
-            const tabs = nav.querySelectorAll('button[data-bs-toggle="tab"], button[data-bs-toggle="pill"]');
-            tabs.forEach(tabEl => {
-                tabEl.addEventListener('shown.bs.tab', function (event) {
-                    const target = event.target.getAttribute("data-bs-target");
-                    if (target) {
-                        localStorage.setItem(storageKey, target);
-                        if (navId === 'adminTabs') {
-                            history.replaceState(null, null, target);
+        if (mainNav && mainContent) {
+            // При переключении любого главного таба:
+            // ГАРАНТИРУЕМ взаимное исключение (Mutual Exclusion):
+            // Принудительно гасим ВСЕ другие главные tab-pane, чтобы ни один модуль не мог остаться висеть на странице!
+            mainNav.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
+                btn.addEventListener('show.bs.tab', function(event) {
+                    const targetSelector = event.target.getAttribute('data-bs-target');
+                    if (targetSelector) {
+                        mainContent.querySelectorAll(':scope > .tab-pane').forEach(pane => {
+                            if ('#' + pane.id !== targetSelector) {
+                                pane.classList.remove('show', 'active');
+                            }
+                        });
+                    }
+                    // Убираем active у всех остальных кнопок главного меню
+                    mainNav.querySelectorAll('.admin-nav-link').forEach(b => {
+                        if (b !== event.target) {
+                            b.classList.remove('active');
                         }
+                    });
+                });
+
+                btn.addEventListener('shown.bs.tab', function(event) {
+                    const target = event.target.getAttribute('data-bs-target');
+                    if (target) {
+                        const tabName = target.replace('#', '');
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('tab', tabName);
+                        history.replaceState(null, null, url.toString());
                     }
                 });
             });
+        }
+
+        // Если сервер вернул статистику — принудительно активируем вкладку статистики
+        if (openStats) {
+            const statBtn = document.querySelector('[data-bs-target="#statisticsTab"]');
+            if (statBtn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                bootstrap.Tab.getOrCreateInstance(statBtn).show();
+            }
+        }
+
+        // Для внутренних под-навигаций (sub-tabs, pills) — восстанавливаем через Bootstrap Tab API без synthetic click
+        const subNavs = document.querySelectorAll('.nav-tabs, .nav-pills');
+        subNavs.forEach(nav => {
+            if (nav.id === 'adminTabs') return; // главный nav пропускаем
+            const storageKey = 'activeSubTab_' + (nav.id || Math.random());
+            const savedTarget = localStorage.getItem(storageKey);
+            if (savedTarget) {
+                const trigger = nav.querySelector(`[data-bs-target="${savedTarget}"]`);
+                if (trigger && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    try {
+                        bootstrap.Tab.getOrCreateInstance(trigger).show();
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+            }
+            nav.querySelectorAll('button[data-bs-toggle="tab"], button[data-bs-toggle="pill"]').forEach(tabEl => {
+                tabEl.addEventListener('shown.bs.tab', function(event) {
+                    const target = event.target.getAttribute('data-bs-target');
+                    if (target) { localStorage.setItem(storageKey, target); }
+                });
+            });
         });
-
-        // Полная ширина для вкладки статистики теперь обрабатывается через CSS :has()
-        // Ничего делать не нужно
-
     });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
