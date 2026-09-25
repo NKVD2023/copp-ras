@@ -4,12 +4,47 @@
 {% block content %}
 <!-- Active Reports Section -->
 <div id="section-active" class="content-section">
+    {% if active_announcements %}
+    <div class="announcements-container mb-3" id="mobileAnnouncementsBlock">
+        {% for ann in active_announcements %}
+        <div class="card border-0 shadow-sm rounded-4 p-3 mb-2 bg-white" 
+             style="border: 1px solid #e2e8f0 !important; border-left: 4px solid {% if ann.type == 'danger' %}#dc2626{% elif ann.type == 'warning' %}#b45309{% elif ann.type == 'success' %}#16a34a{% else %}#00334e{% endif %} !important;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    {% if ann.type == 'danger' %}
+                        <span class="badge px-2 py-1 rounded-pill" style="color: #dc2626; background-color: #fef2f2; border: 1px solid #fecaca; font-size: 0.72rem;">
+                            <i class="bi bi-exclamation-circle me-1"></i>Срочно
+                        </span>
+                    {% elif ann.type == 'warning' %}
+                        <span class="badge px-2 py-1 rounded-pill" style="color: #b45309; background-color: #fffbeb; border: 1px solid #fde68a; font-size: 0.72rem;">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Внимание
+                        </span>
+                    {% elif ann.type == 'success' %}
+                        <span class="badge px-2 py-1 rounded-pill" style="color: #16a34a; background-color: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.72rem;">
+                            <i class="bi bi-check-circle me-1"></i>Обновление
+                        </span>
+                    {% else %}
+                        <span class="badge px-2 py-1 rounded-pill" style="color: #00334e; background-color: rgba(0, 51, 78, 0.08); border: 1px solid rgba(0, 51, 78, 0.2); font-size: 0.72rem;">
+                            <i class="bi bi-info-circle me-1"></i>Объявление
+                        </span>
+                    {% endif %}
+                </div>
+                <small class="text-muted" style="font-size: 0.75rem;">{{ (ann.created_at|msk_time).strftime('%d.%m.%Y %H:%M') if ann.created_at else '' }}</small>
+            </div>
+            <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">{{ ann.title }}</h6>
+            <div class="text-secondary small" style="white-space: pre-line; line-height: 1.45; font-size: 0.85rem;">{{ ann.content }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <h5 class="fw-bold mb-3 text-dark">К заполнению</h5>
     
     {% if unfilled_templates %}
         <div id="unfilledContainer" class="d-flex flex-column gap-3">
             {% for template in unfilled_templates %}
                 {% set is_revision = revision_submissions and template.id in revision_submissions %}
+                {% set rev_sub = revision_submissions[template.id] if is_revision else none %}
                 {% set days_left = (template.deadline - current_date).days if template.deadline else none %}
                 {% set card_style = "background: #ffffff; border-color: #edf2f7;" %}
                 {% if is_revision %}
@@ -56,14 +91,29 @@
                                 <span class="badge bg-danger text-white border border-danger ms-1">Осталось 0 дн.</span>
                                 {% elif days_left <= 3 %}
                                 <span class="badge bg-warning text-dark border border-warning ms-1">Осталось {{ days_left }} дн.</span>
-                                {% else %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-1">Осталось {{ days_left }} дн.</span>
                                 {% endif %}
                             {% endif %}
                             {% else %}
                             <span class="text-secondary fw-medium">Без срока</span>
                             {% endif %}
                         </div>
+                        
+                        {% if is_revision and rev_sub and rev_sub.revision_comment %}
+                        <div class="p-2 px-3 rounded-3 mb-3" style="background-color: #fff1f6; border-left: 3px solid #ff0072;">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="fw-bold" style="color: #ff0072; font-size: 0.74rem;">
+                                    <i class="bi bi-chat-left-text me-1"></i>Комментарий:
+                                </span>
+                                {% if rev_sub.returned_at %}
+                                <span class="text-muted" style="font-size: 0.68rem;">
+                                    {{ (rev_sub.returned_at|msk_time).strftime('%d.%m.%Y %H:%M') }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-dark small" style="font-size: 0.8rem; white-space: pre-line; line-height: 1.35;">{{ rev_sub.revision_comment }}</div>
+                        </div>
+                        {% endif %}
+
                         <div class="action-buttons-container" data-template-id="{{ template.id }}">
                             {% if is_revision %}
                             <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn text-white w-100 d-flex align-items-center justify-content-center gap-2 fw-bold shadow-sm" style="background-color: #ff0072; border-radius: 8px;">
@@ -141,7 +191,23 @@
                 <span class="badge bg-white text-muted border">Период: {{ template.period or '-' }}</span>
             </div>
             <h6 class="card-title fw-bold text-dark mb-1">{{ template.short_name or template.name }}</h6>
-            <p class="text-muted small mb-3 mobile-report-card-desc">{{ template.name }}</p>
+            <p class="text-muted small mb-2 mobile-report-card-desc">{{ template.name }}</p>
+            {% set sub = submissions_by_template.get(template.id) if submissions_by_template else none %}
+            {% if sub and sub.submitted_at %}
+            <div class="mb-2">
+                <span class="text-muted small d-inline-flex align-items-center gap-1" style="font-size: 0.78rem;">
+                    <i class="bi bi-calendar2-check text-success"></i>
+                    <span>Сдано: <strong>{{ (sub.submitted_at|msk_time).strftime('%d.%m.%Y %H:%M') }}</strong></span>
+                </span>
+            </div>
+            {% elif sub %}
+            <div class="mb-2">
+                <span class="text-muted small d-inline-flex align-items-center gap-1" style="font-size: 0.78rem;">
+                    <i class="bi bi-check-circle text-success"></i>
+                    <span>Отчет сдан</span>
+                </span>
+            </div>
+            {% endif %}
             
             <div class="mt-auto pt-3 border-top border-success border-opacity-25 d-flex flex-column gap-2">
                 <a href="{{ url_for('reports.fill_report', template_id=template.id) }}" class="btn btn-sm btn-outline-success w-100 d-flex align-items-center justify-content-center gap-2 rounded-btn">

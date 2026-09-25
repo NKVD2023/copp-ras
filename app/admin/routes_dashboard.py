@@ -8,7 +8,7 @@ import datetime
 from flask import render_template, request, redirect, url_for, send_file
 from flask_login import login_required, current_user
 from app.admin import admin_bp
-from app.models import User, ReportTemplate, ReportSubmission, ActionLog, UploadedFile
+from app.models import User, ReportTemplate, ReportSubmission, ActionLog, UploadedFile, Announcement
 from app.auth.decorators import roles_required
 from app.extensions import db
 from config import basedir
@@ -230,6 +230,15 @@ def dashboard():
             'tables_count': 0
         }
 
+    # 10. Объявления для пользователей
+    if current_user.role == 'manager' and dept:
+        all_announcements = Announcement.query.filter(
+            (Announcement.created_by_id == current_user.id) |
+            (Announcement.target_type == 'all')
+        ).order_by(Announcement.created_at.desc()).all()
+    else:
+        all_announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
+
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
                            users=users, 
@@ -258,7 +267,8 @@ def dashboard():
                            stat_schema=stat_schema,
                            current_sort=sort_param,
                            current_date=datetime.date.today(),
-                           departments=all_departments)
+                           departments=all_departments,
+                           announcements=all_announcements)
 
 
 @admin_bp.route('/clear_logs', methods=['POST'])

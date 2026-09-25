@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 import logging
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -30,7 +31,9 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # ── Cookie Security ───────────────────────────────────────────────────────
+    # ── Session & Cookie Security ─────────────────────────────────────────────
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
+    SESSION_REFRESH_EACH_REQUEST = False
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'

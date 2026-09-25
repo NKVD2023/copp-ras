@@ -167,7 +167,7 @@
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link rounded-pill px-4 py-2 fw-medium" id="db-tab-backups" data-bs-toggle="tab" data-bs-target="#dbPaneBackups" type="button" role="tab">
-            <i class="bi bi-archive me-2"></i>Резервные копии <span class="badge bg-secondary rounded-pill ms-1">{{ backups_list|length }}</span>
+            <i class="bi bi-archive me-2"></i>Резервная копия
         </button>
     </li>
     <li class="nav-item" role="presentation">
@@ -532,85 +532,76 @@
     </div>
 
     <!-- ============================================================== -->
-    <!-- ПОДВКЛАДКА 2: РЕЗЕРВНЫЕ КОПИИ (БЭКАПЫ)                          -->
+    <!-- ============================================================== -->
+    <!-- ПОДВКЛАДКА 2: РЕЗЕРВНАЯ КОПИЯ (СКАЧАТЬ / ВОССТАНОВИТЬ ИЗ ZIP)  -->
     <!-- ============================================================== -->
     <div class="tab-pane fade" id="dbPaneBackups" role="tabpanel">
-        <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+        <div class="card border-0 shadow-sm p-4 bg-white mx-auto" style="border-radius: 16px; max-width: 1250px;">
             
-            <!-- Панель быстрых действий с бэкапами -->
-            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4 pb-3 border-bottom">
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-copp rounded-pill shadow-sm" onclick="triggerCreateBackup()">
-                        <i class="bi bi-camera me-1"></i> Создать снимок БД сейчас
-                    </button>
-                    <a href="{{ url_for('admin.download_current_db') }}" class="btn btn-outline-primary rounded-pill shadow-sm">
-                        <i class="bi bi-cloud-arrow-down me-1"></i> Скачать полный архив (БД + файлы)
-                    </a>
+            <div class="row g-4 align-items-stretch">
+                <!-- 1. Скачивание резервной копии -->
+                <div class="col-12 col-md-6">
+                    <div class="p-4 rounded-4 border bg-light-subtle h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <span class="p-3 rounded-3 text-white d-flex align-items-center justify-content-center" style="background-color: var(--primary-color); width: 44px; height: 44px;">
+                                    <i class="bi bi-cloud-arrow-down fs-4"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">Скачать резервную копию</h6>
+                                    <small class="text-muted">Полный ZIP-архив (БД + прикрепленные файлы)</small>
+                                </div>
+                            </div>
+                            <p class="text-secondary small mb-4">
+                                Формирует и выгружает актуальный ZIP-архив с текущим состоянием базы данных (<code>reports.db</code>) и всеми прикрепленными к отчетам файлами.
+                            </p>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('admin.download_current_db') }}" class="btn btn-copp w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm rounded-pill">
+                                <i class="bi bi-download"></i>
+                                <span>Скачать архив (.ZIP)</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <button type="button" class="btn btn-outline-secondary rounded-pill shadow-sm" onclick="document.getElementById('backupFileInput').click()">
-                        <i class="bi bi-cloud-arrow-up me-1"></i> Восстановить из ZIP архива
-                    </button>
-                    <form id="restoreForm" action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-none">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <input type="file" name="backup_file" id="backupFileInput" accept=".zip" required onchange="promptRestorePassword()">
-                        <input type="hidden" name="password" id="restorePasswordHidden">
-                    </form>
+                <!-- 2. Восстановление из резервной копии -->
+                <div class="col-12 col-md-6">
+                    <div class="p-4 rounded-4 border bg-light-subtle h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <span class="p-3 rounded-3 text-white d-flex align-items-center justify-content-center bg-secondary" style="width: 44px; height: 44px;">
+                                    <i class="bi bi-cloud-arrow-up fs-4"></i>
+                                </span>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">Восстановить из архива</h6>
+                                    <small class="text-muted">Импорт данных из ранее сохраненного ZIP</small>
+                                </div>
+                            </div>
+                            <p class="text-secondary small mb-4">
+                                Восстанавливает базу данных и файлы из ZIP-архива. Текущие данные будут перезаписаны. Для безопасности операция требует подтверждения паролем администратора.
+                            </p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline-copp w-100 py-2 d-flex align-items-center justify-content-center gap-2 rounded-pill" onclick="document.getElementById('backupFileInput').click()">
+                                <i class="bi bi-upload"></i>
+                                <span>Восстановить из ZIP архива</span>
+                            </button>
+                            <form id="restoreForm" action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data" class="d-none">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="file" name="backup_file" id="backupFileInput" accept=".zip" required onchange="promptRestorePassword()">
+                                <input type="hidden" name="password" id="restorePasswordHidden">
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Таблица файлов бэкапов -->
-            <div class="table-responsive rounded-3 border">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="px-3">Имя файла архива</th>
-                            <th>Размер файла</th>
-                            <th>Дата создания (МСК)</th>
-                            <th class="text-end px-3">Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for b in backups_list %}
-                        <tr>
-                            <td class="px-3 fw-bold text-dark">
-                                <i class="bi bi-file-earmark-zip text-primary me-2 fs-5"></i>{{ b.name }}
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-dark border">
-                                    {{ (b.size / 1024 / 1024)|round(2) }} МБ ({{ (b.size / 1024)|round(0)|int }} КБ)
-                                </span>
-                            </td>
-                            <td class="text-muted small font-monospace">
-                                <!-- Форматирование времени mtime через фильтр или JS -->
-                                <span class="js-mtime" data-ts="{{ b.mtime }}">{{ b.name }}</span>
-                            </td>
-                            <td class="text-end px-3">
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('admin.download_backup', filename=b.name) }}" class="btn btn-outline-primary rounded-pill px-3 me-1" title="Скачать">
-                                        <i class="bi bi-download me-1"></i> Скачать
-                                    </a>
-                                    <button type="button" class="btn btn-outline-warning rounded-pill px-3 me-1 text-dark" onclick="triggerRestoreBackup('{{ b.name }}')" title="Восстановить">
-                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Восстановить
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger rounded-pill px-2" onclick="triggerDeleteBackup('{{ b.name }}')" title="Удалить">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center py-5 text-muted">
-                                <i class="bi bi-archive fs-1 text-muted d-block mb-2 opacity-50"></i>
-                                В папке /backups еще нет созданных снимков базы данных.<br>
-                                Нажмите <strong>«Создать снимок БД сейчас»</strong>, чтобы сделать первую резервную копию.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="alert alert-light border mt-4 mb-0 rounded-3 p-3 d-flex align-items-center gap-2 small text-muted">
+                <i class="bi bi-info-circle text-primary fs-5 flex-shrink-0"></i>
+                <div>
+                    Рекомендуется регулярно скачивать резервную копию перед проведением обновлений структуры или массовым редактированием отчетов.
+                </div>
             </div>
 
         </div>
@@ -893,76 +884,7 @@
         }
     });
 
-    // 7. Действия с бэкапами
-    window.triggerCreateBackup = function() {
-        withPassword(function(pwd) {
-            fetch('/admin/db/backup/create', {
-                method: 'POST',
-                headers: {
-                    'X-User-Password': pwd,
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    coppAlert('Резервная копия базы данных успешно создана!', 'success').then(() => {
-                        window.location.reload();
-                    });
-                } else {
-                    coppAlert(data.message || 'Ошибка создания бэкапа', 'error');
-                }
-            });
-        });
-    };
-
-    window.triggerRestoreBackup = function(filename) {
-        coppConfirm(`Вы уверены, что хотите восстановить базу данных из файла <strong>${filename}</strong>?<br><span class="text-danger small">Все текущие несохраненные изменения будут перезаписаны!</span>`, function() {
-            withPassword(function(pwd) {
-                fetch(`/admin/db/backup/restore/${filename}`, {
-                    method: 'POST',
-                    headers: {
-                        'X-User-Password': pwd,
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    }
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        coppAlert('База данных успешно восстановлена!', 'success').then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        coppAlert(data.message || 'Ошибка восстановления', 'error');
-                    }
-                });
-            });
-        });
-    };
-
-    window.triggerDeleteBackup = function(filename) {
-        coppConfirm(`Удалить резервную копию <strong>${filename}</strong>?`, function() {
-            withPassword(function(pwd) {
-                fetch(`/admin/db/backup/delete/${filename}`, {
-                    method: 'POST',
-                    headers: {
-                        'X-User-Password': pwd,
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    }
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        coppAlert('Резервная копия удалена', 'success').then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        coppAlert(data.message || 'Ошибка удаления', 'error');
-                    }
-                });
-            });
-        });
-    };
+    // 7. Восстановление бэкапа из ZIP архива
 
     function promptRestorePassword() {
         const fileInput = document.getElementById('backupFileInput');

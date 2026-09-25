@@ -30,6 +30,7 @@ class ReportSubmission(db.Model):
     template_id = db.Column(db.Integer, db.ForeignKey('report_templates.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     data = db.Column(JSON)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
     is_revision = db.Column(db.Boolean, default=False)
     revision_comment = db.Column(db.Text, nullable=True)
     returned_at = db.Column(db.DateTime, nullable=True)

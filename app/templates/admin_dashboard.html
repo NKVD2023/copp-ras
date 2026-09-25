@@ -47,6 +47,12 @@
                     Файлы
                 </button>
             </li>
+            <li class="admin-nav-item">
+                <button class="admin-nav-link {% if active_tab == 'announcementsTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#announcementsTab" type="button">
+                    <i class="bi bi-megaphone-fill"></i>
+                    Объявления
+                </button>
+            </li>
             {% if current_user.role == 'admin' %}
             <li class="admin-nav-item">
                 <button class="admin-nav-link {% if active_tab == 'departmentsTab' %}active{% endif %} d-flex align-items-center gap-2" data-bs-toggle="tab" data-bs-target="#departmentsTab" type="button">
@@ -124,6 +130,10 @@
         <div class="card p-4">
             {% include 'admin_tabs/files_tabs.html' %}
         </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'announcementsTab' %}show active{% endif %}" id="announcementsTab" role="tabpanel">
+        {% include 'admin_tabs/announcements_tabs.html' %}
     </div>
 
     {% if current_user.role == 'admin' %}

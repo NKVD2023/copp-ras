@@ -7,7 +7,7 @@ from flask import render_template, redirect, url_for, request, jsonify, send_fil
 from flask_login import login_required, current_user
 from datetime import date
 from app.reports import reports_bp
-from app.models import ReportTemplate, ReportSubmission, User
+from app.models import ReportTemplate, ReportSubmission, User, Announcement
 from app.utils import is_mobile
 from app.services.excel_service import ExcelService
 
@@ -92,6 +92,12 @@ def dashboard():
         from app.services.stat_service import StatService
         stat_schema = StatService.build_unified_stat_schema(matched_templates, current_user.id)
                                     
+    # Активные объявления для текущего пользователя
+    raw_announcements = Announcement.query.filter_by(is_active=True).order_by(Announcement.created_at.desc()).all()
+    active_announcements = [a for a in raw_announcements if a.is_visible_to_user(current_user)]
+
+    submissions_by_template = {s.template_id: s for s in submissions}
+
     template_name = 'mobile/user_dashboard.html' if is_mobile(request) else 'user_dashboard.html'
     return render_template(template_name, 
                            unfilled_templates=active,
@@ -101,6 +107,8 @@ def dashboard():
                            selected_short_name=selected_short_name,
                            stat_schema=stat_schema,
                            revision_submissions=revision_submissions,
+                           submissions_by_template=submissions_by_template,
+                           active_announcements=active_announcements,
                            current_date=date.today())
 
 

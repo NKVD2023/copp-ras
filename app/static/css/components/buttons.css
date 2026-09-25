@@ -96,3 +96,65 @@
     color: var(--primary-hover);
     border-color: var(--primary-hover);
 }
+
+/* ==========================================================================
+   ФИЛЬТР-ЧИПСЫ (БЫСТРЫЕ ФИЛЬТРЫ В ЛИЧНОМ КАБИНЕТЕ)
+   ========================================================================== */
+.filter-chip-btn {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.35rem 0.85rem;
+    border-radius: 50rem;
+    transition: all 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1.4;
+}
+
+.filter-chip-btn:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+    border-color: #cbd5e1;
+}
+
+.filter-chip-btn.active {
+    background-color: #00334e !important;
+    border-color: #00334e !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(0, 51, 78, 0.2);
+}
+
+.filter-chip-btn.active i {
+    color: #ffffff !important;
+}
+
+.filter-chip-btn.chip-revision {
+    border-color: #ffd1e1;
+    background-color: #fff5f8;
+    color: #c2005a;
+}
+
+.filter-chip-btn.chip-revision:hover {
+    background-color: #ffe6ef;
+    border-color: #ffb3ce;
+}
+
+.filter-chip-btn.chip-revision.active {
+    background-color: #ff0072 !important;
+    border-color: #ff0072 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(255, 0, 114, 0.25);
+}
+
+.filter-chip-btn.chip-revision.active i,
+.filter-chip-btn.chip-revision.active .badge {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.25) !important;
+}
+

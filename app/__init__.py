@@ -38,6 +38,45 @@ def create_app(config_class: type = Config) -> Flask:
         from app import models  # noqa: F401 — регистрирует модели в SQLAlchemy
         db.create_all()
 
+    # ── Проверка срока жизни сессии (24 часа) ──────────────────────────────────
+    @app.before_request
+    def enforce_session_lifetime():
+        from flask import request, session, redirect, url_for, jsonify
+        from flask_login import current_user, logout_user
+        import time
+
+        # Статические файлы, вход и выход пропускаем
+        if request.endpoint == 'static' or (request.path and request.path.startswith('/static/')):
+            return
+        if request.endpoint in ['auth.login', 'auth.logout'] or (request.path and request.path.startswith('/auth/')):
+            return
+
+        if current_user.is_authenticated:
+            login_time = session.get('login_time')
+            # 24 часа = 86400 секунд
+            if not login_time or (time.time() - float(login_time) > 86400):
+                logout_user()
+                session.clear()
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+                    return jsonify({
+                        'status': 'session_expired',
+                        'message': 'Срок сессии истек',
+                        'redirect': url_for('auth.login')
+                    }), 401
+                return redirect(url_for('auth.login'))
+
+    # ── Обработка неавторизованного доступа (AJAX / обычный) ───────────────────
+    @login_manager.unauthorized_handler
+    def handle_unauthorized():
+        from flask import request, redirect, url_for, jsonify
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({
+                'status': 'unauthorized',
+                'message': 'Требуется авторизация',
+                'redirect': url_for('auth.login')
+            }), 401
+        return redirect(url_for('auth.login'))
+
     # ── Режим технических работ ────────────────────────────────────────────────
     @app.before_request
     def check_maintenance():
@@ -67,10 +106,10 @@ def create_app(config_class: type = Config) -> Flask:
                 }), 503
             return render_template('maintenance.html', maintenance=status), 503
 
-    # ── Security headers ──────────────────────────────────────────────────────
+    # ── Security & Cache headers ──────────────────────────────────────────────
     @app.after_request
     def add_security_headers(response):
-        """Добавляет заголовки безопасности HTTP к каждому ответу."""
+        """Добавляет заголовки безопасности HTTP и запрет кеширования динамического HTML."""
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
@@ -82,6 +121,11 @@ def create_app(config_class: type = Config) -> Flask:
             "img-src 'self' data:; "
             "object-src 'none';"
         )
+        # Запрет кеширования HTML-страниц (защита от устаревшего DOM и скриптов в браузере)
+        if response.mimetype == 'text/html':
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
         return response
 
     # ── Jinja2 Context Processors ─────────────────────────────────────────────

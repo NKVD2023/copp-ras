@@ -11,6 +11,7 @@ from app.models.tasks import BackgroundTask
 from app.models.dictionaries import Dictionary
 from app.models.department import Department, department_templates
 from app.models.settings import MaintenanceSetting
+from app.models.announcement import Announcement
 
 __all__ = [
     'User',
@@ -26,4 +27,5 @@ __all__ = [
     'Department',
     'department_templates',
     'MaintenanceSetting',
+    'Announcement',
 ]

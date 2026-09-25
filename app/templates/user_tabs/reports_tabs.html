@@ -3,25 +3,49 @@
         {% set total_assigned = total_unfilled + total_filled %}
 
 
-        <div class="row mb-4 align-items-center g-2 mx-0" id="userReportsFilterBar">
-            <div class="col-md-8">
-                <div class="input-group shadow-sm">
-                    <span class="input-group-text bg-white border-end-0 text-muted">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-                        </svg>
+        <!-- Единый функциональный ряд: Компактный поиск + Быстрые фильтры + Сортировка -->
+        <div class="card border-0 shadow-sm rounded-4 p-2 px-3 mb-4 bg-white" id="userReportsFilterBar">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <!-- 1. Компактная строка поиска -->
+                <div class="input-group input-group-sm" style="width: 270px; max-width: 100%;">
+                    <span class="input-group-text bg-light border-0 text-muted rounded-start-pill ps-3">
+                        <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="userReportSearch" class="form-control border-start-0 ps-0" placeholder="Поиск отчетов по названию..." autocomplete="off">
+                    <input type="text" id="userReportSearch" class="form-control bg-light border-0 shadow-none ps-1" placeholder="Поиск отчетов..." autocomplete="off" style="font-size: 0.85rem;">
+                    <button class="btn btn-light border-0 text-muted rounded-end-pill pe-3 d-none" type="button" id="clearSearchBtn" title="Очистить поиск">
+                        <i class="bi bi-x-lg" style="font-size: 0.72rem;"></i>
+                    </button>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <select id="userReportSort" class="d-none">
-                    <option value="deadline_asc" selected>Срок сдачи (сначала ближайшие)</option>
-                    <option value="deadline_desc">Срок сдачи (сначала дальние)</option>
-                    <option value="name_asc">По названию (А-Я)</option>
-                    <option value="name_desc">По названию (Я-А)</option>
-                    <option value="id_desc">Сначала новые созданные</option>
-                </select>
+
+                <!-- 2. Быстрые фильтр-чипсы -->
+                <div class="d-flex align-items-center flex-wrap gap-2" id="filterChipsContainer">
+                    <button type="button" class="filter-chip-btn active" data-filter="all">
+                        <span>Все</span>
+                    </button>
+                    <button type="button" class="filter-chip-btn" data-filter="urgent">
+                        <span>Срочные</span>
+                    </button>
+                    {% if revision_submissions %}
+                    <button type="button" class="filter-chip-btn chip-revision" data-filter="revision">
+                        <span>На доработке</span>
+                        <span class="badge rounded-pill text-white ms-1" style="background-color: #ff0072; font-size: 0.68rem; padding: 0.2em 0.5em;">{{ revision_submissions|length }}</span>
+                    </button>
+                    {% endif %}
+                    <button type="button" class="filter-chip-btn" data-filter="draft">
+                        <span>С черновиком</span>
+                    </button>
+                </div>
+
+                <!-- 3. Аккуратная сортировка справа -->
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <select id="userReportSort" class="d-none">
+                        <option value="deadline_asc" selected>Срок сдачи (сначала ближайшие)</option>
+                        <option value="deadline_desc">Срок сдачи (сначала дальние)</option>
+                        <option value="name_asc">По названию (А-Я)</option>
+                        <option value="name_desc">По названию (Я-А)</option>
+                        <option value="id_desc">Сначала новые созданные</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -53,9 +77,14 @@
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const searchInput = document.getElementById('userReportSearch');
+                const clearSearchBtn = document.getElementById('clearSearchBtn');
                 const sortSelect = document.getElementById('userReportSort');
                 const navTabs = document.getElementById('userTabs'); // from user_dashboard.html
                 
+                let currentFilter = 'all';
+                let searchTimeout;
+                const currentUserId = "{{ current_user.id }}";
+
                 // Скрываем строку поиска для не-отчетных вкладок
                 const filterBar = document.getElementById('userReportsFilterBar');
                 if (filterBar && navTabs) {
@@ -79,33 +108,37 @@
                     updateFilterBarVisibility();
                 }
 
-                // Показываем измененные кнопки при наличии черновика
-                const currentUserId = "{{ current_user.id }}";
-                document.querySelectorAll('.action-buttons-container').forEach(container => {
-                    const templateId = container.dataset.templateId;
-                    const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
-                    if (localStorage.getItem(draftKey)) {
-                        // Меняем кнопки
-                        const defaultBtn = container.querySelector('.btn-default-fill');
-                        const splitBtns = container.querySelector('.btn-draft-split');
-                        if (defaultBtn && splitBtns) {
-                            defaultBtn.classList.add('d-none');
-                            splitBtns.classList.remove('d-none');
-                            splitBtns.classList.add('d-flex');
+                // Помечаем карточки наличием черновика и переключаем кнопки
+                function updateDraftAttributes() {
+                    document.querySelectorAll('.action-buttons-container').forEach(container => {
+                        const templateId = container.dataset.templateId;
+                        const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
+                        const reportItem = container.closest('.user-report-item');
+                        if (localStorage.getItem(draftKey)) {
+                            if (reportItem) reportItem.setAttribute('data-has-draft', 'true');
+                            const defaultBtn = container.querySelector('.btn-default-fill');
+                            const splitBtns = container.querySelector('.btn-draft-split');
+                            if (defaultBtn && splitBtns) {
+                                defaultBtn.classList.add('d-none');
+                                splitBtns.classList.remove('d-none');
+                                splitBtns.classList.add('d-flex');
+                            }
+                        } else {
+                            if (reportItem) reportItem.setAttribute('data-has-draft', 'false');
                         }
-                    }
-                });
+                    });
+                }
+                updateDraftAttributes();
                 
                 // Функция для сброса черновика и начала заново
                 window.clearDraftAndStart = function(templateId, url) {
                     coppConfirm('Вы уверены, что хотите начать заполнение заново? Сохраненный черновик будет удален.', () => {
                         const draftKey = `autosave_draft_${templateId}_${currentUserId}`;
                         localStorage.removeItem(draftKey);
+                        updateDraftAttributes();
                         window.location.href = url;
                     });
                 };
-                
-                let searchTimeout;
                 
                 // Initialize original containers
                 document.querySelectorAll('.user-report-item').forEach(item => {
@@ -113,6 +146,14 @@
                         item.setAttribute('data-original-container', item.closest('.filter-row').id);
                     }
                 });
+
+                function itemMatchesFilter(item) {
+                    if (currentFilter === 'all') return true;
+                    if (currentFilter === 'urgent') return item.getAttribute('data-is-urgent') === 'true';
+                    if (currentFilter === 'revision') return item.getAttribute('data-is-revision') === 'true';
+                    if (currentFilter === 'draft') return item.getAttribute('data-has-draft') === 'true';
+                    return true;
+                }
                 
                 function applyFilterAndSort() {
                     if (!searchInput) return;
@@ -120,6 +161,11 @@
                     
                     const query = searchInput.value.toLowerCase().trim();
                     const sortVal = sortSelect ? sortSelect.value : '';
+                    
+                    if (clearSearchBtn) {
+                        if (query.length > 0) clearSearchBtn.classList.remove('d-none');
+                        else clearSearchBtn.classList.add('d-none');
+                    }
                     
                     const sections = ['unfilledContainer', 'filledContainer', 'filesContainer'];
                     const unifiedContainer = document.getElementById('unifiedSearchContainer');
@@ -140,11 +186,14 @@
                             
                             allItems.forEach(item => {
                                 const title = item.getAttribute('data-title') || '';
-                                if (title.includes(query)) {
+                                const matchesQuery = title.includes(query);
+                                const matchesFilter = itemMatchesFilter(item);
+
+                                if (matchesQuery && matchesFilter) {
                                     item.style.display = '';
                                     item.classList.remove('search-hidden');
                                     visibleItems.push(item);
-                                    unifiedContainer.appendChild(item); // Move to unified container
+                                    unifiedContainer.appendChild(item);
                                 } else {
                                     item.style.display = 'none';
                                     item.classList.add('search-hidden');
@@ -183,12 +232,18 @@
                             
                             let allItems = Array.from(document.querySelectorAll('.user-report-item'));
                             allItems.forEach(item => {
-                                item.style.display = '';
-                                item.classList.remove('search-hidden');
                                 const origId = item.getAttribute('data-original-container');
                                 const origContainer = document.getElementById(origId);
                                 if (origContainer) {
                                     origContainer.appendChild(item);
+                                }
+
+                                if (itemMatchesFilter(item)) {
+                                    item.style.display = '';
+                                    item.classList.remove('search-hidden');
+                                } else {
+                                    item.style.display = 'none';
+                                    item.classList.add('search-hidden');
                                 }
                             });
                             
@@ -198,10 +253,11 @@
                                 if (!container) return;
                                 
                                 let items = Array.from(container.querySelectorAll('.user-report-item'));
+                                let visibleItems = items.filter(it => it.style.display !== 'none');
                                 
                                 const emptyState = container.querySelector('.empty-state');
                                 if (emptyState) {
-                                    emptyState.style.display = (items.length === 0) ? '' : 'none';
+                                    emptyState.style.display = (visibleItems.length === 0) ? '' : 'none';
                                 }
                                 
                                 if (sortVal && items.length > 0) {
@@ -221,9 +277,43 @@
                                 }
                             });
                         }
-                    }, 100);
+                    }, 50);
                 }
                 
+                // Переключение фильтр-чипсов
+                window.filterByChip = function(filterName) {
+                    const chip = document.querySelector(`.filter-chip-btn[data-filter="${filterName}"]`);
+                    if (chip) {
+                        document.querySelectorAll('.filter-chip-btn').forEach(c => c.classList.remove('active'));
+                        chip.classList.add('active');
+                        currentFilter = filterName;
+                        
+                        // Если выбран специфический фильтр по отчетам — переключаем на вкладку активных
+                        if (filterName !== 'all') {
+                            const unfilledTabBtn = document.querySelector('.admin-nav-link[data-bs-target="#unfilledTab"]');
+                            if (unfilledTabBtn && !unfilledTabBtn.classList.contains('active')) {
+                                const tab = new bootstrap.Tab(unfilledTabBtn);
+                                tab.show();
+                            }
+                        }
+                        applyFilterAndSort();
+                    }
+                };
+
+                document.querySelectorAll('.filter-chip-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        window.filterByChip(this.getAttribute('data-filter'));
+                    });
+                });
+
+                if (clearSearchBtn && searchInput) {
+                    clearSearchBtn.addEventListener('click', function() {
+                        searchInput.value = '';
+                        applyFilterAndSort();
+                        searchInput.focus();
+                    });
+                }
+
                 if (searchInput) searchInput.addEventListener('input', applyFilterAndSort);
                 if (sortSelect) sortSelect.addEventListener('change', applyFilterAndSort);
 

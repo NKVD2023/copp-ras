@@ -28,3 +28,31 @@ def test_department_relationship(init_database):
 
     assert user.department.name == 'Test Department'
     assert user in dept.members.all()
+
+def test_announcement_model_and_targeting(init_database):
+    """Test Announcement creation and targeting visibility."""
+    from app.models import Announcement
+    admin = User.query.filter_by(username='testadmin').first()
+    user = User.query.filter_by(username='testuser').first()
+    user.group = 'СПО'
+    db.session.commit()
+
+    ann = Announcement(
+        title='Тестовое объявление',
+        content='Текст объявления',
+        type='warning',
+        target_type='specific',
+        target_groups=['СПО'],
+        is_active=True,
+        created_by_id=admin.id
+    )
+    db.session.add(ann)
+    db.session.commit()
+
+    assert ann.is_visible_to_user(user) is True
+    assert ann.is_visible_to_user(admin) is True
+
+    # Check inactive
+    ann.is_active = False
+    db.session.commit()
+    assert ann.is_visible_to_user(user) is False

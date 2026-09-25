@@ -64,6 +64,10 @@ def upgrade_database():
         ('report_submissions', 'revision_comment', 'TEXT'),
         ('report_submissions', 'returned_at', 'DATETIME'),
         ('report_submissions', 'returned_by_id', 'INTEGER REFERENCES users(id)'),
+        ('report_submissions', 'submitted_at', 'DATETIME'),
+        ('announcements', 'target_type', 'VARCHAR(20) DEFAULT "all"'),
+        ('announcements', 'target_departments', 'JSON'),
+        ('announcements', 'target_groups', 'JSON'),
     ]
 
     changes_applied = 0

@@ -6,6 +6,7 @@
 """
 from flask import Blueprint, render_template, redirect, request, url_for, flash, session
 from flask_login import login_user, logout_user, current_user
+import time
 from app.models import User
 from app.utils import log_action
 from app.extensions import limiter
@@ -47,6 +48,8 @@ def login():
             flash('Неверное имя пользователя или пароль', 'danger')
             return redirect(url_for('auth.login'))
             
+        session.permanent = True
+        session['login_time'] = time.time()
         login_user(user)
         log_action('Вход в систему', f'Успешный вход пользователя {user.username}')
         
@@ -70,6 +73,23 @@ def logout():
     logout_user()
     session.clear()
     return redirect(url_for('auth.login'))
+
+@auth_bp.route('/test_expire')
+def test_expire():
+    """
+    Тестовый маршрут для проверки суточного таймаута:
+    Искусственно сдвигает login_time текущей сессии на 25 часов назад (на 90 000 сек).
+    """
+    session['login_time'] = time.time() - 90000
+    return (
+        '<div style="font-family: sans-serif; padding: 30px; text-align: center;">'
+        '<h3 style="color: #00334e;">Время входа успешно сдвинуто на 25 часов назад!</h3>'
+        '<p style="color: #64748b;">Сервер считает, что вы вошли вчера. '
+        'Теперь при любом переходе по системе сработает суточный лимит.</p>'
+        '<p><a href="/" style="display: inline-block; padding: 10px 20px; background: #00334e; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Перейти в систему (проверить разлогин)</a></p>'
+        '</div>'
+    )
+
 from flask_login import login_required
 from app.extensions import db
 

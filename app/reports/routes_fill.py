@@ -5,7 +5,7 @@
 """
 from flask import render_template, request, jsonify
 from flask_login import login_required, current_user
-from datetime import date
+from datetime import date, datetime
 from app.extensions import db
 from app.reports import reports_bp
 from app.models import ReportTemplate, ReportSubmission, ReportDraft
@@ -159,6 +159,7 @@ def fill_report(template_id):
             return jsonify({'status': 'error', 'message': error_msg}), 400
 
         submission.data = json_data
+        submission.submitted_at = datetime.utcnow()
         # Сбрасываем статус доработки при успешной сдаче
         was_revision = bool(submission.is_revision)
         submission.is_revision = False

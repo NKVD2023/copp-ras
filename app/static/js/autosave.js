@@ -51,10 +51,18 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
                 body: JSON.stringify(data)
             })
-            .then(r => r.json())
+            .then(r => {
+                if (r.status === 401) {
+                    saveToLocalStorage();
+                    window.location.href = '/auth/login';
+                    return null;
+                }
+                return r.json();
+            })
             .then(res => {
+                if (!res) return;
                 if (res.status === 'success') {
-                    showSavedIndicator('Черновик сохранен ☁️');
+                    showSavedIndicator('Черновик сохранен');
                     saveToLocalStorage();
                 }
             })
@@ -100,10 +108,18 @@
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
             body: JSON.stringify(data)
         })
-        .then(r => r.json())
+        .then(r => {
+            if (r.status === 401) {
+                try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(data)); } catch(e) {}
+                window.location.href = '/auth/login';
+                return null;
+            }
+            return r.json();
+        })
         .then(res => {
+            if (!res) return;
             if (res.status === 'success') {
-                btn.innerHTML = '<i class="bi bi-cloud-check-fill me-2"></i>Сохранено ☁️';
+                btn.innerHTML = '<i class="bi bi-cloud-check-fill me-2"></i>Сохранено';
                 btn.classList.replace('btn-copp', 'btn-success');
             } else {
                 btn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Ошибка';
@@ -142,8 +158,16 @@
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
             body: JSON.stringify(window.getFormDataObj(form))
         })
-        .then(res => res.json())
+        .then(r => {
+            if (r.status === 401) {
+                try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(window.getFormDataObj(form))); } catch(e) {}
+                window.location.href = '/auth/login';
+                return null;
+            }
+            return r.json();
+        })
         .then(res => {
+            if (!res) return;
             if (res.status === 'success') {
                 btn.innerHTML = 'Сдано';
                 btn.classList.replace('btn-copp', 'btn-success');

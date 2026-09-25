@@ -1,0 +1,27 @@
+{#
+  macros/registry.html — Корпоративные макросы реестров и таблиц ЦОПП
+#}
+
+{% macro render_registry_header(title, subtitle='', total_count=0, filtered_count=none, create_btn_text='', create_modal_target='') %}
+<div class="table-registry-header">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h6 class="fw-bold mb-1 text-dark">{{ title }}</h6>
+            {% if subtitle %}
+            <p class="text-muted small mb-0">{{ subtitle }}</p>
+            {% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-light text-secondary border px-3 py-2 fw-medium">
+                Показано: <strong class="text-dark">{{ filtered_count if filtered_count is not none else total_count }}</strong> из {{ total_count }}
+            </span>
+            {% if create_btn_text and create_modal_target %}
+            <button type="button" class="btn btn-copp d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="{{ create_modal_target }}">
+                <i class="bi bi-plus-lg"></i>
+                <span>{{ create_btn_text }}</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
