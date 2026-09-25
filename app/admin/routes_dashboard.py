@@ -346,7 +346,20 @@ def repair_db():
         db.session.execute(text("ALTER TABLE users ADD COLUMN department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL;"))
         db.session.commit()
     except Exception as e:
-        # Если колонка уже есть, будет ошибка, это нормально
+        db.session.rollback()
+        pass
+
+    try:
+        db.session.execute(text("ALTER TABLE uploaded_files ADD COLUMN department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL;"))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        pass
+
+    try:
+        db.session.execute(text("ALTER TABLE dictionaries ADD COLUMN department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL;"))
+        db.session.commit()
+    except Exception as e:
         db.session.rollback()
         pass
 
