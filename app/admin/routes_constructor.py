@@ -4,7 +4,7 @@
 а также функционал импорта структуры из загруженного Excel-файла.
 """
 from flask import render_template, request, redirect, url_for, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from datetime import datetime
 from app.extensions import db
 from app.admin import admin_bp
@@ -45,7 +45,7 @@ def constructor():
     """
     Маршрут создания абсолютно нового шаблона отчета с нуля.
     """
-    from flask_login import current_user
+
     from flask import abort
     if current_user.role not in ['admin', 'manager']:
         abort(403)
@@ -117,7 +117,7 @@ def constructor():
         import os, uuid
         from werkzeug.utils import secure_filename
         from config import basedir
-        from flask_login import current_user
+
         
         UPLOAD_FOLDER = os.path.join(basedir, 'app', 'uploads', 'reports')
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -250,7 +250,7 @@ def edit_constructor(template_id):
         import os, uuid
         from werkzeug.utils import secure_filename
         from config import basedir
-        from flask_login import current_user
+
         
         UPLOAD_FOLDER = os.path.join(basedir, 'app', 'uploads', 'reports')
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -385,7 +385,7 @@ def import_excel_template():
         )
         db.session.add(template)
         
-        from flask_login import current_user
+
         if current_user.role == 'manager':
             from app.utils import get_manager_department
             dept = get_manager_department(current_user)
