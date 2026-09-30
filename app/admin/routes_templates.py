@@ -122,7 +122,12 @@ def toggle_complete(template_id):
     Завершенные отчеты переносятся во вкладку 'Завершенные отчеты' и больше не считаются активными.
     """
     template = ReportTemplate.query.get_or_404(template_id)
-    template.is_completed = not template.is_completed
+    
+    if not template.is_completed:
+        from app.services.template_service import TemplateService
+        TemplateService.complete_template(template)
+    else:
+        template.is_completed = False
     
     db.session.commit()
     status_str = "завершен" if template.is_completed else "возобновлен"
@@ -307,8 +312,8 @@ def export_debtors(template_id):
     """
     template = ReportTemplate.query.get_or_404(template_id)
     
-    # Ищем тех, кто уже сдал
-    submitted_user_ids = [sub.user_id for sub in ReportSubmission.query.filter_by(template_id=template.id).all()]
+    # Ищем тех, кто успешно сдал (не на доработке)
+    submitted_user_ids = [sub.user_id for sub in ReportSubmission.query.filter_by(template_id=template.id, is_revision=False).all()]
     # Вычитаем сдавших из всех назначенных
     debtors = [u for u in template.assigned_users if u.id not in submitted_user_ids]
 
@@ -320,3 +325,29 @@ def export_debtors(template_id):
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+@admin_bp.route('/export_revisions/<int:template_id>', methods=['GET'])
+@login_required
+def export_revisions(template_id):
+    """
+    Формирует и отдает Excel файл (.xlsx) со списком учреждений на доработке и замечаниями.
+    """
+    template = ReportTemplate.query.get_or_404(template_id)
+    
+    # Проверка прав для руководителя
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept or template not in dept.templates:
+            return "Доступ запрещен", 403
+
+    revisions = ReportSubmission.query.filter_by(template_id=template.id, is_revision=True).all()
+
+    output, filename = ExcelService.export_revisions(template, revisions)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )

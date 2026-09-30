@@ -48,14 +48,21 @@
             showSavingIndicator();
             fetch(window.FILL_CONFIG.draftUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': window.FILL_CONFIG.csrfToken
+                },
                 body: JSON.stringify(data)
             })
             .then(r => {
-                if (r.status === 401) {
+                if (r.status === 401 || (r.redirected && r.url && r.url.includes('/auth/login'))) {
                     saveToLocalStorage();
-                    window.location.href = '/auth/login';
                     return null;
+                }
+                const contentType = r.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Non-JSON response');
                 }
                 return r.json();
             })
@@ -105,14 +112,22 @@
 
         fetch(window.FILL_CONFIG.draftUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': window.FILL_CONFIG.csrfToken
+            },
             body: JSON.stringify(data)
         })
         .then(r => {
-            if (r.status === 401) {
+            if (r.status === 401 || (r.redirected && r.url && r.url.includes('/auth/login'))) {
                 try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(data)); } catch(e) {}
                 window.location.href = '/auth/login';
                 return null;
+            }
+            const contentType = r.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                throw new Error('Non-JSON response');
             }
             return r.json();
         })
@@ -149,44 +164,83 @@
             return;
         }
 
+        const formDataObj = window.getFormDataObj(form);
+        // Немедленная страховка данных в localStorage перед началом отправки
+        try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(formDataObj)); } catch(e) {}
+
         const originalHtml = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Отправка...';
 
         fetch(window.FILL_CONFIG.submitUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.FILL_CONFIG.csrfToken },
-            body: JSON.stringify(window.getFormDataObj(form))
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': window.FILL_CONFIG.csrfToken
+            },
+            body: JSON.stringify(formDataObj)
         })
-        .then(r => {
-            if (r.status === 401) {
-                try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(window.getFormDataObj(form))); } catch(e) {}
-                window.location.href = '/auth/login';
+        .then(async r => {
+            // Перенаправление на авторизацию или истечение сессии
+            if (r.status === 401 || (r.redirected && r.url && r.url.includes('/auth/login'))) {
+                try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(formDataObj)); } catch(e) {}
+                coppAlert('Срок вашей сессии истек. Данные отчета сохранены в браузере. Вы будете перенаправлены на страницу входа.', 'warning');
+                setTimeout(() => { window.location.href = '/auth/login'; }, 2500);
                 return null;
             }
-            return r.json();
+
+            const contentType = r.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(formDataObj)); } catch(e) {}
+                if (r.status === 502 || r.status === 503 || r.status === 504) {
+                    throw new Error('Сервер временно недоступен или перезагружается (код ' + r.status + '). Ваши данные сохранены в браузере, повторите отправку через 15 секунд.');
+                }
+                if (r.status === 403) {
+                    throw new Error('Доступ ограничен или срок сдачи отчета завершен. Ваши данные сохранены в браузере.');
+                }
+                if (r.status === 400) {
+                    throw new Error('Срок действия формы истек. Ваши данные сохранены в браузере. Пожалуйста, обновите страницу.');
+                }
+                throw new Error('Ошибка сервера (код ' + r.status + '). Данные отчета надежно сохранены в браузере.');
+            }
+
+            let res;
+            try {
+                res = await r.json();
+            } catch (jsonErr) {
+                try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(formDataObj)); } catch(e) {}
+                throw new Error('Некорректный ответ сервера. Ваши данные сохранены в браузере.');
+            }
+
+            return { ok: r.ok, status: r.status, data: res };
         })
-        .then(res => {
-            if (!res) return;
-            if (res.status === 'success') {
-                btn.innerHTML = 'Сдано';
+        .then(result => {
+            if (!result) return;
+            const { ok, data } = result;
+            if (ok && data && data.status === 'success') {
+                btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Сдано';
                 btn.classList.replace('btn-copp', 'btn-success');
                 try { localStorage.removeItem(window.FILL_CONFIG.draftKey); } catch(e) {}
                 fetch(window.FILL_CONFIG.draftUrl, {
                     method: 'DELETE',
-                    headers: { 'X-CSRFToken': window.FILL_CONFIG.csrfToken }
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': window.FILL_CONFIG.csrfToken }
                 }).catch(() => {});
                 setTimeout(() => { window.location.href = '/'; }, 1000);
             } else {
-                coppAlert('Ошибка: ' + res.message, 'error');
+                const msg = (data && data.message) ? data.message : 'Не удалось отправить отчет';
+                coppAlert(msg, 'error');
                 btn.disabled  = false;
                 btn.innerHTML = originalHtml;
             }
         })
         .catch(err => {
-            coppAlert('Ошибка сети: ' + err, 'error');
+            try { localStorage.setItem(window.FILL_CONFIG.draftKey, JSON.stringify(formDataObj)); } catch(e) {}
+            const msg = (err && err.message) ? err.message : String(err);
+            coppAlert(msg, 'error');
             btn.disabled  = false;
             btn.innerHTML = originalHtml;
         });
     };
 })();
+

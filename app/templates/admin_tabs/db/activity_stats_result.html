@@ -123,8 +123,12 @@
                     {% endif %}
                 </td>
                 <td class="py-3 text-center">
-                    <span class="fw-bold {% if s.submitted == 0 and s.assigned > 0 %}text-danger{% else %}text-dark{% endif %}">
+                    <span class="fw-bold {% if s.submitted == 0 and s.assigned > 0 %}text-danger{% else %}text-dark{% endif %}"
+                          {% if s.submitted_total > s.submitted %}title="Всего отправлено файлов: {{ s.submitted_total }}"{% endif %}>
                         {{ s.submitted }}
+                        {% if s.submitted_total > s.submitted %}
+                            <i class="bi bi-info-circle text-muted" style="font-size: 0.75rem;"></i>
+                        {% endif %}
                     </span>
                     <span class="text-muted mx-1">/</span>
                     <span class="text-muted">{{ s.assigned }}</span>

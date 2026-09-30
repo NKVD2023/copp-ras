@@ -60,11 +60,12 @@ def dashboard():
         # 2. Список шаблонов (новые сверху) для Admin
         all_templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
     
-    # 3. Собираем словарь должников и распределяем шаблоны
-    debtors_map, pure_templates, published_templates, draft_templates, archived_templates, completed_templates = TemplateService.get_dashboard_stats(all_templates)
+    # 3. Собираем словарь должников, доработок и распределяем шаблоны
+    debtors_map, revisions_map, pure_templates, published_templates, revision_templates, draft_templates, archived_templates, completed_templates = TemplateService.get_dashboard_stats(all_templates)
 
     pure_templates = TemplateService.sort_templates(pure_templates, sort_param or 'deadline_asc')
     published_templates = TemplateService.sort_templates(published_templates, sort_param or 'deadline_asc')
+    revision_templates = TemplateService.sort_templates(revision_templates, sort_param or 'deadline_asc')
     draft_templates = TemplateService.sort_templates(draft_templates, sort_param or 'deadline_asc')
     archived_templates = TemplateService.sort_templates(archived_templates, sort_param or 'deadline_asc')
     completed_templates = TemplateService.sort_templates(completed_templates, sort_param or 'id_desc')
@@ -245,10 +246,12 @@ def dashboard():
                            templates=all_templates, 
                            pure_templates=pure_templates,
                            published_templates=published_templates,
+                           revision_templates=revision_templates,
                            draft_templates=draft_templates,
                            archived_templates=archived_templates,
                            completed_templates=completed_templates,
                            debtors_map=debtors_map,
+                           revisions_map=revisions_map,
                            all_users=all_users,
                            all_submissions=all_submissions,
                            active_submissions=active_submissions,

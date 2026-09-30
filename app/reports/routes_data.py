@@ -217,3 +217,38 @@ def return_revision(template_id, user_id):
     db.session.commit()
     
     return jsonify({'status': 'success', 'message': 'Отчет возвращен на доработку'})
+
+
+@reports_bp.route('/delete_submission/<int:template_id>/<int:user_id>', methods=['POST'])
+@login_required
+def delete_submission(template_id, user_id):
+    """
+    Безвозвратное удаление сданного отчета пользователя. Доступно только администраторам.
+    """
+    if current_user.role != 'admin':
+        return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
+        
+    template = ReportTemplate.query.get_or_404(template_id)
+    submissions = ReportSubmission.query.filter_by(template_id=template_id, user_id=user_id).all()
+    
+    if not submissions:
+        return jsonify({'status': 'error', 'message': 'Сданный отчет не найден'}), 404
+        
+    # Удаляем все связанные черновики, если они существуют
+    from app.models import ReportDraft
+    drafts = ReportDraft.query.filter_by(template_id=template_id, user_id=user_id).all()
+    for draft in drafts:
+        db.session.delete(draft)
+        
+    # Удаляем все записи сдачи
+    for sub in submissions:
+        db.session.delete(sub)
+    
+    target_user = User.query.get(user_id)
+    org_name = target_user.description or target_user.username if target_user else str(user_id)
+    
+    log_action('Удаление данных отчета', f'Безвозвратно удалены данные учреждения {org_name} из отчета "{template.short_name}"')
+    
+    db.session.commit()
+    
+    return jsonify({'status': 'success', 'message': 'Данные отчета успешно удалены'})

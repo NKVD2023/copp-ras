@@ -41,10 +41,67 @@ class ExcelService:
         wb.save(output)
         output.seek(0)
         
-        import re
         safe_name = re.sub(r'[^\w\s-]', '', template.short_name).strip().replace(" ", "_")
         if len(safe_name) > 50: safe_name = safe_name[:50] + "..."
         filename = f"Должники_{safe_name}.xlsx"
+        return output, filename
+
+    @staticmethod
+    def export_revisions(template, revisions):
+        """
+        Формирует Excel файл со списком учреждений на доработке и замечаниями куратора.
+        :param template: Объект ReportTemplate
+        :param revisions: Список объектов ReportSubmission (со статусом is_revision=True)
+        :return: (output: BytesIO, filename: str)
+        """
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "На доработке"
+        
+        headers = ["Организация", "Дата возврата", "Замечание куратора / Причина возврата"]
+        ws.append(headers)
+        
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="FF0072", end_color="FF0072", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        
+        for col_idx in range(1, 4):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = thin_border
+            
+        ws.column_dimensions['A'].width = 50
+        ws.column_dimensions['B'].width = 20
+        ws.column_dimensions['C'].width = 70
+        ws.row_dimensions[1].height = 28
+        
+        for row_idx, r in enumerate(revisions, start=2):
+            org_name = (r.user.description if r.user and r.user.description else (r.user.username if r.user else "—"))
+            date_str = r.returned_at.strftime('%d.%m.%Y %H:%M') if r.returned_at else "—"
+            comment = r.revision_comment or "Без замечания"
+            
+            c1 = ws.cell(row=row_idx, column=1, value=org_name)
+            c2 = ws.cell(row=row_idx, column=2, value=date_str)
+            c3 = ws.cell(row=row_idx, column=3, value=comment)
+            
+            c1.border = thin_border
+            c1.alignment = Alignment(vertical="center", wrap_text=True)
+            
+            c2.border = thin_border
+            c2.alignment = Alignment(horizontal="center", vertical="center")
+            
+            c3.border = thin_border
+            c3.alignment = Alignment(vertical="center", wrap_text=True)
+            
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        safe_name = re.sub(r'[^\w\s-]', '', template.short_name).strip().replace(" ", "_")
+        if len(safe_name) > 50: safe_name = safe_name[:50] + "..."
+        filename = f"На_доработке_{safe_name}.xlsx"
         return output, filename
 
     @staticmethod

@@ -77,6 +77,30 @@ def create_app(config_class: type = Config) -> Flask:
             }), 401
         return redirect(url_for('auth.login'))
 
+    # ── Обработка ошибок CSRF (протухание токена / сессии) ────────────────────
+    from flask_wtf.csrf import CSRFError
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        from flask import request, jsonify
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({
+                'status': 'error',
+                'message': 'Срок действия сессии или формы истек. Ваши данные сохранены в браузере, пожалуйста, обновите страницу.'
+            }), 400
+        return f"Ошибка безопасности (CSRF): {e.description}. Пожалуйста, вернитесь назад и обновите страницу.", 400
+
+    # ── Обработка критических ошибок сервера 500 ─────────────────────────────
+    @app.errorhandler(500)
+    def handle_internal_server_error(e):
+        from flask import request, jsonify
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({
+                'status': 'error',
+                'message': 'Внутренняя ошибка сервера. Ваши данные сохранены в памяти браузера, повторите попытку через минуту.'
+            }), 500
+        return "Внутренняя ошибка сервера. Пожалуйста, обратитесь к администратору.", 500
+
     # ── Режим технических работ ────────────────────────────────────────────────
     @app.before_request
     def check_maintenance():
@@ -147,6 +171,18 @@ def create_app(config_class: type = Config) -> Flask:
         if dt:
             return dt + timedelta(hours=3)
         return dt
+
+    import json
+
+    @app.template_filter('fromjson')
+    def fromjson_filter(value):
+        """Парсит JSON-строку в объект Python."""
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except Exception:
+                return []
+        return value or []
 
     # ── Blueprints ────────────────────────────────────────────────────────────
     from app.auth.routes import auth_bp

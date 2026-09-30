@@ -3,9 +3,11 @@
 .hover-shadow:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
 </style>
 {% from "macros/period_selector.html" import render_period_selector %}
-{% macro render_reports_list(templates_list, is_template_tab=False) %}
+{% macro render_reports_list(templates_list, is_template_tab=False, is_revision_tab=False) %}
 <div class="row g-4">
     {% for t in templates_list %}
+    {% set rev_items = revisions_map[t.id] if revisions_map is defined and t.id in revisions_map else [] %}
+    {% set revisions_count = rev_items|length %}
     {% set debtors = debtors_map[t.id] if debtors_map is defined else [] %}
     {% set total_assigned = t.assigned_users.count() %}
     {% set debtors_count = debtors|length %}
@@ -23,7 +25,7 @@
          data-progress="{{ progress }}"
          data-id="{{ t.id }}">
         
-        <div class="border h-100 p-3 position-relative bg-white shadow-sm hover-shadow transition-all {% if is_overdue %}border-danger{% endif %} rounded-card-sm">
+        <div class="border h-100 p-3 position-relative bg-white shadow-sm hover-shadow transition-all {% if is_revision_tab %}border-revision-card{% elif is_overdue %}border-danger{% endif %} rounded-card-sm" {% if is_revision_tab %}style="border-color: rgba(255, 0, 114, 0.35) !important;"{% endif %}>
             
             <!-- Three dots menu (Действия) -->
             <div class="dropdown position-absolute dropdown-options">
@@ -122,7 +124,9 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                        {% if is_fully_completed %}
+                        {% if is_revision_tab %}
+                        <span class="badge text-white px-2 py-1 badge-status" style="background-color: #ff0072;"><i class="bi bi-arrow-repeat me-1"></i>На доработке</span>
+                        {% elif is_fully_completed %}
                         <span class="badge bg-light text-copp border border-secondary-subtle px-2 py-1 badge-status">Сбор завершен</span>
                         {% elif t.is_published %}
                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 badge-status">Опубликовано</span>
@@ -173,7 +177,55 @@
                     </div>
 
                     <!-- Inline Progress -->
-                    {% if total_assigned > 0 %}
+                    {% if is_revision_tab %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <span class="small fw-bold text-dark fs-sm">Сдали: {{ submitted }} из {{ total_assigned }}</span>
+                            <a class="fw-bold text-decoration-none d-flex align-items-center fs-sm" style="color: #ff0072;" data-bs-toggle="collapse" href="#revisionsCollapse-{{ t.id }}" role="button" aria-expanded="false" aria-controls="revisionsCollapse-{{ t.id }}">
+                                На доработке ({{ revisions_count }}) <i class="bi bi-chevron-down ms-1 fs-4 mt-1"></i>
+                            </a>
+                        </div>
+                        <div class="progress rounded-pill bg-light border progress-bar-8">
+                            <div class="progress-bar rounded-pill" role="progressbar" style="width: {{ progress }}%; background-color: #ff0072;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        
+                        <div class="collapse mt-2" id="revisionsCollapse-{{ t.id }}">
+                            <div class="card card-body p-2 border-0 bg-light rounded-3 shadow-sm">
+                                <div class="mb-2 px-1 d-flex justify-content-between align-items-center">
+                                    <span class="small fw-bold text-dark">Список на доработке:</span>
+                                    <span class="badge rounded-pill text-white" style="background-color: #ff0072; font-size: 0.75rem;">{{ revisions_count }}</span>
+                                </div>
+                                <div class="d-flex gap-2 border-bottom pb-2 mb-2 px-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 d-flex align-items-center justify-content-center gap-1 w-50 fw-medium fs-xs-p" onclick="copyRevisionsList('{{ t.id }}')">
+                                        <i class="bi bi-clipboard"></i> Скопировать
+                                    </button>
+                                    <a href="{{ url_for('admin.export_revisions', template_id=t.id) }}" class="btn btn-sm py-1 px-2 d-flex align-items-center justify-content-center gap-1 w-50 fw-medium fs-xs-p" style="border: 1px solid #ff0072; color: #ff0072;">
+                                        <i class="bi bi-file-earmark-excel"></i> В Excel
+                                    </a>
+                                </div>
+                                <div class="revisions-list-container small px-1 scrollable-xs" id="revisionsList-{{ t.id }}">
+                                    <ul class="mb-0 ps-3 text-muted">
+                                        {% for rev in rev_items %}
+                                        <li class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-start gap-1">
+                                                <span class="text-dark fw-medium revision-org-desc">{{ rev.user.description or rev.user.username }}</span>
+                                                {% if rev.returned_at %}
+                                                <span class="text-muted text-nowrap fs-xs"><i class="bi bi-clock-history me-1"></i>{{ rev.returned_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if rev.comment %}
+                                            <div class="mt-1 p-2 rounded bg-white border-start border-3 small text-dark revision-comment-text" style="border-color: #ff0072 !important; font-size: 0.8rem;">
+                                                <span class="text-muted fw-semibold">Замечание:</span> {{ rev.comment }}
+                                            </div>
+                                            {% endif %}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% elif total_assigned > 0 %}
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-end mb-1">
                             <span class="small fw-bold text-dark fs-sm">Сдали: {{ submitted }} из {{ total_assigned }}</span>
@@ -557,6 +609,16 @@
                 </div>
             </div>
         </div>
+    </div>
+    {% else %}
+    <div class="col-12 py-5 text-center text-muted">
+        {% if is_revision_tab %}
+        <i class="bi bi-check2-circle fs-1 text-muted d-block mb-2 opacity-50"></i>
+        <span>Нет отчетов, находящихся на доработке</span>
+        {% else %}
+        <i class="bi bi-inbox fs-1 text-muted d-block mb-2 opacity-50"></i>
+        <span>Отчеты не найдены</span>
+        {% endif %}
     </div>
     {% endfor %}
 </div>

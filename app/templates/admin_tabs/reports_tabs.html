@@ -1,3 +1,25 @@
+<style>
+.tab-revision-btn.active {
+    background-color: #ff0072 !important;
+    color: #ffffff !important;
+}
+.tab-revision-btn:not(.active) {
+    color: #495057;
+}
+.tab-revision-btn:not(.active):hover {
+    color: #ff0072;
+}
+.tab-revision-btn .revision-count-badge {
+    background-color: rgba(255, 0, 114, 0.12);
+    color: #ff0072;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.tab-revision-btn.active .revision-count-badge {
+    background-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+}
+</style>
 <div class="reports-sub-tabs mb-4">
     <div class="d-flex flex-wrap flex-xl-nowrap justify-content-between align-items-center gap-3">
         
@@ -6,6 +28,14 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active rounded-pill px-3 py-2" id="published-tab" data-bs-toggle="tab" data-bs-target="#published-reports" type="button" role="tab" aria-controls="published-reports" aria-selected="true">
                     <i class="bi bi-eye-fill me-1"></i> Опубликованные
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill px-3 py-2 tab-revision-btn" id="revisions-tab" data-bs-toggle="tab" data-bs-target="#revisions-reports" type="button" role="tab" aria-controls="revisions-reports" aria-selected="false">
+                    <i class="bi bi-arrow-repeat me-1"></i> На доработке
+                    {% if revision_templates and revision_templates|length > 0 %}
+                    <span class="badge rounded-pill ms-1 revision-count-badge">{{ revision_templates|length }}</span>
+                    {% endif %}
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -59,6 +89,9 @@
     <div class="tab-content" id="reportsSubTabsContent">
         <div class="tab-pane fade show active" id="published-reports" role="tabpanel" aria-labelledby="published-tab">
             {% include 'admin_tabs/reports/published.html' %}
+        </div>
+        <div class="tab-pane fade" id="revisions-reports" role="tabpanel" aria-labelledby="revisions-tab">
+            {% include 'admin_tabs/reports/revisions.html' %}
         </div>
         <div class="tab-pane fade" id="submissions-reports" role="tabpanel" aria-labelledby="submissions-tab">
             {% include 'admin_tabs/reports/submissions.html' %}
@@ -238,6 +271,30 @@
 
         navigator.clipboard.writeText(textToCopy).then(function() {
             // Optional: alert or toast
+        }, function(err) {
+            console.error('Ошибка копирования: ', err);
+        });
+    }
+
+    function copyRevisionsList(templateId) {
+        const listContainer = document.getElementById('revisionsList-' + templateId);
+        if(!listContainer) return;
+        
+        let textToCopy = "";
+        const listItems = listContainer.querySelectorAll('li');
+        listItems.forEach(li => {
+            const descElem = li.querySelector('.revision-org-desc');
+            const commentElem = li.querySelector('.revision-comment-text');
+            const name = descElem ? descElem.innerText.trim() : li.innerText.trim();
+            if (commentElem && commentElem.innerText.trim()) {
+                textToCopy += `${name} (Замечание: ${commentElem.innerText.trim()})\n`;
+            } else {
+                textToCopy += `${name}\n`;
+            }
+        });
+
+        navigator.clipboard.writeText(textToCopy).then(function() {
+            // Success
         }, function(err) {
             console.error('Ошибка копирования: ', err);
         });

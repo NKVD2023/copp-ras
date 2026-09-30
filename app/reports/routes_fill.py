@@ -49,6 +49,8 @@ def fill_report(template_id):
     template = ReportTemplate.query.get_or_404(template_id)
     
     if current_user.role != 'user':
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
         return "Доступ ограничен", 403
         
     # Пробуем найти уже существующий ответ (черновик или сданный отчет)
@@ -63,6 +65,8 @@ def fill_report(template_id):
     if not submission:
         # Если нет ответа, то проверяем строго: форма должна быть назначена и опубликована
         if template not in current_user.assigned_templates or not template.is_published:
+            if request.is_json:
+                return jsonify({'status': 'error', 'message': 'Доступ ограничен или форма не опубликована'}), 403
             return "Доступ ограничен или форма не опубликована", 403
     else:
         # Если ответ есть (архивная запись), но форма больше не актуальна, просто блокируем редактирование
@@ -77,11 +81,11 @@ def fill_report(template_id):
         if not submission:
             submission = ReportSubmission(template_id=template.id, user_id=current_user.id)
             db.session.add(submission)
-        else:
-            schema = template.schema or []
         old_data = submission.data or {}
         
-        json_data = request.get_json()
+        json_data = request.get_json(silent=True)
+        if not isinstance(json_data, dict):
+            return jsonify({'status': 'error', 'message': 'Некорректный формат данных'}), 400
         
         # --- СЕРВЕРНАЯ ВАЛИДАЦИЯ ---
         if type(template.schema) is str:

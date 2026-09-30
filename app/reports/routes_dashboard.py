@@ -42,7 +42,11 @@ def dashboard():
     today = date.today()
     for t in assigned:
         if not t.is_completed and t.deadline and today > t.deadline:
-            t.is_completed = True
+            from app.services.template_service import TemplateService
+            TemplateService.complete_template(t)
+            if t.id in revision_submissions:
+                filled_ids.append(t.id)
+                del revision_submissions[t.id]
             needs_commit = True
             
     if needs_commit:
@@ -50,13 +54,22 @@ def dashboard():
         db.session.commit()
     
     # Архив пользователя (теперь "Завершенные отчеты"):
-    # Сюда попадают отчеты, которые пользователь уже сдал (и не на доработке) ИЛИ которые глобально закрыты
-    filled = [t for t in assigned if (t.id in filled_ids and t.id not in revision_submissions) or t.is_completed]
+    # Сюда попадают отчеты, которые пользователь уже сдал (и не на доработке) ИЛИ которые глобально закрыты.
+    # ВАЖНО: если у пользователя есть активная доработка — отчет НЕ переносится в архив, 
+    # даже если шаблон is_completed=True (куратор мог вернуть на доработку вручную после завершения).
+    filled = [t for t in assigned
+              if t.id not in revision_submissions
+              and (
+                  (t.id in filled_ids) or t.is_completed
+              )]
     # Сортируем завершенные новые сверху
     filled.sort(key=lambda x: x.id, reverse=True)
     
-    # К заполнению: назначены, еще не сданные (или отправленные на доработку!) и не завершенные глобально
-    unfilled = [t for t in assigned if (t.id not in filled_ids or t.id in revision_submissions) and not t.is_completed]
+    # К заполнению: не сданные (или на доработке!), и не завершённые глобально.
+    # Исключение: если is_revision=True — показываем даже для is_completed=True шаблонов.
+    unfilled = [t for t in assigned
+                if (t.id not in filled_ids or t.id in revision_submissions)
+                and (not t.is_completed or t.id in revision_submissions)]
     
     # Сортируем невыполненные: отчеты на доработке показываем первыми!
     unfilled.sort(key=lambda x: (0 if x.id in revision_submissions else 1, x.deadline or date.max))

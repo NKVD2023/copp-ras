@@ -40,6 +40,10 @@ class Config:
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_HTTPONLY = True
 
+    # ── CSRF Protection ───────────────────────────────────────────────────────
+    # None — токен действует всё время жизни сессии (24 часа), а не сгорает через 1 час (3600с)
+    WTF_CSRF_TIME_LIMIT = None
+
     # ── Features ──────────────────────────────────────────────────────────────
     ENABLE_CHARTS = True
 

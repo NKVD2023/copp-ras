@@ -64,7 +64,8 @@ def get_stats_data_and_filters():
             'department': user.department.name if user.department else '',
             'last_login': last_login,
             'assigned': assigned_templates_count,
-            'submitted': submitted_reports_count,
+            'submitted': dist_assigned_submitted,
+            'submitted_total': submitted_reports_count,
             'completion_rate': completion_rate,
             'status': status
         })

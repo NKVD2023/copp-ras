@@ -335,6 +335,16 @@
                                             <i class="bi bi-arrow-counterclockwise"></i> На доработку
                                         </button>
                                         {% endif %}
+                                        
+                                        {% if current_user.role == 'admin' %}
+                                        <button class="btn btn-sm btn-outline-danger w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p mt-1 btn-delete-submission" 
+                                                data-template-id="{{ template.id }}" 
+                                                data-user-id="{{ sub.user.id }}" 
+                                                data-org-name="{{ sub.user.description or sub.user.username }}" 
+                                                title="Безвозвратно удалить отчет">
+                                            <i class="bi bi-trash"></i> Удалить
+                                        </button>
+                                        {% endif %}
                                     </div>
                                     {% endif %}
                                 </td>
@@ -881,7 +891,66 @@
                 returnForRevision(templateId, userId, orgName, currentComment);
             }
         });
-    </script>
+    
+        // Обработка кнопки удаления отчета
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-delete-submission');
+            if (btn) {
+                const templateId = btn.getAttribute('data-template-id');
+                const userId = btn.getAttribute('data-user-id');
+                const orgName = btn.getAttribute('data-org-name');
+                
+                Swal.fire({
+                    title: 'Удаление данных',
+                    text: 'Вы действительно хотите безвозвратно удалить данные отчета учреждения «' + orgName + '»? Это действие нельзя отменить!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Да, удалить',
+                    cancelButtonText: 'Отмена'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Удаление...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading()
+                            }
+                        });
+                        
+                        fetch('/delete_submission/' + templateId + '/' + userId, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token() }}'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Удалено!',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire('Ошибка', data.message || 'Произошла ошибка при удалении', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire('Ошибка', 'Произошла ошибка при удалении', 'error');
+                        });
+                    }
+                });
+            }
+        });
+</script>
 </body>
 
 </html>
