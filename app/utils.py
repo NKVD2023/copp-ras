@@ -53,6 +53,20 @@ def is_mobile(req) -> bool:
     ]
     return any(pattern in user_agent for pattern in mobile_patterns)
 
+def is_ajax() -> bool:
+    """
+    Проверяет, пришел ли запрос через fetch/XHR (AJAX) или ожидает JSON-ответ.
+    Позволяет маршрутам отвечать JSON вместо редиректа при AJAX-вызовах.
+    """
+    if not request:
+        return False
+    return bool(
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.is_json
+        or request.args.get('ajax') == '1'
+        or (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html)
+    )
+
 def build_schema_tree(schema):
     """
     Преобразует схему отчета, заменяя плоский список полей 'fields' на древовидную структуру 'fields_tree'.

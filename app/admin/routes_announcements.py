@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from app.admin import admin_bp
 from app.models import Announcement, Department, User
 from app.extensions import db
-from app.utils import log_action
+from app.utils import log_action, is_ajax
 
 
 @admin_bp.route('/announcements/create', methods=['POST'])
@@ -150,5 +150,13 @@ def delete_announcement(announcement_id):
     db.session.commit()
 
     log_action('Удаление объявления', f'Удалено объявление: "{title}"')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Объявление «{title}» удалено',
+            'announcement_id': announcement_id
+        })
+
     flash('Объявление удалено.', 'success')
     return redirect(url_for('admin.dashboard', tab='announcementsTab'))

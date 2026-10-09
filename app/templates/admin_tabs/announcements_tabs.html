@@ -13,8 +13,8 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 {% set active_count = announcements|selectattr('is_active')|list|length %}
-                <span class="badge bg-light text-secondary border px-3 py-2 fw-medium">
-                    Показано: <strong class="text-dark">{{ announcements|length }}</strong> из {{ announcements|length }}
+                <span class="badge bg-light text-secondary border px-3 py-2 fw-medium" id="announcementsCountBadge">
+                    Показано: <strong class="text-dark" id="announcementsCount">{{ announcements|length }}</strong> из {{ announcements|length }}
                 </span>
                 <button type="button" class="btn btn-copp d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#createAnnouncementModal">
                     <i class="bi bi-plus-lg"></i>
@@ -40,9 +40,9 @@
             </thead>
             <tbody>
                 {% for ann in announcements %}
-                <tr>
+                <tr id="announcement-row-{{ ann.id }}">
                     <!-- Статус -->
-                    <td class="ps-4 py-3">
+                    <td class="ps-4 py-3 ann-status-cell">
                         {% if ann.is_active %}
                             <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill d-inline-flex align-items-center gap-1">
                                 <span class="d-inline-block rounded-circle bg-success" style="width: 6px; height: 6px;"></span>
@@ -105,7 +105,7 @@
                     <td class="pe-4 py-3 text-end">
                         <div class="d-inline-flex align-items-center gap-1 justify-content-end">
                             <!-- Тумблер запуска / остановки -->
-                            <form action="{{ url_for('admin.toggle_announcement', announcement_id=ann.id) }}" method="POST" class="m-0 d-inline">
+                            <form action="{{ url_for('admin.toggle_announcement', announcement_id=ann.id) }}" method="POST" class="m-0 d-inline" onsubmit="event.preventDefault(); toggleAnnouncementAjax(this, '{{ ann.id }}');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 {% if ann.is_active %}
                                     <button type="submit" class="btn btn-sm btn-outline-secondary py-1 px-2" title="Остановить показ">
@@ -124,7 +124,7 @@
                             </button>
 
                             <!-- Кнопка удаления -->
-                            <form action="{{ url_for('admin.delete_announcement', announcement_id=ann.id) }}" method="POST" class="m-0 d-inline" onsubmit="event.preventDefault(); coppConfirm('Вы уверены, что хотите удалить это объявление?', () => { this.submit(); });">
+                            <form action="{{ url_for('admin.delete_announcement', announcement_id=ann.id) }}" method="POST" class="m-0 d-inline" onsubmit="event.preventDefault(); deleteAnnouncementAjax(this, '{{ ann.id }}');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Удалить">
                                 <i class="bi bi-trash"></i>
@@ -371,4 +371,83 @@ function toggleTargetGroup(annId) {
         }
     }
 }
+
+window.deleteAnnouncementAjax = function(formEl, annId) {
+    coppConfirm('Вы уверены, что хотите удалить это объявление?', async () => {
+        try {
+            const res = await fetch(formEl.action, {
+                method: 'POST',
+                body: new FormData(formEl),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                const row = document.getElementById('announcement-row-' + annId);
+                if (row) {
+                    row.style.transition = 'all 0.3s ease';
+                    row.style.opacity = '0';
+                    row.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        row.remove();
+                        const countEl = document.getElementById('announcementsCount');
+                        if (countEl) {
+                            const remaining = document.querySelectorAll('tbody tr[id^="announcement-row-"]').length;
+                            countEl.textContent = remaining;
+                        }
+                    }, 300);
+                }
+                if (typeof coppToast === 'function') {
+                    coppToast(data.message || 'Объявление удалено', 'success');
+                }
+            } else {
+                coppAlert(data.message || 'Ошибка удаления объявления', 'error');
+            }
+        } catch (err) {
+            coppAlert('Сетевая ошибка при удалении', 'error');
+        }
+    });
+};
+
+window.toggleAnnouncementAjax = async function(formEl, annId) {
+    try {
+        const res = await fetch(formEl.action, {
+            method: 'POST',
+            body: new FormData(formEl),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            const row = document.getElementById('announcement-row-' + annId);
+            if (row) {
+                const statusCell = row.querySelector('.ann-status-cell');
+                if (statusCell) {
+                    if (data.is_active) {
+                        statusCell.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill d-inline-flex align-items-center gap-1"><span class="d-inline-block rounded-circle bg-success" style="width: 6px; height: 6px;"></span> Активно</span>`;
+                    } else {
+                        statusCell.innerHTML = `<span class="badge bg-light text-muted border px-2 py-1 rounded-pill d-inline-flex align-items-center gap-1"><span class="d-inline-block rounded-circle bg-secondary" style="width: 6px; height: 6px;"></span> Остановлено</span>`;
+                    }
+                }
+                const btn = formEl.querySelector('button[type="submit"]');
+                if (btn) {
+                    if (data.is_active) {
+                        btn.className = 'btn btn-sm btn-outline-secondary py-1 px-2';
+                        btn.title = 'Остановить показ';
+                        btn.innerHTML = '<i class="bi bi-pause-fill"></i>';
+                    } else {
+                        btn.className = 'btn btn-sm btn-outline-success py-1 px-2';
+                        btn.title = 'Запустить показ';
+                        btn.innerHTML = '<i class="bi bi-play-fill"></i>';
+                    }
+                }
+            }
+            if (typeof coppToast === 'function') {
+                coppToast(data.message || 'Статус обновлен', 'success');
+            }
+        } else {
+            coppAlert(data.message || 'Ошибка обновления статуса', 'error');
+        }
+    } catch (err) {
+        coppAlert('Сетевая ошибка при обновлении статуса', 'error');
+    }
+};
 </script>

@@ -4,7 +4,7 @@
 клонирования отчетов на новый период, редактирования метаданных и удаления.
 Также содержит логику экспорта списка должников в Excel.
 """
-from flask import request, redirect, url_for, send_file
+from flask import request, redirect, url_for, send_file, jsonify, flash
 from flask_login import login_required, current_user
 import openpyxl
 from io import BytesIO
@@ -13,7 +13,7 @@ from datetime import datetime
 from app.extensions import db
 from app.admin import admin_bp
 from app.models import User, ReportTemplate, ReportSubmission
-from app.utils import log_action
+from app.utils import log_action, is_ajax
 from app.services.excel_service import ExcelService
 from app.auth.decorators import roles_required
 
@@ -55,6 +55,15 @@ def assign_template_users(template_id):
             
     db.session.commit()
     log_action('Назначение исполнителей отчета', f'Изменены исполнители для отчета {template.short_name}')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Исполнители для отчета «{template.short_name}» сохранены',
+            'template_id': template_id,
+            'assigned_count': template.assigned_users.count()
+        })
+
     return redirect(request.referrer or url_for('reports.dashboard'))
 
 @admin_bp.route('/reset_to_pure/<int:template_id>', methods=['POST'])
@@ -75,6 +84,14 @@ def reset_to_pure(template_id):
     
     db.session.commit()
     log_action('Сброс в Шаблоны', f'Отчет {template.short_name} очищен и перенесен в шаблоны')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Отчет «{template.short_name}» очищен и перенесен в шаблоны',
+            'template_id': template_id
+        })
+
     return redirect(request.referrer or url_for('admin.dashboard', tab='reportsTab'))
 
 
@@ -88,6 +105,8 @@ def toggle_publish(template_id):
     template = ReportTemplate.query.get_or_404(template_id)
     
     if not template.is_published and (not template.period or template.period == 'None') and not template.period_data:
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Невозможно опубликовать отчет: не задан период.'}), 400
         flash('Невозможно опубликовать отчет: не задан период.', 'danger')
         return redirect(url_for('admin.dashboard', tab='reportsTab'))
         
@@ -112,6 +131,16 @@ def toggle_publish(template_id):
     db.session.commit()
     status_str = "опубликован" if template.is_published else "скрыт"
     log_action('Публикация отчета', f'Отчет {template.short_name} {status_str}')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Отчет «{template.short_name}» {status_str}',
+            'template_id': template_id,
+            'is_published': template.is_published,
+            'status_str': status_str
+        })
+
     return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/toggle_complete/<int:template_id>', methods=['POST'])
@@ -132,6 +161,16 @@ def toggle_complete(template_id):
     db.session.commit()
     status_str = "завершен" if template.is_completed else "возобновлен"
     log_action('Изменение статуса отчета', f'Сбор данных для отчета {template.short_name} {status_str}')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Сбор данных для отчета «{template.short_name}» {status_str}',
+            'template_id': template_id,
+            'is_completed': template.is_completed,
+            'status_str': status_str
+        })
+
     return redirect(request.referrer or url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/toggle_archive/<int:template_id>', methods=['POST'])
@@ -146,6 +185,16 @@ def toggle_archive(template_id):
     db.session.commit()
     status_str = "в архив" if template.is_archived else "из архива"
     log_action('Архивация отчета', f'Отчет {template.short_name} перенесен {status_str}')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Отчет «{template.short_name}» перенесен {status_str}',
+            'template_id': template_id,
+            'is_archived': template.is_archived,
+            'status_str': status_str
+        })
+
     return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/archive_submission/<int:submission_id>', methods=['POST'])
@@ -246,6 +295,14 @@ def delete_template(template_id):
     db.session.delete(template)
     db.session.commit()
     log_action('Удаление отчета', f'Отчет {name} удален')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Отчет «{name}» успешно удален',
+            'template_id': template_id
+        })
+
     return redirect(url_for('admin.dashboard', tab='reportsTab'))
 
 @admin_bp.route('/edit_template_meta/<int:template_id>', methods=['POST'])

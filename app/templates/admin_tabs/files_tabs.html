@@ -21,7 +21,7 @@
         </thead>
         <tbody>
             {% for f in all_files %}
-            <tr>
+            <tr id="file-row-{{ f.id }}">
                 <td>{{ f.id }}</td>
                 <td>
                     <strong>{{ f.filename }}</strong>
@@ -44,7 +44,7 @@
                     </a>
                     
                     {% if rep_count == 0 %}
-                    <form action="{{ url_for('admin.delete_file', file_id=f.id) }}" method="POST" class="d-inline" onsubmit="event.preventDefault(); coppConfirm('Вы уверены, что хотите удалить этот файл?', () => { this.submit(); });">
+                    <form action="{{ url_for('admin.delete_file', file_id=f.id) }}" method="POST" class="d-inline" onsubmit="event.preventDefault(); deleteFileAjax(this, '{{ f.id }}');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
                             <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
@@ -91,3 +91,34 @@
         </form>
     </div>
 </div>
+
+<script>
+window.deleteFileAjax = function(formEl, fileId) {
+    coppConfirm('Вы уверены, что хотите удалить этот файл?', async () => {
+        try {
+            const res = await fetch(formEl.action, {
+                method: 'POST',
+                body: new FormData(formEl),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                const row = document.getElementById('file-row-' + fileId);
+                if (row) {
+                    row.style.transition = 'all 0.3s ease';
+                    row.style.opacity = '0';
+                    row.style.transform = 'scale(0.95)';
+                    setTimeout(() => row.remove(), 300);
+                }
+                if (typeof coppToast === 'function') {
+                    coppToast(data.message || 'Файл удален', 'success');
+                }
+            } else {
+                coppAlert(data.message || 'Ошибка удаления файла', 'error');
+            }
+        } catch (err) {
+            coppAlert('Сетевая ошибка при удалении файла', 'error');
+        }
+    });
+};
+</script>

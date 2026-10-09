@@ -3,14 +3,14 @@
 Содержит логику создания, удаления пользователей, принудительного сброса паролей
 и массового назначения отчетов конкретному пользователю.
 """
-from flask import request, redirect, url_for, flash, send_file
+from flask import request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
 import io
 import openpyxl
 from app.extensions import db, limiter
 from app.admin import admin_bp
 from app.models import User, ReportSubmission, ReportTemplate
-from app.utils import log_action
+from app.utils import log_action, is_ajax
 from app.auth.decorators import roles_required
 
 # ==========================================
@@ -78,6 +78,8 @@ def delete_user(user_id):
         from app.utils import get_manager_department
         dept = get_manager_department(current_user)
         if not dept or user.department_id != dept.id:
+            if is_ajax():
+                return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
             flash('Доступ запрещен')
             return redirect(url_for('admin.dashboard', tab='usersTab'))
     # Очищаем связанные данные, чтобы не сломать внешние ключи
@@ -86,6 +88,14 @@ def delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     log_action('Удаление пользователя', f'Пользователь {username} и все его отчеты удалены')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Пользователь {username} и все его отчеты удалены',
+            'user_id': user_id
+        })
+
     return redirect(url_for('admin.dashboard', tab='usersTab'))
 
 @admin_bp.route('/edit_user/<int:user_id>', methods=['POST'])
@@ -100,6 +110,8 @@ def edit_user(user_id):
         from app.utils import get_manager_department
         dept = get_manager_department(current_user)
         if not dept or user.department_id != dept.id:
+            if is_ajax():
+                return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
             flash('Доступ запрещен')
             return redirect(url_for('admin.dashboard', tab='usersTab'))
     
@@ -108,6 +120,8 @@ def edit_user(user_id):
     if username:
         # Проверяем уникальность логина, если он был изменен
         if username != user.username and User.query.filter_by(username=username).first():
+            if is_ajax():
+                return jsonify({'status': 'error', 'message': 'Пользователь с таким логином уже существует'}), 400
             flash('Пользователь с таким логином уже существует')
             return redirect(url_for('admin.dashboard', tab='usersTab'))
         user.username = username
@@ -142,6 +156,23 @@ def edit_user(user_id):
 
     db.session.commit()
     log_action('Редактирование пользователя', f'Обновлен профиль пользователя {user.username}')
+
+    if is_ajax():
+        dept_name = user.department.name if user.department else None
+        return jsonify({
+            'status': 'success',
+            'message': f'Данные пользователя {user.username} успешно сохранены',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'description': user.description or '',
+                'role': user.role,
+                'group': user.group or '',
+                'department_id': user.department_id,
+                'department_name': dept_name
+            }
+        })
+
     return redirect(url_for('admin.dashboard', tab='usersTab'))
 
 @admin_bp.route('/change_my_password', methods=['POST'])
@@ -150,10 +181,22 @@ def edit_user(user_id):
 def change_my_password():
     """Смена собственного пароля (вызывается через модальное окно профиля)."""
     new_password = request.form.get('new_password')
-    if new_password:
-        current_user.set_password(new_password)
-        db.session.commit()
-        log_action('Смена пароля', f'Пользователь {current_user.username} сменил свой пароль')
+    if not new_password or not new_password.strip():
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Пароль не может быть пустым'}), 400
+        flash('Пароль не может быть пустым', 'warning')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+
+    current_user.set_password(new_password.strip())
+    db.session.commit()
+    log_action('Смена пароля', f'Пользователь {current_user.username} сменил свой пароль')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': 'Пароль успешно изменен'
+        })
+
     # Защита от Open Redirect: возвращаемся только на внутренний маршрут 
     return redirect(url_for('admin.dashboard', tab='usersTab'))
 
@@ -267,16 +310,22 @@ def bulk_delete_users():
     """
     user_ids = request.form.getlist('user_ids')
     if not user_ids:
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Не выбрано ни одного пользователя для удаления'}), 400
         flash('Не выбрано ни одного пользователя для удаления', 'warning')
         return redirect(url_for('admin.dashboard', tab='usersTab'))
         
     try:
         user_ids = [int(uid) for uid in user_ids if uid and str(uid).isdigit()]
     except (ValueError, TypeError):
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Некорректный список идентификаторов'}), 400
         flash('Некорректный список идентификаторов', 'danger')
         return redirect(url_for('admin.dashboard', tab='usersTab'))
         
     if not user_ids:
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Не выбрано ни одного пользователя'}), 400
         flash('Не выбрано ни одного пользователя', 'warning')
         return redirect(url_for('admin.dashboard', tab='usersTab'))
         
@@ -285,6 +334,8 @@ def bulk_delete_users():
         user_ids.remove(current_user.id)
         
     if not user_ids:
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Нельзя удалить собственную учетную запись'}), 400
         flash('Нельзя удалить собственную учетную запись', 'danger')
         return redirect(url_for('admin.dashboard', tab='usersTab'))
 
@@ -293,6 +344,8 @@ def bulk_delete_users():
         from app.utils import get_manager_department
         dept = get_manager_department(current_user)
         if not dept:
+            if is_ajax():
+                return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
             flash('Доступ запрещен', 'danger')
             return redirect(url_for('admin.dashboard', tab='usersTab'))
         allowed_users = User.query.filter(User.id.in_(user_ids), User.department_id == dept.id, User.role == 'user').all()
@@ -303,6 +356,8 @@ def bulk_delete_users():
         target_ids = [u.id for u in target_users]
         
     if not target_ids:
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Нет доступных для удаления пользователей (аккаунты администраторов защищены)'}), 400
         flash('Нет доступных для удаления пользователей (аккаунты администраторов защищены)', 'warning')
         return redirect(url_for('admin.dashboard', tab='usersTab'))
         
@@ -328,6 +383,15 @@ def bulk_delete_users():
         
     db.session.commit()
     log_action('Массовое удаление', f'Удалено пользователей: {deleted_count} ({usernames_sample})')
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': f'Успешно удалено пользователей: {deleted_count}',
+            'deleted_count': deleted_count,
+            'deleted_ids': target_ids
+        })
+
     flash(f'Успешно удалено пользователей: {deleted_count}', 'success')
     return redirect(url_for('admin.dashboard', tab='usersTab'))
 

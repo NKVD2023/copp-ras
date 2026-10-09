@@ -224,8 +224,8 @@
             </div>
             <div class="card-body">
                 <p class="text-muted small mb-4">Вы вошли как <strong>{{ current_user.username }}</strong></p>
-                <form action="{{ url_for('admin.change_my_password') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <form id="changeMyPasswordForm" action="{{ url_for('admin.change_my_password') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-4">
                         <label class="form-label text-muted">Сменить пароль</label>
                         <input type="text" name="new_password" class="form-control" required autocomplete="off" placeholder="Введите новый пароль">
@@ -470,6 +470,49 @@
             const statsPane = document.getElementById('statisticsTab');
             if (statsPane && statsPane.classList.contains('active')) {
                 setTimeout(initStatsTomSelect, 100);
+            }
+
+            const pwForm = document.getElementById('changeMyPasswordForm');
+            if (pwForm) {
+                pwForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const submitBtn = pwForm.querySelector('button[type="submit"]');
+                    const originalHtml = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Сохранение...';
+                    try {
+                        const formData = new FormData(pwForm);
+                        const res = await fetch(pwForm.action, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            body: formData
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.status === 'success') {
+                            if (typeof window.coppToast === 'function') {
+                                window.coppToast(data.message || 'Пароль успешно изменен', 'success');
+                            } else if (typeof window.coppAlert === 'function') {
+                                window.coppAlert(data.message || 'Пароль успешно изменен', 'success');
+                            }
+                            pwForm.reset();
+                        } else {
+                            if (typeof window.coppAlert === 'function') {
+                                window.coppAlert(data.message || 'Ошибка смены пароля', 'error');
+                            } else {
+                                alert(data.message || 'Ошибка смены пароля');
+                            }
+                        }
+                    } catch (err) {
+                        if (typeof window.coppAlert === 'function') {
+                            window.coppAlert('Ошибка сети при смене пароля', 'error');
+                        } else {
+                            alert('Ошибка сети при смене пароля');
+                        }
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalHtml;
+                    }
+                });
             }
         });
     </script>

@@ -1,11 +1,12 @@
 import os
 import uuid
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.admin import admin_bp
 from app.models import UploadedFile, ReportTemplate
+from app.utils import is_ajax
 from config import basedir
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'xlsx', 'doc', 'xls', 'dox'}
@@ -89,12 +90,17 @@ def delete_file(file_id):
         from app.utils import get_manager_department
         dept = get_manager_department(current_user)
         if not dept or file_obj.department_id != dept.id:
+            if is_ajax():
+                return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
             flash('Доступ запрещен', 'danger')
             return redirect(url_for('admin.dashboard', tab='filesTab'))
     
     # Check if attached to any reports
     if file_obj.reports.count() > 0:
-        flash(f'Файл "{file_obj.filename}" прикреплен к отчетам и не может быть удален. Сначала открепите его.', 'danger')
+        msg = f'Файл "{file_obj.filename}" прикреплен к отчетам и не может быть удален. Сначала открепите его.'
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': msg}), 400
+        flash(msg, 'danger')
         return redirect(url_for('admin.dashboard', tab='filesTab'))
         
     try:
@@ -102,14 +108,25 @@ def delete_file(file_id):
         if os.path.exists(file_path):
             os.remove(file_path)
             
+        filename = file_obj.filename
         db.session.delete(file_obj)
         db.session.commit()
         
         from app.utils import log_action
-        log_action('Удаление файла', f'Удален файл {file_obj.filename}')
+        log_action('Удаление файла', f'Удален файл {filename}')
+
+        if is_ajax():
+            return jsonify({
+                'status': 'success',
+                'message': f'Файл «{filename}» успешно удален',
+                'file_id': file_id
+            })
+
         flash('Файл успешно удален', 'success')
     except Exception as e:
         db.session.rollback()
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': f'Ошибка при удалении: {e}'}), 500
         flash(f'Ошибка при удалении: {e}', 'danger')
         
     return redirect(url_for('admin.dashboard', tab='filesTab'))

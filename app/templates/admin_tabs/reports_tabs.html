@@ -442,4 +442,127 @@
             setTimeout(syncBatchBtnVisibility, 50);
         }
     });
+
+    window.submitAssignUsersAjax = async function(formEl, templateId) {
+        const submitBtn = formEl.querySelector('button[type="submit"]');
+        const origText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+
+        try {
+            const res = await fetch(formEl.action, {
+                method: 'POST',
+                body: new FormData(formEl),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                const modalEl = document.getElementById('access-template-' + templateId);
+                if (modalEl) {
+                    const bsModal = bootstrap.Modal.getInstance(modalEl);
+                    if (bsModal) bsModal.hide();
+                }
+                if (typeof coppToast === 'function') {
+                    coppToast(data.message || 'Исполнители успешно сохранены', 'success');
+                }
+                if (typeof reloadReportsTabSilently === 'function') {
+                    reloadReportsTabSilently();
+                }
+            } else {
+                coppAlert(data.message || 'Ошибка сохранения исполнителей', 'error');
+            }
+        } catch (err) {
+            coppAlert('Сетевая ошибка при сохранении исполнителей', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origText;
+        }
+    };
+
+    window.deleteTemplateAjax = function(templateId, formEl) {
+        coppConfirm('ВНИМАНИЕ!<br><br>Вы точно хотите удалить этот отчет?<br>Все данные, которые уже заполнили учреждения, будут навсегда удалены!', async () => {
+            try {
+                const res = await fetch(formEl.action, {
+                    method: 'POST',
+                    body: new FormData(formEl),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    const card = document.querySelector(`.report-item[data-id="${templateId}"]`);
+                    if (card) {
+                        card.style.transition = 'all 0.3s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        setTimeout(() => card.remove(), 300);
+                    }
+                    if (typeof coppToast === 'function') {
+                        coppToast(data.message || 'Отчет удален', 'success');
+                    }
+                } else {
+                    coppAlert(data.message || 'Ошибка удаления отчета', 'error');
+                }
+            } catch (err) {
+                coppAlert('Сетевая ошибка при удалении отчета', 'error');
+            }
+        });
+    };
+
+    window.toggleReportActionAjax = async function(formEl, confirmMsg) {
+        const doSubmit = async () => {
+            try {
+                const res = await fetch(formEl.action, {
+                    method: 'POST',
+                    body: new FormData(formEl),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    if (typeof coppToast === 'function') {
+                        coppToast(data.message || 'Статус обновлен', 'success');
+                    }
+                    if (typeof reloadReportsTabSilently === 'function') {
+                        reloadReportsTabSilently();
+                    }
+                } else {
+                    coppAlert(data.message || 'Ошибка обновления статуса', 'error');
+                }
+            } catch (err) {
+                coppAlert('Сетевая ошибка при обновлении статуса', 'error');
+            }
+        };
+
+        if (confirmMsg) {
+            coppConfirm(confirmMsg, doSubmit);
+        } else {
+            await doSubmit();
+        }
+    };
+
+    window.reloadReportsTabSilently = async function() {
+        const tabPane = document.getElementById('reportsTab');
+        if (!tabPane) return;
+        const url = tabPane.getAttribute('data-tab-url');
+        if (!url) return;
+        try {
+            const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (res.ok) {
+                const activeSubTabId = document.querySelector('#reportsSubTabs .nav-link.active')?.id;
+                const html = await res.text();
+                tabPane.innerHTML = html;
+                if (typeof initSubTabs === 'function') {
+                    initSubTabs(tabPane);
+                }
+                if (activeSubTabId) {
+                    const btn = tabPane.querySelector('#' + activeSubTabId);
+                    if (btn) {
+                        const tab = new bootstrap.Tab(btn);
+                        tab.show();
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Silent refresh failed:', e);
+        }
+    };
 </script>
