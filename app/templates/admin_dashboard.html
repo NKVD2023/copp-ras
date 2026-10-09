@@ -99,62 +99,124 @@
     {% if selected_user_id or selected_short_name %}
         {% set active_tab = 'statisticsTab' %}
     {% elif req_tab %}
-        {% set active_tab = req_tab %}
-    {% elif current_user.role == 'admin' %}
-        {% set active_tab = 'usersTab' %}
-    {% else %}
-        {% set active_tab = 'reportsTab' %}
+        {% set active_tab = req_tab if req_tab.endswith('Tab') else req_tab ~ 'Tab' %}
+    {% elif not active_tab %}
+        {% if current_user.role == 'admin' %}
+            {% set active_tab = 'usersTab' %}
+        {% else %}
+            {% set active_tab = 'reportsTab' %}
+        {% endif %}
     {% endif %}
 
     {% if current_user.role == 'admin' %}
-    <div class="tab-pane fade {% if active_tab == 'usersTab' %}show active{% endif %}" id="usersTab" role="tabpanel">
-        {% include 'admin_tabs/users_tabs.html' %}
+    <div class="tab-pane fade {% if active_tab == 'usersTab' %}show active{% endif %}" id="usersTab" role="tabpanel" data-tab-name="users" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='users') }}" data-loaded="{% if active_tab == 'usersTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'usersTab' %}
+            {% include 'admin_tabs/users_tabs.html' %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка пользователей...</span>
+            </div>
+        {% endif %}
     </div>
     {% endif %}
     
-    <div class="tab-pane fade {% if active_tab == 'statisticsTab' %}show active{% endif %}" id="statisticsTab" role="tabpanel">
-        {% include 'admin_tabs/statistics/statistics_main.html' %}
+    <div class="tab-pane fade {% if active_tab == 'statisticsTab' %}show active{% endif %}" id="statisticsTab" role="tabpanel" data-tab-name="statistics" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='statistics') }}" data-loaded="{% if active_tab == 'statisticsTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'statisticsTab' %}
+            {% include 'admin_tabs/statistics/statistics_main.html' %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка статистики...</span>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'reportsTab' %}show active{% endif %}" id="reportsTab" role="tabpanel">
-        <div class="card p-4">
-            {% include 'admin_tabs/reports_tabs.html' %}
-        </div>
+    <div class="tab-pane fade {% if active_tab == 'reportsTab' %}show active{% endif %}" id="reportsTab" role="tabpanel" data-tab-name="reports" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='reports') }}" data-loaded="{% if active_tab == 'reportsTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'reportsTab' %}
+            <div class="card p-4">
+                {% include 'admin_tabs/reports_tabs.html' %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка отчетов...</span>
+            </div>
+        {% endif %}
     </div>
     
-    <div class="tab-pane fade {% if active_tab == 'listsTab' %}show active{% endif %}" id="listsTab" role="tabpanel">
-        {% include 'admin_tabs/lists_tabs.html' %}
+    <div class="tab-pane fade {% if active_tab == 'listsTab' %}show active{% endif %}" id="listsTab" role="tabpanel" data-tab-name="lists" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='lists') }}" data-loaded="{% if active_tab == 'listsTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'listsTab' %}
+            {% include 'admin_tabs/lists_tabs.html' %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка справочников...</span>
+            </div>
+        {% endif %}
     </div>
     
-    <div class="tab-pane fade {% if active_tab == 'filesTab' %}show active{% endif %}" id="filesTab" role="tabpanel">
-        <div class="card p-4">
-            {% include 'admin_tabs/files_tabs.html' %}
-        </div>
+    <div class="tab-pane fade {% if active_tab == 'filesTab' %}show active{% endif %}" id="filesTab" role="tabpanel" data-tab-name="files" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='files') }}" data-loaded="{% if active_tab == 'filesTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'filesTab' %}
+            <div class="card p-4">
+                {% include 'admin_tabs/files_tabs.html' %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка файлов...</span>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'announcementsTab' %}show active{% endif %}" id="announcementsTab" role="tabpanel">
-        {% include 'admin_tabs/announcements_tabs.html' %}
+    <div class="tab-pane fade {% if active_tab == 'announcementsTab' %}show active{% endif %}" id="announcementsTab" role="tabpanel" data-tab-name="announcements" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='announcements') }}" data-loaded="{% if active_tab == 'announcementsTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'announcementsTab' %}
+            {% include 'admin_tabs/announcements_tabs.html' %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка объявлений...</span>
+            </div>
+        {% endif %}
     </div>
 
     {% if current_user.role == 'admin' %}
-    <div class="tab-pane fade {% if active_tab == 'databaseTab' %}show active{% endif %}" id="databaseTab" role="tabpanel">
-        {% include 'admin_tabs/db_tabs.html' %}
+    <div class="tab-pane fade {% if active_tab == 'databaseTab' %}show active{% endif %}" id="databaseTab" role="tabpanel" data-tab-name="database" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='database') }}" data-loaded="{% if active_tab == 'databaseTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'databaseTab' %}
+            {% include 'admin_tabs/db_tabs.html' %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка базы данных...</span>
+            </div>
+        {% endif %}
     </div>
     
-    <div class="tab-pane fade {% if active_tab == 'logsTab' %}show active{% endif %}" id="logsTab" role="tabpanel">
-        {% include 'admin_tabs/logs_tabs.html' %}
+    <div class="tab-pane fade {% if active_tab == 'logsTab' %}show active{% endif %}" id="logsTab" role="tabpanel" data-tab-name="logs" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='logs') }}" data-loaded="{% if active_tab == 'logsTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'logsTab' %}
+            {% include 'admin_tabs/logs_tabs.html' %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка журнала действий...</span>
+            </div>
+        {% endif %}
     </div>
-    {% endif %}
 
-    {% if current_user.role == 'admin' %}
-    <div class="tab-pane fade {% if active_tab == 'departmentsTab' %}show active{% endif %}" id="departmentsTab" role="tabpanel">
-        <!-- Убран белый фон карточки -->
-        {% include 'admin_tabs/departments_tabs.html' %}
+    <div class="tab-pane fade {% if active_tab == 'departmentsTab' %}show active{% endif %}" id="departmentsTab" role="tabpanel" data-tab-name="departments" data-tab-url="{{ url_for('admin.get_tab_fragment', tab_name='departments') }}" data-loaded="{% if active_tab == 'departmentsTab' %}true{% else %}false{% endif %}">
+        {% if active_tab == 'departmentsTab' %}
+            {% include 'admin_tabs/departments_tabs.html' %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" style="color: #00334e;" role="status"></div>
+                <span class="small fw-medium">Загрузка отделов...</span>
+            </div>
+        {% endif %}
     </div>
     {% endif %}
 
     <!-- Вкладка профиля -->
-    <div class="tab-pane fade {% if active_tab == 'profileTab' %}show active{% endif %}" id="profileTab" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'profileTab' %}show active{% endif %}" id="profileTab" role="tabpanel" data-loaded="true">
         <div class="card mw-500">
             <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
                 <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/></svg>
@@ -177,6 +239,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/period_selector.js') }}"></script>
     <script>
         function exportExcel(btn, templateId) {
@@ -226,20 +289,123 @@
         }
     </script>
 
-<script>
+    <!-- Поддержка ленивой загрузки вкладок (Lazy Tabs Client Controller) -->
+    <script>
+    // 1. Поддержка вызова DOMContentLoaded для динамически вставляемых фрагментов
+    (function() {
+        const _origAddEventListener = document.addEventListener;
+        document.addEventListener = function(type, listener, options) {
+            if (type === 'DOMContentLoaded' && (document.readyState === 'interactive' || document.readyState === 'complete')) {
+                setTimeout(listener, 1);
+                return;
+            }
+            return _origAddEventListener.call(document, type, listener, options);
+        };
+    })();
+
+    // 2. Выполнение тегов <script> при динамической вставке HTML
+    function executeScripts(container) {
+        const scripts = Array.from(container.querySelectorAll('script'));
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            if (oldScript.src) {
+                newScript.src = oldScript.src;
+            } else {
+                newScript.textContent = oldScript.textContent;
+            }
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+    }
+
+    // 3. Восстановление и регистрация внутренних вкладок (sub-tabs)
+    function initSubTabs(container) {
+        const subNavs = container.querySelectorAll('.nav-tabs, .nav-pills');
+        subNavs.forEach(nav => {
+            if (nav.id === 'adminTabs') return;
+            const storageKey = 'activeSubTab_' + (nav.id || Math.random());
+            const savedTarget = localStorage.getItem(storageKey);
+            if (savedTarget) {
+                const trigger = nav.querySelector(`[data-bs-target="${savedTarget}"]`);
+                if (trigger && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    try {
+                        bootstrap.Tab.getOrCreateInstance(trigger).show();
+                    } catch (e) {}
+                }
+            }
+            nav.querySelectorAll('button[data-bs-toggle="tab"], button[data-bs-toggle="pill"]').forEach(tabEl => {
+                tabEl.addEventListener('shown.bs.tab', function(event) {
+                    const target = event.target.getAttribute('data-bs-target');
+                    if (target) { localStorage.setItem(storageKey, target); }
+                });
+            });
+        });
+    }
+
+    // 4. Загрузчик контента вкладки
+    const loadingTabs = new Set();
+    function loadTabContent(targetPane) {
+        if (!targetPane) return Promise.resolve();
+        if (targetPane.getAttribute('data-loaded') === 'true') {
+            return Promise.resolve();
+        }
+        const tabUrl = targetPane.getAttribute('data-tab-url');
+        if (!tabUrl) return Promise.resolve();
+        if (loadingTabs.has(targetPane.id)) return Promise.resolve();
+
+        loadingTabs.add(targetPane.id);
+        return fetch(tabUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP status ' + response.status);
+                return response.text();
+            })
+            .then(html => {
+                targetPane.innerHTML = html;
+                targetPane.setAttribute('data-loaded', 'true');
+                executeScripts(targetPane);
+                initSubTabs(targetPane);
+                if (targetPane.id === 'statisticsTab' && typeof initStatsTomSelect === 'function') {
+                    setTimeout(initStatsTomSelect, 50);
+                }
+            })
+            .catch(err => {
+                console.error('Error loading tab:', err);
+                targetPane.innerHTML = `
+                    <div class="alert alert-danger m-4 d-flex align-items-center justify-content-between">
+                        <div><i class="bi bi-exclamation-triangle-fill me-2"></i> Не удалось загрузить содержимое раздела.</div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="retryLoadTab('${targetPane.id}')">Повторить</button>
+                    </div>`;
+            })
+            .finally(() => {
+                loadingTabs.delete(targetPane.id);
+            });
+    }
+
+    function retryLoadTab(paneId) {
+        const pane = document.getElementById(paneId);
+        if (pane) {
+            pane.setAttribute('data-loaded', 'false');
+            pane.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2" style="color: #00334e;"></div> <span class="small fw-medium">Повторная загрузка...</span></div>';
+            loadTabContent(pane);
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         const mainNav = document.getElementById('adminTabs');
         const mainContent = document.getElementById('adminTabsContent');
         const openStats = {{ 'true' if (selected_user_id or selected_short_name) else 'false' }};
 
         if (mainNav && mainContent) {
-            // При переключении любого главного таба:
-            // ГАРАНТИРУЕМ взаимное исключение (Mutual Exclusion):
-            // Принудительно гасим ВСЕ другие главные tab-pane, чтобы ни один модуль не мог остаться висеть на странице!
             mainNav.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
                 btn.addEventListener('show.bs.tab', function(event) {
                     const targetSelector = event.target.getAttribute('data-bs-target');
                     if (targetSelector) {
+                        const targetPane = document.querySelector(targetSelector);
+                        if (targetPane) {
+                            loadTabContent(targetPane);
+                        }
                         mainContent.querySelectorAll(':scope > .tab-pane').forEach(pane => {
                             if ('#' + pane.id !== targetSelector) {
                                 pane.classList.remove('show', 'active');
@@ -274,34 +440,15 @@
             }
         }
 
-        // Для внутренних под-навигаций (sub-tabs, pills) — восстанавливаем через Bootstrap Tab API без synthetic click
-        const subNavs = document.querySelectorAll('.nav-tabs, .nav-pills');
-        subNavs.forEach(nav => {
-            if (nav.id === 'adminTabs') return; // главный nav пропускаем
-            const storageKey = 'activeSubTab_' + (nav.id || Math.random());
-            const savedTarget = localStorage.getItem(storageKey);
-            if (savedTarget) {
-                const trigger = nav.querySelector(`[data-bs-target="${savedTarget}"]`);
-                if (trigger && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-                    try {
-                        bootstrap.Tab.getOrCreateInstance(trigger).show();
-                    } catch (e) {
-                        // ignore
-                    }
-                }
-            }
-            nav.querySelectorAll('button[data-bs-toggle="tab"], button[data-bs-toggle="pill"]').forEach(tabEl => {
-                tabEl.addEventListener('shown.bs.tab', function(event) {
-                    const target = event.target.getAttribute('data-bs-target');
-                    if (target) { localStorage.setItem(storageKey, target); }
-                });
-            });
-        });
+        // Инициализируем подвкладки для изначально активной вкладки
+        const activePane = mainContent ? mainContent.querySelector(':scope > .tab-pane.active') : null;
+        if (activePane) {
+            initSubTabs(activePane);
+        }
     });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script>
         function initStatsTomSelect() {
             if (typeof TomSelect === 'undefined') return;
             document.querySelectorAll('#statisticsTab select.form-select').forEach(el => {
@@ -315,13 +462,15 @@
                 }
             });
         }
-        // Инициализация при открытии вкладки
-        const statsBtn = document.getElementById('statisticsTabBtn');
-        if (statsBtn) {
-            statsBtn.addEventListener('shown.bs.tab', initStatsTomSelect);
-        }
-        // Если сразу активна
-        setTimeout(initStatsTomSelect, 100);
-    });
-</script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const statsBtn = document.getElementById('statisticsTabBtn');
+            if (statsBtn) {
+                statsBtn.addEventListener('shown.bs.tab', initStatsTomSelect);
+            }
+            const statsPane = document.getElementById('statisticsTab');
+            if (statsPane && statsPane.classList.contains('active')) {
+                setTimeout(initStatsTomSelect, 100);
+            }
+        });
+    </script>
 {% endblock %}
