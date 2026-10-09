@@ -157,6 +157,66 @@ def export_excel(template_id):
     return jsonify({'status': 'success', 'task_id': task_id})
 
 
+@reports_bp.route('/export_multi_excel', methods=['POST'])
+@login_required
+def export_multi_excel():
+    """
+    Запуск фоновой генерации единого сводного Excel файла для нескольких выбранных отчетов.
+    Доступно только для ролей admin и manager.
+    Разрешено выгружать ТОЛЬКО завершенные отчеты.
+    """
+    if current_user.role not in ['admin', 'manager']:
+        return jsonify({'status': 'error', 'message': 'Доступ ограничен'}), 403
+
+    data = request.get_json() or {}
+    template_ids = data.get('template_ids', [])
+    include_toc = bool(data.get('include_toc', True))
+
+    if not template_ids or not isinstance(template_ids, list):
+        return jsonify({'status': 'error', 'message': 'Не выбраны отчеты для выгрузки'}), 400
+
+    try:
+        template_ids = [int(tid) for tid in template_ids]
+    except (ValueError, TypeError):
+        return jsonify({'status': 'error', 'message': 'Некорректный формат идентификаторов'}), 400
+
+    # 1. Получаем доступные отчеты в зависимости от роли
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if dept:
+            all_templates = dept.templates.all()
+        else:
+            all_templates = []
+    else:
+        all_templates = ReportTemplate.query.all()
+
+    # 2. Определяем завершенные отчеты (строгое требование: только завершенные отчеты)
+    from app.services.template_service import TemplateService
+    _, _, _, _, _, _, _, completed_templates = TemplateService.get_dashboard_stats(all_templates)
+    completed_ids = {t.id for t in completed_templates}
+
+    # Проверяем, что ВСЕ запрошенные отчеты завершены и доступны пользователю
+    invalid_ids = [tid for tid in template_ids if tid not in completed_ids]
+    if invalid_ids:
+        return jsonify({
+            'status': 'error',
+            'message': 'Для пакетной выгрузки доступны только завершенные отчеты'
+        }), 400
+
+    from app.services.task_service import TaskService
+    task_id = TaskService.start_multi_excel_generation(
+        template_ids=template_ids,
+        current_user_id=current_user.id,
+        include_toc=include_toc
+    )
+
+    log_action('Пакетный экспорт в Excel', f'Запущена выгрузка {len(template_ids)} завершенных отчетов')
+
+    return jsonify({'status': 'success', 'task_id': task_id})
+
+
+
 @reports_bp.route('/export_my_excel/<int:template_id>')
 @login_required
 def export_my_excel(template_id):

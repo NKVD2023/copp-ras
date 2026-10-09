@@ -2,3 +2,289 @@
 
 
 {{ render_reports_list(completed_templates) }}
+
+<!-- Модальное окно пакетного экспорта завершенных отчетов -->
+<div class="modal fade" id="batchExportExcelModal" tabindex="-1" aria-labelledby="batchExportExcelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+            <div class="modal-header border-bottom py-3 px-4" style="background-color: #f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded-circle" style="background: rgba(0, 51, 78, 0.1); color: #00334E;">
+                        <i class="bi bi-file-earmark-spreadsheet-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark m-0" id="batchExportExcelModalLabel">Пакетный экспорт в Excel</h5>
+                        <div class="text-muted small">Формирование единой книги с отдельными листами по каждому выбранному отчету</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            
+            <div class="modal-body px-4 py-3">
+                <div class="alert alert-light border d-flex align-items-start gap-2 py-2 px-3 mb-3 small" style="background-color: #f8fafc; border-radius: 8px;">
+                    <i class="bi bi-info-circle text-primary mt-1"></i>
+                    <div>
+                        Для пакетной выгрузки доступны <strong>только завершенные отчеты</strong>. В итоговом файле для каждого отчета будет выделен отдельный лист (или группа листов при многостраничной структуре).
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                    <div class="input-group input-group-sm flex-grow-1" style="max-width: 320px;">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" id="batchModalSearch" class="form-control border-start-0" placeholder="Поиск по названию..." autocomplete="off">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-copp" id="batchSelectAllBtn">
+                            <i class="bi bi-check-square me-1"></i>Выбрать все
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="batchDeselectAllBtn">
+                            <i class="bi bi-dash-square me-1"></i>Снять выбор
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border rounded p-2 bg-light batch-templates-container" style="max-height: 340px; overflow-y: auto;">
+                    {% if completed_templates %}
+                        <div class="list-group list-group-flush gap-1">
+                            {% for t in completed_templates %}
+                            <label class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-2 rounded border bg-white batch-template-row" style="cursor: pointer;" data-title="{{ (t.name or '')|lower }} {{ (t.short_name or '')|lower }}">
+                                <div class="d-flex align-items-center gap-3 flex-grow-1 me-3">
+                                    <input class="form-check-input flex-shrink-0 batch-template-checkbox" type="checkbox" value="{{ t.id }}" id="batchTplCheck_{{ t.id }}" style="cursor: pointer; width: 1.15rem; height: 1.15rem;">
+                                    <div class="min-w-0">
+                                        <div class="fw-semibold text-dark text-truncate" style="max-width: 480px;" title="{{ t.name }}">
+                                            {{ t.name }}
+                                        </div>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                            {% if t.short_name and t.short_name != t.name %}
+                                            <span class="badge bg-light text-secondary border small">
+                                                {{ t.short_name }}
+                                            </span>
+                                            {% endif %}
+                                            <span class="badge bg-light text-dark border small">
+                                                <i class="bi bi-calendar3 me-1"></i>{{ t.period or 'Без периода' }}
+                                            </span>
+                                            <span class="badge bg-light text-muted border small">
+                                                <i class="bi bi-check-circle-fill text-success me-1"></i>{{ t.submissions|length }} сдали
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end text-muted small flex-shrink-0">
+                                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
+                                        Завершен
+                                    </span>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            Нет завершенных отчетов для выгрузки
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-3 pt-3 border-top">
+                    <div class="form-check form-switch d-flex align-items-center gap-2 ps-0">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="batchIncludeTocSwitch" checked style="cursor: pointer; width: 2.2rem; height: 1.2rem;">
+                        <div>
+                            <label class="form-check-label fw-semibold text-dark mb-0" for="batchIncludeTocSwitch" style="cursor: pointer;">
+                                Добавить лист «Оглавление» со ссылками
+                            </label>
+                            <div class="text-muted small">
+                                Первый лист будет содержать интерактивный перечень всех выгруженных отчетов с гиперссылками на страницы
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top bg-white px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="text-muted small fw-medium" id="batchSelectedCounter">
+                    Выбрано: 0 отчетов
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-copp d-flex align-items-center gap-2" id="startBatchExportBtn" disabled onclick="executeBatchExcelExport(this)">
+                        <i class="bi bi-download"></i>
+                        <span>Скачать единый Excel</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    function initBatchExport() {
+        const searchInput = document.getElementById('batchModalSearch');
+        const rows = document.querySelectorAll('.batch-template-row');
+        const checkboxes = document.querySelectorAll('.batch-template-checkbox');
+        const selectAllBtn = document.getElementById('batchSelectAllBtn');
+        const deselectAllBtn = document.getElementById('batchDeselectAllBtn');
+        const counterEl = document.getElementById('batchSelectedCounter');
+        const exportBtn = document.getElementById('startBatchExportBtn');
+
+        function updateSelectedCount() {
+            const checkedCount = document.querySelectorAll('.batch-template-checkbox:checked').length;
+            if (counterEl) {
+                counterEl.textContent = `Выбрано: ${checkedCount} ${getReportNoun(checkedCount)}`;
+            }
+            if (exportBtn) {
+                exportBtn.disabled = (checkedCount === 0);
+            }
+        }
+
+        function getReportNoun(n) {
+            n = Math.abs(n) % 100;
+            const n1 = n % 10;
+            if (n > 10 && n < 20) return 'отчетов';
+            if (n1 > 1 && n1 < 5) return 'отчета';
+            if (n1 === 1) return 'отчет';
+            return 'отчетов';
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const term = this.value.trim().toLowerCase();
+                rows.forEach(row => {
+                    const text = row.getAttribute('data-title') || '';
+                    if (!term || text.includes(term)) {
+                        row.classList.remove('d-none');
+                    } else {
+                        row.classList.add('d-none');
+                    }
+                });
+            });
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateSelectedCount);
+        });
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', function() {
+                rows.forEach(row => {
+                    if (!row.classList.contains('d-none')) {
+                        const cb = row.querySelector('.batch-template-checkbox');
+                        if (cb) cb.checked = true;
+                    }
+                });
+                updateSelectedCount();
+            });
+        }
+
+        if (deselectAllBtn) {
+            deselectAllBtn.addEventListener('click', function() {
+                checkboxes.forEach(cb => cb.checked = false);
+                updateSelectedCount();
+            });
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBatchExport);
+    } else {
+        initBatchExport();
+    }
+
+    window.executeBatchExcelExport = function(btn) {
+        const selectedCheckboxes = document.querySelectorAll('.batch-template-checkbox:checked');
+        const templateIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+
+        if (templateIds.length === 0) {
+            if (typeof coppAlert === 'function') {
+                coppAlert('Выберите хотя бы один отчет для выгрузки', 'warning');
+            } else {
+                alert('Выберите хотя бы один отчет для выгрузки');
+            }
+            return;
+        }
+
+        const includeTocSwitch = document.getElementById('batchIncludeTocSwitch');
+        const includeToc = includeTocSwitch ? includeTocSwitch.checked : true;
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Подготовка...';
+
+        const csrfToken = '{{ csrf_token() }}';
+
+        fetch('/export_multi_excel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                template_ids: templateIds,
+                include_toc: includeToc
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Ошибка сервера'); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success' && data.task_id) {
+                pollBatchTaskStatus(data.task_id, btn, originalHtml);
+            } else {
+                throw new Error(data.message || 'Ошибка запуска фоновой задачи');
+            }
+        })
+        .catch(err => {
+            if (typeof coppAlert === 'function') {
+                coppAlert(err.message || 'Произошла ошибка при обращении к серверу', 'error');
+            } else {
+                alert(err.message || 'Произошла ошибка при обращении к серверу');
+            }
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
+    };
+
+    function pollBatchTaskStatus(taskId, btn, originalHtml) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Формирование...';
+        
+        fetch(`/task_status/${taskId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'SUCCESS') {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    
+                    const modalEl = document.getElementById('batchExportExcelModal');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                    }
+
+                    if (typeof coppAlert === 'function') {
+                        coppAlert('Единый файл Excel успешно сформирован!', 'success');
+                    }
+
+                    window.location.href = `/task_download/${taskId}`;
+                } else if (data.status === 'FAILED') {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    if (typeof coppAlert === 'function') {
+                        coppAlert('Ошибка формирования файла: ' + (data.message || 'Неизвестная ошибка'), 'error');
+                    } else {
+                        alert('Ошибка формирования файла: ' + (data.message || 'Неизвестная ошибка'));
+                    }
+                } else {
+                    setTimeout(() => pollBatchTaskStatus(taskId, btn, originalHtml), 1000);
+                }
+            })
+            .catch(err => {
+                setTimeout(() => pollBatchTaskStatus(taskId, btn, originalHtml), 1000);
+            });
+    }
+})();
+</script>

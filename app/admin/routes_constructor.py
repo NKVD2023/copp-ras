@@ -74,9 +74,9 @@ def constructor():
             short_name=data.get('short_name'), 
             period=data.get('period'),
             period_data=period_data,
-            deadline=deadline_date,
+            deadline=None, # Чистый шаблон не имеет срока сдачи при создании
             is_published=False,
-            is_template=True, # Теперь сразу создаем как шаблон
+            is_template=True, # Создаем как чистый шаблон
             schema=schema # Сохраняем JSON-структуру листов
         )
         db.session.add(template)

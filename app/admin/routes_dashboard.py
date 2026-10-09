@@ -104,8 +104,8 @@ def dashboard():
         # Сортируем: свежие бэкапы сверху
         backups_list.sort(key=lambda x: x['mtime'], reverse=True)
         
-    # 5. Загружаем последние 500 записей журнала действий
-    logs_list = ActionLog.query.order_by(ActionLog.timestamp.desc()).limit(500).all()
+    # 5. Журнал действий теперь загружается лениво (Lazy Loading) через /admin/logs/api
+    logs_list = []
 
     # 6. Получение уникальных групп (с учетом изоляции руководителя)
     if current_user.role == 'manager' and dept:
@@ -279,19 +279,37 @@ def dashboard():
 @roles_required('admin')
 def clear_logs():
     """
-    Маршрут для полной очистки таблицы `action_logs`.
-    Доступен исключительно администратору (viewer не может удалять логи).
+    Маршрут для очистки таблицы `action_logs`.
+    Поддерживает полную очистку или очистку старых записей (старше 6 мес., 1 года).
+    Доступен исключительно администратору.
     """
     if current_user.role != 'admin':
-        return "Доступ запрещен", 403
+        return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
         
-    ActionLog.query.delete()
+    older_than = request.form.get('older_than', 'all')
+    from datetime import datetime, timedelta
+    
+    if older_than == '180_days':
+        threshold = datetime.utcnow() - timedelta(days=180)
+        deleted = ActionLog.query.filter(ActionLog.timestamp < threshold).delete()
+        msg = f'очистил записи старше 6 месяцев (удалено {deleted} записей)'
+    elif older_than == '365_days':
+        threshold = datetime.utcnow() - timedelta(days=365)
+        deleted = ActionLog.query.filter(ActionLog.timestamp < threshold).delete()
+        msg = f'очистил записи старше 1 года (удалено {deleted} записей)'
+    else:
+        deleted = ActionLog.query.delete()
+        msg = f'полностью очистил журнал действий (удалено {deleted} записей)'
+        
     db.session.commit()
     
     # Сразу после очистки добавим лог о том, кто именно её произвел
     from app.utils import log_action
-    log_action('Очистка логов', f'Администратор {current_user.username} полностью очистил журнал действий')
+    log_action('Очистка логов', f'Администратор {current_user.username} {msg}')
     
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+        return jsonify({'status': 'success', 'message': f'Журнал обновлен: {msg}'})
+        
     return redirect(url_for('admin.dashboard', tab='logsTab'))
 
 @admin_bp.route('/export_statistics', methods=['GET'])

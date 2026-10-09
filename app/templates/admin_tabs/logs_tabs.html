@@ -1,321 +1,610 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h6 class="fw-bold m-0">Журнал действий системы</h6>
-    <div class="d-flex gap-2 align-items-center">
-        <!-- Поиск -->
-        <div class="input-group input-group-sm soft-ui-input log-search-input">
-            <span class="input-group-text border-0 bg-transparent text-secondary ps-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                </svg>
-            </span>
-            <input type="text" id="logsSearch" class="form-control soft-ui-input border-0 ps-1" placeholder="Поиск по журналу...">
-        </div>
-        
-        <!-- Экспорт в Excel -->
-        <button type="button" class="btn btn-outline-success btn-sm px-3 text-nowrap shadow-sm" onclick="exportLogsToCSV()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-spreadsheet mb-1 me-1" viewBox="0 0 16 16">
-              <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h2v2H3zm0 1h2v2H4a1 1 0 0 1-1-1v-1zm3 2v-2h3v2H6zm4 0v-2h3v1a1 1 0 0 1-1 1h-2zm3-3h-3v-2h3v2zm-7 0H6v-2h3v2z"/>
-            </svg>
-            Excel
-        </button>
+<!-- 
+  LOGS_TABS.HTML
+  Журнал действий системы (аудит) с ленивой загрузкой (Lazy Loading),
+  серверной пагинацией, фильтрами и экспортом в Excel (CSV).
+  Оформлен строго по стандартам ЦОПП (.table-registry-card, Bootstrap Icons).
+-->
 
-        <!-- Очистить -->
-        <form action="{{ url_for('admin.clear_logs') }}" method="POST" onsubmit="event.preventDefault(); coppConfirm('Вы уверены, что хотите удалить все логи? Это действие необратимо.', () => { this.submit(); });" class="m-0">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <button type="submit" class="btn btn-outline-danger btn-sm px-3 text-nowrap shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-trash3 mb-1 me-1" viewBox="0 0 16 16">
-                    <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .471-.53Zm5.058 0a.5.5 0 0 1 .471.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/>
-                </svg>
-                Очистить
-            </button>
-        </form>
+<div class="card table-registry-card position-relative">
+    <!-- Верхняя панель: Заголовок + Счётчик + Действия -->
+    <div class="p-4 border-bottom border-light-subtle">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+            <div>
+                <h6 class="fw-bold mb-1 text-dark">Журнал действий системы</h6>
+                <p class="text-muted small mb-0">Аудит активности пользователей, изменений данных и системных событий</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-secondary border px-3 py-2 fw-medium" id="logsCountBadge">
+                    Показано: <strong class="text-dark" id="logsFilteredCount">0</strong> из <span id="logsTotalCount">0</span>
+                </span>
+                
+                <!-- Кнопка обновления логов -->
+                <button type="button" class="btn btn-outline-copp btn-sm shadow-sm d-flex align-items-center gap-1" id="logsRefreshBtn" onclick="loadLogs(logsCurrentPage, true)" title="Обновить журнал">
+                    <i class="bi bi-arrow-clockwise" id="logsRefreshIcon"></i>
+                    <span>Обновить</span>
+                </button>
+
+                <!-- Серверный экспорт в Excel -->
+                <button type="button" class="btn btn-outline-success btn-sm shadow-sm d-flex align-items-center gap-1" id="logsExportBtn" onclick="exportLogs()" title="Экспорт с учетом фильтров в Excel">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                    <span>Excel</span>
+                </button>
+
+                <!-- Очистка логов (меню с безопасными режимами) -->
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-outline-danger btn-sm dropdown-toggle shadow-sm d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Очистка записей">
+                        <i class="bi bi-trash3"></i>
+                        <span>Очистка</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-light-subtle">
+                        <li>
+                            <button class="dropdown-item text-secondary py-2 d-flex align-items-center gap-2" type="button" onclick="confirmClearLogs('180_days')">
+                                <i class="bi bi-clock-history text-muted"></i>
+                                <span>Старше 6 месяцев</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item text-secondary py-2 d-flex align-items-center gap-2" type="button" onclick="confirmClearLogs('365_days')">
+                                <i class="bi bi-calendar-x text-muted"></i>
+                                <span>Старше 1 года</span>
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <button class="dropdown-item text-danger fw-semibold py-2 d-flex align-items-center gap-2" type="button" onclick="confirmClearLogs('all')">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span>Очистить полностью</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Фильтры в один ряд -->
+        <div class="row g-2 align-items-center">
+            <!-- Поиск -->
+            <div class="col-12 col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 text-muted">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="logsSearch" class="form-control bg-light border-start-0 ps-0" placeholder="Поиск по действию, деталям, логину, IP..." autocomplete="off">
+                    <button class="btn btn-light border border-start-0 text-muted d-none" type="button" id="logsClearSearchBtn">
+                        <i class="bi bi-x-lg" style="font-size: 0.75rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Фильтр по роли -->
+            <div class="col-6 col-md-2">
+                <select id="logsRoleFilter" class="form-select form-select-sm bg-light border-light-subtle text-secondary">
+                    <option value="">Все роли</option>
+                    <option value="admin">Администратор</option>
+                    <option value="manager">Руководитель</option>
+                    <option value="user">Пользователь</option>
+                    <option value="system">Система</option>
+                </select>
+            </div>
+
+            <!-- Фильтр по типу действия -->
+            <div class="col-6 col-md-3">
+                <select id="logsActionFilter" class="form-select form-select-sm bg-light border-light-subtle text-secondary">
+                    <option value="">Все действия</option>
+                </select>
+            </div>
+
+            <!-- Фильтр по дате -->
+            <div class="col-10 col-md-2">
+                <select id="logsDateRangeFilter" class="form-select form-select-sm bg-light border-light-subtle text-secondary">
+                    <option value="">За всё время</option>
+                    <option value="today">За сегодня</option>
+                    <option value="week">За 7 дней</option>
+                    <option value="month">За 30 дней</option>
+                </select>
+            </div>
+
+            <!-- Кнопка сброса фильтров -->
+            <div class="col-2 col-md-1 text-end">
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100 d-none" id="logsResetFiltersBtn" title="Сбросить все фильтры">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </div>
+        </div>
     </div>
-</div>
 
-<style>
-/* Основной контейнер таблицы (для прокрутки и скруглений) */
-.table-container {
-    max-height: calc(100vh - 220px); 
-    min-height: 500px;
-    overflow-y: auto;
-}
+    <!-- Таблица журнала -->
+    <div class="table-responsive mb-0" id="logsTableContainer">
+        <table class="table table-hover align-middle mb-0" id="logsTable">
+            <thead class="table-light text-muted small text-uppercase">
+                <tr>
+                    <th class="ps-4 py-3 fw-semibold border-bottom" style="width: 155px;">Дата и время</th>
+                    <th class="py-3 fw-semibold border-bottom" style="width: 210px;">Пользователь</th>
+                    <th class="py-3 fw-semibold border-bottom" style="width: 180px;">Действие</th>
+                    <th class="py-3 fw-semibold border-bottom">Подробности</th>
+                    <th class="pe-4 py-3 fw-semibold border-bottom text-end" style="width: 140px;">IP-адрес</th>
+                </tr>
+            </thead>
+            <tbody id="logsTableBody">
+                <tr id="logsInitialRow">
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2 text-primary" role="status" style="color: #00334e !important;"></div>
+                        <span>Загрузка журнала действий...</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-/* Стилизация скроллбара (делает его тонким и аккуратным, как в macOS) */
-.table-container::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-.table-container::-webkit-scrollbar-track {
-    background: transparent; 
-}
-.table-container::-webkit-scrollbar-thumb {
-    background: #d1d5db; 
-    border-radius: 10px;
-}
-.table-container::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af; 
-}
-
-/* Структура и границы таблицы */
-.modern-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin-bottom: 0;
-}
-.modern-table th, .modern-table td {
-    padding: 0.6rem 1rem !important; /* Удобные средние отступы */
-    border-right: 1px solid #f3f4f6; /* Тонкие вертикальные разделители */
-    border-bottom: 1px solid #f3f4f6 !important; /* Тонкие горизонтальные разделители */
-    vertical-align: middle;
-}
-/* Убираем границу у последнего столбца */
-.modern-table th:last-child, .modern-table td:last-child {
-    border-right: none;
-}
-
-/* Оформление липкой шапки (всегда видна при прокрутке) */
-.modern-table thead {
-    position: sticky; 
-    top: 0; 
-    z-index: 10;
-}
-.modern-table thead th {
-    background-color: #ffffff !important; 
-    border-bottom: 1px solid #e5e7eb !important;
-    font-size: 0.75rem; 
-    font-weight: 500; 
-    color: #6b7280; 
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-}
-
-/* Ховер-эффект для строк (мягкая подсветка при наведении) */
-.modern-table tbody tr {
-    transition: background-color 0.2s ease-in-out;
-}
-.modern-table tbody tr:hover {
-    background-color: #f9fafb;
-}
-</style>
-
-<!-- Обертка таблицы -->
-<div class="card border-0 shadow-sm mt-3 card-table">
-    <!-- Контейнер с прокруткой -->
-    <div class="card-body p-0">
-        <div class="table-container">
-            <table class="table modern-table" id="logsTable">
-                <thead>
-                    <tr>
-                        <th class="sortable th-sortable th-w-12" data-col="0" >
-                            Дата и время <span class="sort-icon text-copp ms-1"></span>
-                        </th>
-                        <th class="sortable th-sortable th-w-20" data-col="1" >
-                            Пользователь <span class="sort-icon text-copp ms-1"></span>
-                        </th>
-                        <th class="sortable th-sortable th-w-15" data-col="2" >
-                            Действие <span class="sort-icon text-copp ms-1"></span>
-                        </th>
-                        <th class="sortable th-sortable th-w-40" data-col="3" >
-                            Подробности <span class="sort-icon text-copp ms-1"></span>
-                        </th>
-                        <th class="sortable th-sortable th-w-13" data-col="4" >
-                            IP-адрес <span class="sort-icon text-copp ms-1"></span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs_list %}
-                    <tr class="log-row">
-                        <!-- Дата -->
-                        <td class="log-table-date" data-sort-value="{{ (log.timestamp|msk_time).strftime('%Y-%m-%d %H:%M:%S') }}">
-                            {{ (log.timestamp|msk_time).strftime('%d.%m.%Y %H:%M') }}
-                        </td>
-                        
-                        <!-- Пользователь -->
-                        <td>
-                            {% if log.user %}
-                                <div class="d-flex flex-column align-items-start gap-1">
-                                    {% if log.user.role == 'admin' %}
-                                        <span class="badge rounded-pill fw-bold badge-role badge-role-admin">АДМИН</span>
-                                    {% elif log.user.role == 'manager' %}
-                                        <span class="badge rounded-pill fw-bold badge-role badge-role-manager">РЕДАКТОР</span>
-                                    {% else %}
-                                        <span class="badge rounded-pill fw-bold badge-role badge-role-user">ПОЛЬЗОВАТЕЛЬ</span>
-                                    {% endif %}
-                                    <div class="log-table-user">{{ log.user.username }}</div>
-                                    <div class="log-table-sub">
-                                        {% if log.user.description and log.user.description != 'None' %}{{ log.user.description }}{% endif %}
-                                    </div>
-                                </div>
-                            {% else %}
-                                <div class="d-flex flex-column align-items-start gap-1">
-                                    <span class="badge rounded-pill fw-bold badge-role badge-role-admin">АДМИН</span>
-                                    <div class="log-table-user">Система</div>
-                                    <div class="log-table-sub">Фоновые задачи</div>
-                                </div>
-                            {% endif %}
-                        </td>
-                        
-                        <!-- Действие -->
-                        <td class="log-table-action">
-                            <span class="dot-separator me-2">●</span>{{ log.action }}
-                        </td>
-                        
-                        <!-- Подробности -->
-                        <td class="log-table-detail">
-                            {{ log.details }}
-                        </td>
-
-                        <!-- IP-адрес -->
-                        <td class="log-table-ip">
-                            {{ log.ip_address or '' }}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr class="no-logs-row">
-                        <td colspan="5" class="log-table-empty">Журнал действий пуст.</td>
-                    </tr>
-                    {% endfor %}
-                    <tr id="noResultsRow" class="d-none">
-                        <td colspan="5" class="log-table-empty">По вашему запросу ничего не найдено.</td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- Подвал карточки: Пагинация и выбор количества строк -->
+    <div class="p-3 border-top border-light-subtle bg-light d-flex flex-wrap justify-content-between align-items-center gap-3" id="logsPaginationBar">
+        <div class="d-flex align-items-center gap-2 text-muted small">
+            <span>Строк на странице:</span>
+            <select id="logsPerPageSelect" class="form-select form-select-sm bg-white border-light-subtle w-auto text-secondary" onchange="changeLogsPerPage(this.value)">
+                <option value="25">25</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+            </select>
+            <span class="ms-2" id="logsPageRangeText">Показано 0–0</span>
         </div>
-        
-        <!-- Футер таблицы -->
-        <div class="d-flex justify-content-between align-items-center log-card-footer">
-            <div style="font-size: 0.85rem; color: #6b7280;">Всего записей: {{ logs_list|length }}</div>
-        </div>
+
+        <nav aria-label="Навигация по журналу">
+            <ul class="pagination pagination-sm mb-0" id="logsPaginationNav">
+                <!-- Кнопки пагинации генерируются через JS -->
+            </ul>
+        </nav>
     </div>
 </div>
 
 <script>
-    // --- Поиск по логам ---
-    const searchInput = document.getElementById('logsSearch');
-    const logsRows = document.querySelectorAll('.log-row');
-    const noResultsRow = document.getElementById('noResultsRow');
+    // ── Глобальное состояние модуля логов ─────────────────────────────────────────
+    let logsCurrentPage = 1;
+    let logsPerPage = 50;
+    let logsTotalPages = 1;
+    let logsTotalCount = 0;
+    let logsSearchTimer = null;
+    let logsLoadedOnce = false;
+    let logsActionsLoaded = false;
+    const csrfToken = '{{ csrf_token() }}';
 
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase();
-            let visibleCount = 0;
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
 
-            logsRows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                if (text.includes(query)) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+    // ── Загрузка логов с сервера (Lazy Loading & Pagination) ─────────────────────
+    function loadLogs(page = 1, forceRefresh = false) {
+        logsCurrentPage = page;
+        const tbody = document.getElementById('logsTableBody');
+        const refreshIcon = document.getElementById('logsRefreshIcon');
 
-            if (visibleCount === 0 && logsRows.length > 0) {
-                noResultsRow.style.display = '';
-            } else {
-                noResultsRow.style.display = 'none';
+        if (refreshIcon) {
+            refreshIcon.classList.add('spin-animation');
+        }
+
+        // Показываем индикатор загрузки, если нужно
+        if (!logsLoadedOnce || forceRefresh) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status" style="color: #00334e;"></div>
+                        <span>Загрузка данных журнала...</span>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Собираем параметры фильтров
+        const search = document.getElementById('logsSearch')?.value.trim() || '';
+        const role = document.getElementById('logsRoleFilter')?.value || '';
+        const action = document.getElementById('logsActionFilter')?.value || '';
+        const dateRange = document.getElementById('logsDateRangeFilter')?.value || '';
+
+        // Проверяем, активны ли фильтры для показа кнопки "Сбросить"
+        updateResetButtonState(search, role, action, dateRange);
+
+        const params = new URLSearchParams({
+            page: logsCurrentPage,
+            per_page: logsPerPage,
+            search: search,
+            role: role,
+            action: action,
+            date_range: dateRange
+        });
+
+        fetch(`/admin/logs/api?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
-        });
-    }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка сети при загрузке журнала');
+            }
+            return response.json();
+        })
+        .then(data => {
+            logsLoadedOnce = true;
+            if (refreshIcon) refreshIcon.classList.remove('spin-animation');
 
-    // --- Сортировка столбцов ---
-    const logsTable = document.getElementById('logsTable');
-    if (logsTable) {
-        const headers = logsTable.querySelectorAll('th.sortable');
-        let sortCol = -1;
-        let sortAsc = true;
-
-        headers.forEach(header => {
-            header.addEventListener('click', () => {
-                const col = parseInt(header.getAttribute('data-col'));
+            if (data.status === 'success') {
+                renderLogsTable(data.items);
+                renderPagination(data.pagination);
                 
-                // Переключаем направление или ставим ASC для нового столбца
-                if (sortCol === col) {
-                    sortAsc = !sortAsc;
-                } else {
-                    sortCol = col;
-                    sortAsc = true;
+                // Заполняем выпадающий список действий при первой успешной загрузке
+                if (!logsActionsLoaded && data.unique_actions) {
+                    populateActionsFilter(data.unique_actions);
+                    logsActionsLoaded = true;
                 }
-                
-                // Обновляем иконки
-                headers.forEach(h => h.querySelector('.sort-icon').innerHTML = '');
-                header.querySelector('.sort-icon').innerHTML = sortAsc ? '↑' : '↓';
-
-                const tbody = logsTable.querySelector('tbody');
-                const rowsArray = Array.from(logsRows);
-
-                rowsArray.sort((a, b) => {
-                    const aCell = a.cells[col];
-                    const bCell = b.cells[col];
-                    
-                    // Если есть атрибут data-sort-value (например для дат), используем его
-                    let aVal = aCell.hasAttribute('data-sort-value') ? aCell.getAttribute('data-sort-value') : aCell.innerText.trim();
-                    let bVal = bCell.hasAttribute('data-sort-value') ? bCell.getAttribute('data-sort-value') : bCell.innerText.trim();
-
-                    if (aVal < bVal) return sortAsc ? -1 : 1;
-                    if (aVal > bVal) return sortAsc ? 1 : -1;
-                    return 0;
-                });
-
-                // Перестраиваем таблицу
-                rowsArray.forEach(row => tbody.appendChild(row));
-                
-                // Сообщения об отсутствии данных ставим в конец
-                if (noResultsRow) tbody.appendChild(noResultsRow);
-                const noLogs = document.querySelector('.no-logs-row');
-                if (noLogs) tbody.appendChild(noLogs);
-            });
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-danger">
+                            <i class="bi bi-exclamation-circle me-1"></i> Не удалось загрузить журнал: ${escapeHtml(data.message || 'Ошибка')}
+                        </td>
+                    </tr>
+                `;
+            }
+        })
+        .catch(err => {
+            if (refreshIcon) refreshIcon.classList.remove('spin-animation');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Ошибка соединения с сервером при получении записей.
+                    </td>
+                </tr>
+            `;
+            console.error('Logs fetch error:', err);
         });
     }
 
-    // --- Экспорт в Excel (CSV UTF-8) ---
-    function exportLogsToCSV() {
-        if (logsRows.length === 0) {
-            coppAlert('Нет данных для экспорта', 'warning');
+    // ── Отрисовка строк таблицы ──────────────────────────────────────────────────
+    function renderLogsTable(items) {
+        const tbody = document.getElementById('logsTableBody');
+        if (!items || items.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="bi bi-journal-x fs-3 d-block mb-2 text-secondary"></i>
+                        <span>Записей в журнале не найдено. Попробуйте изменить параметры поиска или фильтров.</span>
+                    </td>
+                </tr>
+            `;
             return;
         }
 
-        // Добавляем BOM (Byte Order Mark), чтобы Excel правильно открыл русские символы (UTF-8)
-        let csvContent = '\uFEFF'; 
-        
-        // Заголовки таблицы (разделитель точка с запятой для Excel)
-        csvContent += 'Дата и время;Пользователь;Действие;Подробности\n';
+        let html = '';
+        items.forEach(log => {
+            // Формирование бейджа роли
+            let roleBadge = '';
+            const uRole = log.user?.role || 'system';
+            if (uRole === 'admin') {
+                roleBadge = `<span class="badge rounded-pill fw-bold badge-role badge-role-admin">АДМИН</span>`;
+            } else if (uRole === 'manager') {
+                roleBadge = `<span class="badge rounded-pill fw-bold badge-role badge-role-manager">РЕДАКТОР</span>`;
+            } else if (uRole === 'user') {
+                roleBadge = `<span class="badge rounded-pill fw-bold badge-role badge-role-user">ПОЛЬЗОВАТЕЛЬ</span>`;
+            } else {
+                roleBadge = `<span class="badge rounded-pill fw-bold bg-light text-secondary border">СИСТЕМА</span>`;
+            }
 
-        // Данные (только те, которые не скрыты поиском)
-        logsRows.forEach(row => {
-            if (row.style.display !== 'none') {
-                const cells = row.cells;
-                const rowData = [
-                    cells[0].innerText.trim(),
-                    cells[1].innerText.trim().replace(/\n/g, ' '), // Убираем переносы между бейджем и никнеймом
-                    cells[2].innerText.trim(),
-                    cells[3].innerText.trim().replace(/"/g, '""')  // Экранируем кавычки
-                ];
-                
-                // Если внутри текста есть точка с запятой, кавычка или перенос строки - оборачиваем в кавычки
-                const formattedRowData = rowData.map(item => {
-                    if (item.includes(';') || item.includes('"') || item.includes('\n')) {
-                        return `"${item}"`;
-                    }
-                    return item;
-                });
+            const username = escapeHtml(log.user?.username || 'Система');
+            const userDesc = log.user?.description ? `<div class="small text-muted text-truncate" style="max-width: 190px;" title="${escapeHtml(log.user.description)}">${escapeHtml(log.user.description)}</div>` : '';
+            const actionText = escapeHtml(log.action || '');
+            const detailsText = escapeHtml(log.details || '');
+            const ipText = escapeHtml(log.ip_address || '—');
 
-                csvContent += formattedRowData.join(';') + '\n';
+            html += `
+                <tr>
+                    <td class="ps-4 py-3 text-nowrap font-monospace small text-secondary">
+                        ${escapeHtml(log.timestamp_formatted)}
+                    </td>
+                    <td class="py-3">
+                        <div class="d-flex flex-column align-items-start gap-1">
+                            ${roleBadge}
+                            <div class="fw-semibold text-dark small">${username}</div>
+                            ${userDesc}
+                        </div>
+                    </td>
+                    <td class="py-3">
+                        <span class="d-inline-flex align-items-center gap-1 fw-medium text-dark small">
+                            <span class="d-inline-block rounded-circle" style="width: 6px; height: 6px; background-color: #00334e;"></span>
+                            ${actionText}
+                        </span>
+                    </td>
+                    <td class="py-3 text-secondary small" style="word-break: break-word;">
+                        ${detailsText}
+                    </td>
+                    <td class="pe-4 py-3 text-end font-monospace small text-muted">
+                        ${ipText}
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    // ── Отрисовка пагинации ──────────────────────────────────────────────────────
+    function renderPagination(pg) {
+        logsTotalPages = pg.total_pages || 1;
+        logsTotalCount = pg.total_items || 0;
+
+        // Обновляем счётчик в шапке
+        const filteredCountEl = document.getElementById('logsFilteredCount');
+        const totalCountEl = document.getElementById('logsTotalCount');
+        if (filteredCountEl) filteredCountEl.textContent = pg.total_items.toLocaleString('ru-RU');
+        if (totalCountEl) totalCountEl.textContent = pg.total_items.toLocaleString('ru-RU');
+
+        // Диапазон строк в подвале
+        const rangeTextEl = document.getElementById('logsPageRangeText');
+        if (rangeTextEl) {
+            if (pg.total_items === 0) {
+                rangeTextEl.textContent = 'Показано 0–0';
+            } else {
+                const start = (pg.page - 1) * pg.per_page + 1;
+                const end = Math.min(pg.page * pg.per_page, pg.total_items);
+                rangeTextEl.textContent = `Показано ${start.toLocaleString('ru-RU')}–${end.toLocaleString('ru-RU')} из ${pg.total_items.toLocaleString('ru-RU')}`;
+            }
+        }
+
+        const nav = document.getElementById('logsPaginationNav');
+        if (!nav) return;
+
+        if (logsTotalPages <= 1) {
+            nav.innerHTML = '';
+            return;
+        }
+
+        let navHtml = '';
+
+        // Кнопка "Назад"
+        navHtml += `
+            <li class="page-item ${!pg.has_prev ? 'disabled' : ''}">
+                <button class="page-link" type="button" onclick="loadLogs(${pg.page - 1})" aria-label="Предыдущая" ${!pg.has_prev ? 'tabindex="-1"' : ''}>
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+            </li>
+        `;
+
+        // Номера страниц (с вычислением диапазона вокруг текущей)
+        const cur = pg.page;
+        const total = pg.total_pages;
+        let startPage = Math.max(1, cur - 2);
+        let endPage = Math.min(total, cur + 2);
+
+        if (cur <= 3) {
+            endPage = Math.min(total, 5);
+        } else if (cur >= total - 2) {
+            startPage = Math.max(1, total - 4);
+        }
+
+        if (startPage > 1) {
+            navHtml += `<li class="page-item"><button class="page-link" type="button" onclick="loadLogs(1)">1</button></li>`;
+            if (startPage > 2) {
+                navHtml += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+            }
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            if (p === cur) {
+                navHtml += `<li class="page-item active" aria-current="page"><span class="page-link" style="background-color: #00334e; border-color: #00334e;">${p}</span></li>`;
+            } else {
+                navHtml += `<li class="page-item"><button class="page-link" type="button" onclick="loadLogs(${p})">${p}</button></li>`;
+            }
+        }
+
+        if (endPage < total) {
+            if (endPage < total - 1) {
+                navHtml += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+            }
+            navHtml += `<li class="page-item"><button class="page-link" type="button" onclick="loadLogs(${total})">${total}</button></li>`;
+        }
+
+        // Кнопка "Вперед"
+        navHtml += `
+            <li class="page-item ${!pg.has_next ? 'disabled' : ''}">
+                <button class="page-link" type="button" onclick="loadLogs(${pg.page + 1})" aria-label="Следующая" ${!pg.has_next ? 'tabindex="-1"' : ''}>
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </li>
+        `;
+
+        nav.innerHTML = navHtml;
+    }
+
+    // ── Заполнение выпадающего списка действий ──────────────────────────────────
+    function populateActionsFilter(actions) {
+        const select = document.getElementById('logsActionFilter');
+        if (!select || !Array.isArray(actions)) return;
+
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Все действия</option>';
+        actions.forEach(act => {
+            const opt = document.createElement('option');
+            opt.value = act;
+            opt.textContent = act;
+            if (act === currentVal) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    // ── Смена количества строк на странице ──────────────────────────────────────
+    function changeLogsPerPage(val) {
+        logsPerPage = parseInt(val) || 50;
+        loadLogs(1, true);
+    }
+
+    // ── Экспорт в Excel (CSV с текущими фильтрами) ───────────────────────────────
+    function exportLogs() {
+        const search = document.getElementById('logsSearch')?.value.trim() || '';
+        const role = document.getElementById('logsRoleFilter')?.value || '';
+        const action = document.getElementById('logsActionFilter')?.value || '';
+        const dateRange = document.getElementById('logsDateRangeFilter')?.value || '';
+
+        const params = new URLSearchParams({
+            search: search,
+            role: role,
+            action: action,
+            date_range: dateRange
+        });
+
+        window.location.href = `/admin/logs/export?${params.toString()}`;
+    }
+
+    // ── Очистка журнала действий ────────────────────────────────────────────────
+    function confirmClearLogs(olderThan) {
+        let confirmText = '';
+        if (olderThan === '180_days') {
+            confirmText = 'Удалить все записи журнала <strong>старше 6 месяцев</strong>? Свежие записи сохранятся.';
+        } else if (olderThan === '365_days') {
+            confirmText = 'Удалить все записи журнала <strong>старше 1 года</strong>? Свежие записи сохранятся.';
+        } else {
+            confirmText = 'Вы уверены, что хотите <strong>полностью очистить весь журнал</strong>? Все архивные записи будут удалены безвозвратно.';
+        }
+
+        if (typeof window.coppConfirm === 'function') {
+            window.coppConfirm(confirmText, () => {
+                executeClearLogs(olderThan);
+            }, 'Подтверждение очистки');
+        } else if (confirm('Подтвердите удаление записей журнала')) {
+            executeClearLogs(olderThan);
+        }
+    }
+
+    function executeClearLogs(olderThan) {
+        const formData = new FormData();
+        formData.append('older_than', olderThan);
+        formData.append('csrf_token', csrfToken);
+
+        fetch('/admin/clear_logs', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (typeof coppAlert === 'function') {
+                    coppAlert(data.message, 'success');
+                }
+                loadLogs(1, true);
+            } else {
+                if (typeof coppAlert === 'function') {
+                    coppAlert(data.message || 'Ошибка при очистке', 'error');
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Clear logs error:', err);
+            // Если сервер ответил редиректом вместо JSON
+            loadLogs(1, true);
+        });
+    }
+
+    // ── Управление состоянием кнопки сброса ──────────────────────────────────────
+    function updateResetButtonState(search, role, action, dateRange) {
+        const resetBtn = document.getElementById('logsResetFiltersBtn');
+        const clearSearchBtn = document.getElementById('logsClearSearchBtn');
+        const hasFilters = Boolean(search || role || action || dateRange);
+
+        if (resetBtn) {
+            resetBtn.classList.toggle('d-none', !hasFilters);
+        }
+        if (clearSearchBtn) {
+            clearSearchBtn.classList.toggle('d-none', !search);
+        }
+    }
+
+    function resetAllLogsFilters() {
+        const searchInput = document.getElementById('logsSearch');
+        const roleFilter = document.getElementById('logsRoleFilter');
+        const actionFilter = document.getElementById('logsActionFilter');
+        const dateRangeFilter = document.getElementById('logsDateRangeFilter');
+
+        if (searchInput) searchInput.value = '';
+        if (roleFilter) roleFilter.value = '';
+        if (actionFilter) actionFilter.value = '';
+        if (dateRangeFilter) dateRangeFilter.value = '';
+
+        loadLogs(1, true);
+    }
+
+    // ── Инициализация слушателей событий ─────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+        // Поиск с дебаунсом (300 мс)
+        const searchInput = document.getElementById('logsSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(logsSearchTimer);
+                logsSearchTimer = setTimeout(() => {
+                    loadLogs(1, false);
+                }, 300);
+            });
+        }
+
+        // Кнопка очистки строки поиска
+        const clearSearchBtn = document.getElementById('logsClearSearchBtn');
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', function() {
+                if (searchInput) {
+                    searchInput.value = '';
+                    loadLogs(1, false);
+                }
+            });
+        }
+
+        // Селекторы фильтров
+        ['logsRoleFilter', 'logsActionFilter', 'logsDateRangeFilter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => loadLogs(1, false));
             }
         });
 
-        // Формируем файл и скачиваем
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const dateStr = new Date().toISOString().slice(0, 10);
-        a.download = `copp_logs_export_${dateStr}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
+        // Кнопка сброса фильтров
+        const resetBtn = document.getElementById('logsResetFiltersBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', resetAllLogsFilters);
+        }
+
+        // ── Ленивая загрузка при клике на вкладку ──────────────────────────────────
+        const logsTabBtn = document.querySelector('button[data-bs-target="#logsTab"], a[data-bs-target="#logsTab"]');
+        if (logsTabBtn) {
+            logsTabBtn.addEventListener('shown.bs.tab', function() {
+                if (!logsLoadedOnce) {
+                    loadLogs(1, false);
+                }
+            });
+        }
+
+        // Если страница сразу открыта на вкладке логов (например, ?tab=logsTab)
+        const logsTabPane = document.getElementById('logsTab');
+        if (logsTabPane && logsTabPane.classList.contains('active')) {
+            loadLogs(1, false);
+        }
+    });
 </script>
+
+<style>
+    /* Анимация вращения иконки обновления */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .spin-animation {
+        display: inline-block;
+        animation: spin 0.8s linear infinite;
+    }
+</style>

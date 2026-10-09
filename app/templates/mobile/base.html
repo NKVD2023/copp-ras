@@ -159,7 +159,20 @@
                 }
             });
         };
-        document.addEventListener('DOMContentLoaded', () => window.initTomSelects());
+        document.addEventListener('DOMContentLoaded', () => {
+            window.initTomSelects();
+
+            // Защита от случайного изменения чисел при скролле страницы колесиком мыши
+            document.addEventListener('wheel', (event) => {
+                const active = document.activeElement;
+                if (active && active.tagName === 'INPUT' && active.type === 'number') {
+                    active.blur();
+                }
+                if (event.target && event.target.tagName === 'INPUT' && event.target.type === 'number') {
+                    event.target.blur();
+                }
+            }, { passive: true });
+        });
     </script>
     {% block scripts %}{% endblock %}
 </body>

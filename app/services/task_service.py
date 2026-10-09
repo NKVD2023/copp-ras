@@ -69,3 +69,64 @@ class TaskService:
         thread.start()
         
         return task_id
+
+    @staticmethod
+    def _generate_multi_excel_thread(task_id, template_ids, include_toc, app, save_dir):
+        with app.app_context():
+            task = BackgroundTask.query.get(task_id)
+            if not task:
+                return
+
+            try:
+                templates_data = []
+                for template_id in template_ids:
+                    template = ReportTemplate.query.get(template_id)
+                    if not template:
+                        continue
+                    submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
+                    templates_data.append((template, submissions))
+
+                if not templates_data:
+                    raise ValueError("Не найдено отчетов для выгрузки")
+
+                output, filename = ExcelService.export_multi_reports(templates_data, include_toc=include_toc)
+
+                os.makedirs(save_dir, exist_ok=True)
+                unique_filename = f"{task_id}_{filename}"
+                filepath = os.path.join(save_dir, unique_filename)
+
+                with open(filepath, 'wb') as f:
+                    f.write(output.read())
+
+                task.status = 'SUCCESS'
+                task.result_path = filepath
+
+            except Exception as e:
+                task.status = 'FAILED'
+                task.error_message = str(e)
+
+            db.session.commit()
+
+    @staticmethod
+    def start_multi_excel_generation(template_ids, current_user_id, include_toc=True):
+        task_id = str(uuid.uuid4())
+        count = len(template_ids)
+        task = BackgroundTask(
+            id=task_id,
+            name=f"Пакетная выгрузка: {count} отчетов"[:128],
+            user_id=current_user_id
+        )
+        db.session.add(task)
+        db.session.commit()
+
+        from flask import current_app
+        app = current_app._get_current_object()
+        save_dir = os.path.join(app.root_path, 'static', 'uploads', 'tasks')
+
+        thread = threading.Thread(
+            target=TaskService._generate_multi_excel_thread,
+            args=(task_id, template_ids, include_toc, app, save_dir)
+        )
+        thread.start()
+
+        return task_id

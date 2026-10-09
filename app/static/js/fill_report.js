@@ -30,6 +30,17 @@
             new bootstrap.Tooltip(el, { trigger: 'hover' });
         });
 
+        // Защита от случайного изменения чисел при скролле страницы колесиком мыши
+        document.addEventListener('wheel', (event) => {
+            const active = document.activeElement;
+            if (active && active.tagName === 'INPUT' && active.type === 'number') {
+                active.blur();
+            }
+            if (event.target && event.target.tagName === 'INPUT' && event.target.type === 'number') {
+                event.target.blur();
+            }
+        }, { passive: true });
+
         document.querySelectorAll('button[data-bs-toggle="tab"]').forEach((tab, index) => {
             tab.addEventListener('shown.bs.tab', () => {
                 if (window.updateWizardButtons) window.updateWizardButtons(index);

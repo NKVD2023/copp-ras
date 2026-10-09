@@ -46,8 +46,11 @@
             </div>
             
             <div class="col-12">
-                <label class="form-label small fw-bold text-dark">Срок сдачи</label>
-                <input type="date" id="templateDeadline" class="form-control bg-light w-auto" value="{{ template.deadline.strftime('%Y-%m-%d') if template and template.deadline else '' }}">
+                <div class="alert alert-light border small text-muted py-2 px-3 d-flex align-items-center gap-2 mb-0">
+                    <i class="bi bi-info-circle text-copp"></i>
+                    <span>Срок сдачи (дедлайн) устанавливается при запуске сбора отчета на вкладке «Шаблоны».</span>
+                </div>
+                <input type="hidden" id="templateDeadline" value="">
             </div>
         </div>
 
@@ -180,8 +183,13 @@
 
     function toggleDictionarySelect(sIdx, typeValue) {
         const dictWrapper = document.getElementById(`dict-wrapper-${sIdx}`);
+        const multWrapper = document.getElementById(`mult-wrapper-${sIdx}`);
         if (dictWrapper) {
             dictWrapper.style.display = (typeValue === 'select') ? 'block' : 'none';
+            dictWrapper.classList.remove('d-none'); // in case it had d-none
+        }
+        if (multWrapper) {
+            multWrapper.style.display = (typeValue === 'select') ? 'none' : 'block';
         }
     }
     let reportStructure = [];
@@ -353,6 +361,7 @@
         const labelInput = document.getElementById(`label-${sIdx}`);
         const typeInput = document.getElementById(`type-${sIdx}`);
         const reqInput = document.getElementById(`req-${sIdx}`);
+        const multInput = document.getElementById(`mult-${sIdx}`);
         const hintInput = document.getElementById(`hint-${sIdx}`);
         const groupInput = document.getElementById(`groupMode-${sIdx}`);
         
@@ -383,6 +392,7 @@
         if (!isGroup) {
             newField.type = typeInput.value;
             newField.required = reqInput.checked;
+            newField.is_multiple = multInput ? multInput.checked : false;
             newField.hint = hintInput.value.trim();
             
             if (typeInput.value === 'select') {
@@ -405,6 +415,8 @@
         
         labelInput.value = '';
         if (hintInput) hintInput.value = '';
+        if (reqInput) reqInput.checked = false;
+        if (multInput) multInput.checked = false;
         // Скрываем обёртку блока выбора шаблона (а не сам select напрямую)
         toggleDictionarySelect(sIdx, 'number');
         typeInput.value = 'number'; // reset to default
@@ -682,13 +694,17 @@
                                     <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>`;
                             } else {
-                                let extraCheckbox = '';
+                                let extraCheckbox = `
+                                <div class="form-check mb-0 border-start ps-3" style="display: ${f.type === 'group' ? 'none' : 'block'}">
+                                    <input class="form-check-input" type="checkbox" id="mult-${sIdx}-${fIdx}" ${f.is_multiple ? 'checked' : ''} onchange="updateFieldMultiple(${sIdx}, ${fIdx}, this.checked)">
+                                    <label class="form-check-label small text-dark" for="mult-${sIdx}-${fIdx}">Множественное</label>
+                                </div>`;
                                 
                                 controlsHtml = `<select class="form-select form-select-sm text-muted w-140" onchange="updateFieldType(${sIdx}, ${fIdx}, this.value)">
                                     <option value="number" ${f.type === 'number' || f.type === 'Числовое' ? 'selected' : ''}>Числовое</option>
                                     <option value="text" ${f.type === 'text' || f.type === 'Текстовое' ? 'selected' : ''}>Текстовое</option>
                                 </select>
-                                <div class="form-check mb-0 ms-2 d-none" ${f.type === 'group' ? '' : ''}>
+                                <div class="form-check mb-0 ms-2" style="display: ${f.type === 'group' ? 'none' : 'block'}">
                                     <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
@@ -759,6 +775,10 @@
                                 <div class="form-check mb-0">
                                     <input class="form-check-input" type="checkbox" id="req-${sIdx}">
                                     <label class="form-check-label small text-dark" for="req-${sIdx}">Обязательно</label>
+                                </div>
+                                <div class="form-check mb-0 border-start ps-3" id="mult-wrapper-${sIdx}">
+                                    <input class="form-check-input" type="checkbox" id="mult-${sIdx}">
+                                    <label class="form-check-label small text-dark" for="mult-${sIdx}">Множественное</label>
                                 </div>
                             </div>
                             
