@@ -227,7 +227,7 @@
                                                 {% for t in templates %}
                                                 <div class="col-md-6">
                                                     <div class="form-check">
-                                                        <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="template_ids" value="{{ t.id }}" {% if t in user.assigned_templates %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
+                                                        <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="template_ids" value="{{ t.id }}" {% if (user_assigned_pairs is defined and (user.id, t.id) in user_assigned_pairs) or (user_assigned_pairs is not defined and t in user.assigned_templates) %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
                                                         <label class="form-check-label small" for="access-{{ user.id }}-{{ t.id }}">{{ t.short_name }}</label>
                                                     </div>
                                                 </div>

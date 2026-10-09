@@ -30,8 +30,9 @@
                 <td>{{ (f.upload_date|msk_time).strftime('%d.%m.%Y %H:%M') if f.upload_date else '' }}</td>
                 <td>{{ f.uploader.username if f.uploader else 'Неизвестно' }}</td>
                 <td>
-                    {% if f.reports.count() > 0 %}
-                    <span class="badge bg-info">{{ f.reports.count() }}</span>
+                    {% set rep_count = file_report_counts.get(f.id, 0) if file_report_counts is defined else f.reports.count() %}
+                    {% if rep_count > 0 %}
+                    <span class="badge bg-info">{{ rep_count }}</span>
                     {% else %}
                     <span class="badge bg-secondary">0</span>
                     {% endif %}
@@ -42,7 +43,7 @@
                         <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
                     </a>
                     
-                    {% if f.reports.count() == 0 %}
+                    {% if rep_count == 0 %}
                     <form action="{{ url_for('admin.delete_file', file_id=f.id) }}" method="POST" class="d-inline" onsubmit="event.preventDefault(); coppConfirm('Вы уверены, что хотите удалить этот файл?', () => { this.submit(); });">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">

@@ -6,36 +6,80 @@ from flask import render_template, send_file
 from flask_login import login_required
 from app.admin import admin_bp
 from app.auth.decorators import roles_required
-from app.models.user import User
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+from app.models.user import User, user_template_access
 from app.models.logs import ActionLog
-from app.models.report import ReportSubmission
+from app.models.report import ReportSubmission, ReportTemplate
 from app.extensions import db
 
 def get_stats_data_and_filters():
-    """Сбор статистики по активности подотчетных пользователей (только role == 'user')."""
-    users = User.query.filter_by(role='user').all()
+    """Сбор статистики по активности подотчетных пользователей (только role == 'user').
+    Оптимизированная батчевая выборка (устранена проблема 400+ N+1 запросов к БД).
+    """
+    users = User.query.filter_by(role='user').options(joinedload(User.department)).all()
+    if not users:
+        return [], [], []
+
+    user_ids = [u.id for u in users]
+
+    # 1. Последний вход по всем пользователям за 1 запрос
+    last_logins = dict(
+        db.session.query(
+            ActionLog.user_id,
+            func.max(ActionLog.timestamp)
+        ).filter(ActionLog.user_id.in_(user_ids), ActionLog.action == 'Вход в систему')
+         .group_by(ActionLog.user_id).all()
+    )
+
+    # 2. Назначенные опубликованные шаблоны по всем пользователям за 1 запрос
+    user_assigned_published = db.session.query(
+        user_template_access.c.user_id,
+        user_template_access.c.template_id
+    ).join(ReportTemplate, user_template_access.c.template_id == ReportTemplate.id)\
+     .filter(
+         user_template_access.c.user_id.in_(user_ids),
+         ReportTemplate.is_published == True,
+         ReportTemplate.is_archived == False
+     ).all()
+
+    assigned_map = {}
+    for u_id, t_id in user_assigned_published:
+        assigned_map.setdefault(u_id, set()).add(t_id)
+
+    # 3. Все сданные отчеты по пользователям за 1 запрос
+    user_submissions = db.session.query(
+        ReportSubmission.user_id,
+        ReportSubmission.template_id,
+        ReportSubmission.is_revision
+    ).filter(ReportSubmission.user_id.in_(user_ids)).all()
+
+    submitted_clean_map = {}  # u_id -> set of template_ids
+    has_revisions_map = {}    # u_id -> bool
+    submitted_count_map = {}  # u_id -> count of non-revision submissions
+
+    for u_id, t_id, is_rev in user_submissions:
+        if not is_rev:
+            submitted_clean_map.setdefault(u_id, set()).add(t_id)
+            submitted_count_map[u_id] = submitted_count_map.get(u_id, 0) + 1
+        else:
+            has_revisions_map[u_id] = True
+
     stats = []
-
     for user in users:
-        # Last login
-        last_login_log = ActionLog.query.filter_by(user_id=user.id, action='Вход в систему').order_by(ActionLog.timestamp.desc()).first()
-        last_login = last_login_log.timestamp if last_login_log else None
+        last_login = last_logins.get(user.id)
 
-        # Assigned published templates count
-        assigned_templates = [t for t in user.assigned_templates if t.is_published and not getattr(t, 'is_archived', False)]
-        assigned_templates_count = len(assigned_templates)
-        assigned_template_ids = {t.id for t in assigned_templates}
+        user_assigned_ids = assigned_map.get(user.id, set())
+        assigned_templates_count = len(user_assigned_ids)
 
-        # Submitted reports count (только принятые, не на доработке)
-        submitted_reports_count = ReportSubmission.query.filter_by(user_id=user.id, is_revision=False).count()
-        has_revisions = ReportSubmission.query.filter_by(user_id=user.id, is_revision=True).count() > 0
+        user_clean_sub_ids = submitted_clean_map.get(user.id, set())
+        submitted_reports_count = submitted_count_map.get(user.id, 0)
+        has_revisions = has_revisions_map.get(user.id, False)
 
-        # Distinct submitted assigned templates
-        dist_assigned_submitted = db.session.query(ReportSubmission.template_id)\
-            .filter(ReportSubmission.user_id == user.id, ReportSubmission.is_revision == False, ReportSubmission.template_id.in_(assigned_template_ids))\
-            .distinct().count() if assigned_template_ids else 0
+        # Пересечение: сданные шаблоны из числа назначенных
+        dist_assigned_submitted = len(user_clean_sub_ids & user_assigned_ids)
 
-        # Completion rate
+        # Расчет процента сдачи
         completion_rate = 0.0
         if assigned_templates_count > 0:
             if dist_assigned_submitted > 0:
@@ -56,7 +100,7 @@ def get_stats_data_and_filters():
             status = 'В процессе'
         else:
             status = 'Отчеты не сданы'
-            
+
         stats.append({
             'username': user.username,
             'description': user.description or '',

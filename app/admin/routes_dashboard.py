@@ -12,6 +12,10 @@ from app.models import User, ReportTemplate, ReportSubmission, ActionLog, Upload
 from app.auth.decorators import roles_required
 from app.extensions import db
 from config import basedir
+from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy import func
+from app.models import user_template_access
+from app.models.report import report_attachments
 from app.services.template_service import TemplateService
 from app.services.excel_service import ExcelService
 
@@ -49,19 +53,19 @@ def dashboard():
         from app.utils import get_manager_department
         dept = get_manager_department(current_user)
         if dept:
-            users = dept.members.filter(User.id != current_user.id).all()
-            all_templates = dept.templates.order_by(ReportTemplate.id.desc()).all()
+            users = dept.members.options(joinedload(User.department)).filter(User.id != current_user.id).all()
+            all_templates = dept.templates.options(subqueryload(ReportTemplate.attachments)).order_by(ReportTemplate.id.desc()).all()
         else:
             users = []
             all_templates = []
     else:
-        # 1. Данные пользователей (исключая текущего) для Admin
-        users = User.query.filter(User.id != current_user.id).all()
-        # 2. Список шаблонов (новые сверху) для Admin
-        all_templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
+        # 1. Данные пользователей (исключая текущего) для Admin с жадной загрузкой отдела
+        users = User.query.options(joinedload(User.department)).filter(User.id != current_user.id).all()
+        # 2. Список шаблонов (новые сверху) для Admin с жадной загрузкой вложений
+        all_templates = ReportTemplate.query.options(subqueryload(ReportTemplate.attachments)).order_by(ReportTemplate.id.desc()).all()
     
-    # 3. Собираем словарь должников, доработок и распределяем шаблоны
-    debtors_map, revisions_map, pure_templates, published_templates, revision_templates, draft_templates, archived_templates, completed_templates = TemplateService.get_dashboard_stats(all_templates)
+    # 3. Собираем словарь должников, доработок, количеств назначений и распределяем шаблоны
+    debtors_map, revisions_map, pure_templates, published_templates, revision_templates, draft_templates, archived_templates, completed_templates, assigned_counts = TemplateService.get_dashboard_stats(all_templates)
 
     pure_templates = TemplateService.sort_templates(pure_templates, sort_param or 'deadline_asc')
     published_templates = TemplateService.sort_templates(published_templates, sort_param or 'deadline_asc')
@@ -70,21 +74,64 @@ def dashboard():
     archived_templates = TemplateService.sort_templates(archived_templates, sort_param or 'deadline_asc')
     completed_templates = TemplateService.sort_templates(completed_templates, sort_param or 'id_desc')
 
+    # Предрасчет матриц связей O(1) для исключения сотен N+1 запросов в шаблонах
+    user_assigned_pairs = set(
+        db.session.query(user_template_access.c.user_id, user_template_access.c.template_id).all()
+    )
+    report_attachment_pairs = set(
+        db.session.query(report_attachments.c.template_id, report_attachments.c.file_id).all()
+    )
+    report_attachment_counts = dict(
+        db.session.query(report_attachments.c.template_id, func.count()).group_by(report_attachments.c.template_id).all()
+    )
+    file_report_counts = dict(
+        db.session.query(report_attachments.c.file_id, func.count()).group_by(report_attachments.c.file_id).all()
+    )
+
+    # Предрасчет сданных отчетов по шаблонам (для бейджей без N+1 queries)
+    template_submissions_counts = dict(
+        db.session.query(ReportSubmission.template_id, func.count()).group_by(ReportSubmission.template_id).all()
+    )
+
+    # Предрасчет привязок отделов к шаблонам (для бейджей отделов на карточках и чекбоксов в админке)
+    from app.models.department import department_templates, Department
+    template_departments_raw = db.session.query(
+        department_templates.c.template_id,
+        Department.name
+    ).join(Department, department_templates.c.department_id == Department.id).all()
+    template_departments_map = {}
+    for tid, dname in template_departments_raw:
+        template_departments_map.setdefault(tid, []).append(dname)
+
+    dept_template_pairs = set(
+        db.session.query(department_templates.c.department_id, department_templates.c.template_id).all()
+    )
+
+    dept_member_counts = dict(
+        db.session.query(User.department_id, func.count()).filter(User.department_id.isnot(None)).group_by(User.department_id).all()
+    )
+
     # Данные для вкладки "База Данных" и "Сданные отчёты" (если нужны)
     if current_user.role == 'manager':
         all_users = users
         if dept:
             allowed_user_ids = [u.id for u in dept.members.all()]
             allowed_template_ids = [t.id for t in dept.templates.all()]
-            all_submissions = ReportSubmission.query.filter(
+            all_submissions = ReportSubmission.query.options(
+                joinedload(ReportSubmission.template),
+                joinedload(ReportSubmission.user)
+            ).filter(
                 ReportSubmission.user_id.in_(allowed_user_ids),
                 ReportSubmission.template_id.in_(allowed_template_ids)
             ).order_by(ReportSubmission.id.desc()).all()
         else:
             all_submissions = []
     else:
-        all_users = User.query.all()
-        all_submissions = ReportSubmission.query.order_by(ReportSubmission.id.desc()).all()
+        all_users = [current_user] + list(users)
+        all_submissions = ReportSubmission.query.options(
+            joinedload(ReportSubmission.template),
+            joinedload(ReportSubmission.user)
+        ).order_by(ReportSubmission.id.desc()).all()
         
     active_submissions = [sub for sub in all_submissions if getattr(sub, 'is_archived', False) == False]
 
@@ -119,13 +166,13 @@ def dashboard():
         if not all_groups:
             all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
 
-    # 6. Файлы
+    # 6. Файлы (с жадной предзагрузкой автора)
     if current_user.role == 'manager' and dept:
-        all_files = UploadedFile.query.filter_by(department_id=dept.id).order_by(UploadedFile.upload_date.desc()).all()
+        all_files = UploadedFile.query.options(joinedload(UploadedFile.uploader)).filter_by(department_id=dept.id).order_by(UploadedFile.upload_date.desc()).all()
     elif current_user.role == 'manager' and not dept:
         all_files = []
     else:
-        all_files = UploadedFile.query.order_by(UploadedFile.upload_date.desc()).all()
+        all_files = UploadedFile.query.options(joinedload(UploadedFile.uploader)).order_by(UploadedFile.upload_date.desc()).all()
 
     from app.models import Dictionary
     if current_user.role == 'manager' and dept:
@@ -194,7 +241,10 @@ def dashboard():
         from app.models import Department, ReportDraft, BackgroundTask, MaintenanceSetting
         import sqlite3
         all_departments = Department.query.order_by(Department.name).all()
-        all_drafts = ReportDraft.query.order_by(ReportDraft.updated_at.desc()).all()
+        all_drafts = ReportDraft.query.options(
+            joinedload(ReportDraft.template),
+            joinedload(ReportDraft.user)
+        ).order_by(ReportDraft.updated_at.desc()).all()
         all_tasks = BackgroundTask.query.order_by(BackgroundTask.created_at.desc()).limit(100).all()
         all_maintenance = MaintenanceSetting.query.all()
 
@@ -231,14 +281,14 @@ def dashboard():
             'tables_count': 0
         }
 
-    # 10. Объявления для пользователей
+    # 10. Объявления для пользователей (с жадной предзагрузкой автора)
     if current_user.role == 'manager' and dept:
-        all_announcements = Announcement.query.filter(
+        all_announcements = Announcement.query.options(joinedload(Announcement.author)).filter(
             (Announcement.created_by_id == current_user.id) |
             (Announcement.target_type == 'all')
         ).order_by(Announcement.created_at.desc()).all()
     else:
-        all_announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
+        all_announcements = Announcement.query.options(joinedload(Announcement.author)).order_by(Announcement.created_at.desc()).all()
 
     # Передаем весь этот массив данных в шаблон
     return render_template('admin_dashboard.html', 
@@ -252,6 +302,15 @@ def dashboard():
                            completed_templates=completed_templates,
                            debtors_map=debtors_map,
                            revisions_map=revisions_map,
+                           assigned_counts=assigned_counts,
+                           user_assigned_pairs=user_assigned_pairs,
+                           report_attachment_pairs=report_attachment_pairs,
+                           report_attachment_counts=report_attachment_counts,
+                           file_report_counts=file_report_counts,
+                           template_submissions_counts=template_submissions_counts,
+                           template_departments_map=template_departments_map,
+                           dept_template_pairs=dept_template_pairs,
+                           dept_member_counts=dept_member_counts,
                            all_users=all_users,
                            all_submissions=all_submissions,
                            active_submissions=active_submissions,

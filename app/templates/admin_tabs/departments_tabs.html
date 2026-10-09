@@ -98,7 +98,7 @@
             {% for dept in departments %}
             <button class="nav-link dept-nav-link d-flex justify-content-between align-items-center" id="dept-{{ dept.id }}-tab" data-bs-toggle="pill" data-bs-target="#dept-{{ dept.id }}" type="button" role="tab">
                 <span class="text-truncate"><i class="bi bi-diagram-3 me-2"></i>{{ dept.name }}</span>
-                <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">{{ dept.members.count() }}</span>
+                <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">{{ dept_member_counts.get(dept.id, 0) if dept_member_counts is defined else dept.members.count() }}</span>
             </button>
             {% endfor %}
         </div>
@@ -319,7 +319,7 @@
                                                     <div class="card-body p-3">
                                                         <div class="form-check m-0 d-flex align-items-start">
                                                             <input class="form-check-input mt-1 shadow-sm border-secondary tmpl-checkbox-{{ dept.id }}" type="checkbox" name="template_ids" value="{{ t.id }}" id="edit_{{ dept.id }}_template{{ t.id }}"
-                                                                {% if t in dept.templates %}checked{% endif %} onchange="updateCounter('{{ dept.id }}', 'tmpl-checkbox', 'count-templates')">
+                                                                {% if (dept_template_pairs is defined and (dept.id, t.id) in dept_template_pairs) or (dept_template_pairs is not defined and t in dept.templates) %}checked{% endif %} onchange="updateCounter('{{ dept.id }}', 'tmpl-checkbox', 'count-templates')">
                                                             <label class="form-check-label ms-2 w-100" style="cursor:pointer;" for="edit_{{ dept.id }}_template{{ t.id }}">
                                                                 <div class="d-flex justify-content-between align-items-start mb-1">
                                                                     <span class="fw-bold text-dark js-search-text text-truncate pe-2" title="{{ t.short_name }}">{{ t.short_name }}</span>

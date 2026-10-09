@@ -9,7 +9,7 @@
     {% set rev_items = revisions_map[t.id] if revisions_map is defined and t.id in revisions_map else [] %}
     {% set revisions_count = rev_items|length %}
     {% set debtors = debtors_map[t.id] if debtors_map is defined else [] %}
-    {% set total_assigned = t.assigned_users.count() %}
+    {% set total_assigned = assigned_counts.get(t.id, 0) if (assigned_counts is defined and t.id in assigned_counts) else t.assigned_users.count() %}
     {% set debtors_count = debtors|length %}
     {% set submitted = total_assigned - debtors_count %}
     {% set progress = (submitted / total_assigned * 100)|int if total_assigned > 0 else 0 %}
@@ -120,7 +120,7 @@
 
             <div class="d-flex flex-column justify-content-between h-100 pe-4">
                 <div>
-                    {% set file_count = t.attachments|length if t.attachments else 0 %}
+                    {% set file_count = report_attachment_counts.get(t.id, 0) if report_attachment_counts is defined else (t.attachments|length if t.attachments else 0) %}
                     
                     <div class="mb-2">
                         {% if not is_template_tab and not t.is_template and t.period and t.period != 'None' %}
@@ -142,9 +142,13 @@
                         {% endif %}
                         
                         {% if current_user.role == 'admin' %}
-                            {% set t_depts = t.departments.all() %}
-                            {% if t_depts %}
-                                {% for d in t_depts %}
+                            {% set t_dept_names = template_departments_map.get(t.id, []) if template_departments_map is defined else [] %}
+                            {% if t_dept_names %}
+                                {% for dname in t_dept_names %}
+                                    <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1" title="Отчет принадлежит отделу: {{ dname }}"><i class="bi bi-diagram-3 me-1 text-muted"></i>{{ dname }}</span>
+                                {% endfor %}
+                            {% elif template_departments_map is not defined and t.departments.all() %}
+                                {% for d in t.departments.all() %}
                                     <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1" title="Отчет принадлежит отделу: {{ d.name }}"><i class="bi bi-diagram-3 me-1 text-muted"></i>{{ d.name }}</span>
                                 {% endfor %}
                             {% else %}
@@ -361,7 +365,7 @@
                                 {% set color = 'danger' if ext == 'pdf' else ('success' if ext in ['xls','xlsx'] else ('primary' if ext in ['doc','docx'] else 'secondary')) %}
                                 {% set icon = 'bi-file-earmark-pdf' if ext == 'pdf' else ('bi-file-earmark-excel' if ext in ['xls','xlsx'] else ('bi-file-earmark-word' if ext in ['doc','docx'] else 'bi-file-earmark-text')) %}
                                 <label class="d-flex align-items-center gap-3 p-2 border rounded bg-white shadow-sm file-label" onmouseover="this.classList.add('bg-light')" onmouseout="this.classList.remove('bg-light')">
-                                    <input class="form-check-input ms-2 file-checkbox" type="checkbox" name="attached_files" value="{{ f.id }}"  {% if f in t.attachments %}checked{% endif %}>
+                                    <input class="form-check-input ms-2 file-checkbox" type="checkbox" name="attached_files" value="{{ f.id }}" {% if (report_attachment_pairs is defined and (t.id, f.id) in report_attachment_pairs) or (report_attachment_pairs is not defined and f in t.attachments) %}checked{% endif %}>
                                     <div class="d-flex align-items-center gap-2 flex-grow-1 ms-2">
                                         <div class="bg-{{ color }} bg-opacity-10 text-{{ color }} rounded p-2 d-flex align-items-center justify-content-center">
                                             <i class="{{ icon }} fs-5"></i>
@@ -575,7 +579,7 @@
                             {% for u in target_users %}
                                 {% if u.role == 'user' %}
                                 <div class="form-check col-12 mb-2 border-bottom pb-2 user-item-{{ t.id }}" data-group="{{ u.group or '' }}" data-search="{{ u.username | lower }} {{ (u.description or '') | lower }}">
-                                    <input class="form-check-input shadow-sm user-checkbox-{{ t.id }}" type="checkbox" name="user_ids" value="{{ u.id }}" {% if u in t.assigned_users %}checked{% endif %} id="user-{{ t.id }}-{{ u.id }}" onchange="updateCounter('{{ t.id }}')">
+                                    <input class="form-check-input shadow-sm user-checkbox-{{ t.id }}" type="checkbox" name="user_ids" value="{{ u.id }}" {% if (user_assigned_pairs is defined and (u.id, t.id) in user_assigned_pairs) or (user_assigned_pairs is not defined and u in t.assigned_users) %}checked{% endif %} id="user-{{ t.id }}-{{ u.id }}" onchange="updateCounter('{{ t.id }}')">
                                     <label class="form-check-label w-100 ms-1 cursor-pointer" for="user-{{ t.id }}-{{ u.id }}">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span class="fw-bold text-dark fs-base">{{ u.username }}</span>

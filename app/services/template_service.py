@@ -26,7 +26,7 @@ class TemplateService:
         needs_commit = False
         template_ids = [t.id for t in all_templates]
         if not template_ids:
-            return {}, {}, [], [], [], [], [], []
+            return {}, {}, [], [], [], [], [], [], {}
 
         # 1. Загружаем сразу всех назначенных пользователей для нужных шаблонов
         assigned_users_raw = db.session.query(
@@ -70,6 +70,8 @@ class TemplateService:
                     'returned_at': returned_at
                 })
 
+        assigned_counts = {t_id: len(users) for t_id, users in assigned_users_map.items()}
+
         pure_templates = []
         published_templates = []
         revision_templates = []
@@ -78,17 +80,39 @@ class TemplateService:
         completed_templates = []
         debtors_map = {}
 
-        for t in all_templates:
-            # Автоматическое закрытие отчетов с истекшим сроком
-            if not t.is_completed and t.is_published and t.deadline and datetime.date.today() > t.deadline:
-                TemplateService.complete_template(t)
-                # Обновляем in-memory словари, так как БД обновилась, 
-                # но текущий цикл всё еще использует старые данные
+        # 4. Батчевое автоматическое закрытие отчетов с истекшим сроком (без N+1 UPDATE в цикле)
+        today = datetime.date.today()
+        overdue_templates = [
+            t for t in all_templates 
+            if not t.is_completed and t.is_published and t.deadline and today > t.deadline
+        ]
+        if overdue_templates:
+            overdue_ids = [t.id for t in overdue_templates]
+            from app.models import ReportTemplate
+            db.session.query(ReportTemplate).filter(ReportTemplate.id.in_(overdue_ids)).update(
+                {'is_completed': True}, synchronize_session='fetch'
+            )
+            db.session.query(ReportSubmission).filter(
+                ReportSubmission.template_id.in_(overdue_ids), 
+                ReportSubmission.is_revision == True
+            ).update({
+                'is_revision': False,
+                'revision_comment': None,
+                'returned_at': None,
+                'returned_by_id': None
+            }, synchronize_session='fetch')
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            for t in overdue_templates:
+                t.is_completed = True
                 for rev_item in revisions_map.get(t.id, []):
                     submitted_user_ids_map[t.id].add(rev_item['user'].id)
                 revisions_map[t.id] = []
-                needs_commit = True
-                
+
+        for t in all_templates:
             assigned_users = assigned_users_map.get(t.id, [])
             submitted_user_ids = submitted_user_ids_map.get(t.id, set())
             rev_items = revisions_map.get(t.id, [])
@@ -112,11 +136,8 @@ class TemplateService:
                     completed_templates.append(t)
                 else:
                     published_templates.append(t)
-                    
-        if needs_commit:
-            db.session.commit()
 
-        return debtors_map, revisions_map, pure_templates, published_templates, revision_templates, draft_templates, archived_templates, completed_templates
+        return debtors_map, revisions_map, pure_templates, published_templates, revision_templates, draft_templates, archived_templates, completed_templates, assigned_counts
 
     @staticmethod
     def sort_templates(templates, sort_by):

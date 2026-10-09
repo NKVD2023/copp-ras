@@ -193,7 +193,7 @@ def export_multi_excel():
 
     # 2. Определяем завершенные отчеты (строгое требование: только завершенные отчеты)
     from app.services.template_service import TemplateService
-    _, _, _, _, _, _, _, completed_templates = TemplateService.get_dashboard_stats(all_templates)
+    _, _, _, _, _, _, _, completed_templates, *_ = TemplateService.get_dashboard_stats(all_templates)
     completed_ids = {t.id for t in completed_templates}
 
     # Проверяем, что ВСЕ запрошенные отчеты завершены и доступны пользователю
