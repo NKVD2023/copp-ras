@@ -34,10 +34,10 @@ class Config:
     # ── Session & Cookie Security ─────────────────────────────────────────────
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     SESSION_REFRESH_EACH_REQUEST = False
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() in ('true', '1', 'yes')
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = os.environ.get('REMEMBER_COOKIE_SECURE', 'true').lower() in ('true', '1', 'yes')
     REMEMBER_COOKIE_HTTPONLY = True
 
     # ── CSRF Protection ───────────────────────────────────────────────────────
