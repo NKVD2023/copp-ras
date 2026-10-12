@@ -138,3 +138,12 @@ app/uploads/
 app/static/uploads/tasks/
 *.xlsx
 *.pdf
+
+# SSL Certificates & Private Keys
+*certificate*.txt
+*intermediate*.txt
+*private*.txt
+*rootCA*.txt
+*.key
+*.crt
+*.pem
