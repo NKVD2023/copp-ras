@@ -207,12 +207,12 @@
                         </li>
                         <li class="nav-item">
                             <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-submissions">
-                                submissions <span class="badge bg-secondary rounded-pill ms-1">{{ all_submissions|length }}</span>
+                                submissions <span class="badge bg-secondary rounded-pill ms-1">{% if total_submissions_count and total_submissions_count > all_submissions|length %}{{ all_submissions|length }} из {{ total_submissions_count }}{% else %}{{ all_submissions|length }}{% endif %}</span>
                             </button>
                         </li>
                         <li class="nav-item">
                             <button class="nav-link py-1 px-3 rounded-pill fw-medium" data-bs-toggle="pill" data-bs-target="#table-drafts">
-                                drafts <span class="badge bg-secondary rounded-pill ms-1">{{ all_drafts|length }}</span>
+                                drafts <span class="badge bg-secondary rounded-pill ms-1">{% if total_drafts_count and total_drafts_count > all_drafts|length %}{{ all_drafts|length }} из {{ total_drafts_count }}{% else %}{{ all_drafts|length }}{% endif %}</span>
                             </button>
                         </li>
                         <li class="nav-item">
@@ -340,7 +340,7 @@
                                         <span class="db-editable badge {% if t.is_template %}bg-primary{% else %}bg-light text-dark border{% endif %}" contenteditable="true" data-model="ReportTemplate" data-id="{{ t.id }}" data-field="is_template">{{ t.is_template }}</span>
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Схема шаблона #{{ t.id }}", {{ t.schema|tojson|safe }})'>
+                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick="loadAndOpenJsonModal('Схема шаблона #{{ t.id }}', 'ReportTemplate', {{ t.id }})">
                                             <i class="bi bi-code-slash me-1"></i> Просмотр JSON
                                         </button>
                                     </td>
@@ -374,7 +374,7 @@
                                         {{ s.user_id }} {% if s.user %}<span class="text-muted small">({{ s.user.username }})</span>{% endif %}
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Отчет #{{ s.id }} ({{ s.user.username if s.user else "user" }})", {{ s.data|tojson|safe }})'>
+                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick="loadAndOpenJsonModal('Отчет #{{ s.id }} ({{ s.user.username if s.user else "user" }})', 'ReportSubmission', {{ s.id }})">
                                             <i class="bi bi-file-earmark-text me-1"></i> Просмотр данных JSON
                                         </button>
                                     </td>
@@ -406,7 +406,7 @@
                                     <td><span class="badge bg-light text-dark border">{{ d.user.username if d.user else d.user_id }}</span></td>
                                     <td class="text-muted small font-monospace">{{ d.updated_at|msk_time }}</td>
                                     <td>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Черновик #{{ d.id }}", {{ d.data|tojson|safe }})'>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 rounded-pill" onclick="loadAndOpenJsonModal('Черновик #{{ d.id }}', 'ReportDraft', {{ d.id }})">
                                             <i class="bi bi-file-earmark-code me-1"></i> Просмотр черновика
                                         </button>
                                     </td>
@@ -442,7 +442,7 @@
                                     <td><span class="badge bg-secondary rounded-pill">{{ dict_item.items|length }} элементов</span></td>
                                     <td class="text-muted">{{ dict_item.department_id or 'Общий' }}</td>
                                     <td>
-                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick='openJsonModal("Справочник «{{ dict_item.name }}»", {{ dict_item.items|tojson|safe }})'>
+                                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill" onclick="loadAndOpenJsonModal('Справочник «{{ dict_item.name }}»', 'Dictionary', {{ dict_item.id }})">
                                             <i class="bi bi-list-ul me-1"></i> Просмотр вариантов
                                         </button>
                                     </td>
@@ -754,14 +754,40 @@
         }
     });
 
-    // 4. Просмотрщик JSON
+    // 4. Просмотрщик JSON (асинхронная загрузка)
     let currentRawJson = '';
+    window.loadAndOpenJsonModal = function(title, model, id) {
+        document.getElementById('jsonModalTitle').textContent = title;
+        document.getElementById('jsonModalContent').textContent = 'Загрузка JSON структуры...';
+        document.getElementById('jsonCopyStatus').textContent = '';
+        currentRawJson = '';
+        const modalEl = document.getElementById('jsonViewerModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        fetch(`/admin/db_raw_json/${model}/${id}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'success') {
+                currentRawJson = JSON.stringify(res.data, null, 2);
+                document.getElementById('jsonModalContent').textContent = currentRawJson;
+            } else {
+                document.getElementById('jsonModalContent').textContent = 'Ошибка загрузки данных: ' + (res.message || 'Неизвестная ошибка');
+            }
+        })
+        .catch(err => {
+            document.getElementById('jsonModalContent').textContent = 'Ошибка сети при получении JSON: ' + err.message;
+        });
+    };
+
     window.openJsonModal = function(title, jsonData) {
         document.getElementById('jsonModalTitle').textContent = title;
         currentRawJson = JSON.stringify(jsonData, null, 2);
         document.getElementById('jsonModalContent').textContent = currentRawJson;
         document.getElementById('jsonCopyStatus').textContent = '';
-        const modal = new bootstrap.Modal(document.getElementById('jsonViewerModal'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('jsonViewerModal'));
         modal.show();
     };
 

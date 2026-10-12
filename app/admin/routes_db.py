@@ -420,3 +420,40 @@ def upload_backup():
         flash(f'Ошибка при восстановлении: {str(e)}')
         
     return redirect(url_for('admin.dashboard', tab='databaseTab'))
+
+
+@admin_bp.route('/db_raw_json/<model_name>/<int:record_id>', methods=['GET'])
+@login_required
+@roles_required('admin')
+def get_db_raw_json(model_name, record_id):
+    """
+    Легковесный эндпоинт для асинхронного просмотра JSON структуры записи
+    (схемы шаблона, данных отчета, черновика, элементов словаря).
+    Позволяет не передавать мегабайты JSON в HTML-коде вкладки базы данных.
+    """
+    from app.models import ReportTemplate, ReportSubmission, ReportDraft, Dictionary
+    import json
+
+    data = None
+    if model_name == 'ReportTemplate':
+        t = ReportTemplate.query.get_or_404(record_id)
+        data = t.schema
+    elif model_name == 'ReportSubmission':
+        s = ReportSubmission.query.get_or_404(record_id)
+        data = s.data
+    elif model_name == 'ReportDraft':
+        d = ReportDraft.query.get_or_404(record_id)
+        data = d.data
+    elif model_name == 'Dictionary':
+        dic = Dictionary.query.get_or_404(record_id)
+        data = dic.items
+    else:
+        return jsonify({'status': 'error', 'message': 'Неподдерживаемая модель'}), 400
+
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            pass
+
+    return jsonify({'status': 'success', 'data': data if data is not None else {}})

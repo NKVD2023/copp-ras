@@ -107,11 +107,15 @@
             <tbody>
                 {% for user in users %}
                 <tr class="user-table-row" id="user-row-{{ user.id }}"
+                    data-user-id="{{ user.id }}"
+                    data-raw-username="{{ user.username }}"
+                    data-raw-description="{{ user.description or '' }}"
                     data-username="{{ user.username|lower }}" 
                     data-description="{{ (user.description or '')|lower }}" 
                     data-role="{{ user.role }}" 
                     data-group="{{ user.group or '' }}" 
-                    data-dept-id="{{ user.department_id or '' }}">
+                    data-dept-id="{{ user.department_id or '' }}"
+                    data-assigned-templates="{{ user_assigned_dict.get(user.id, [])|tojson if user_assigned_dict is defined else '[]' }}">
                     <td class="ps-4 py-3 text-center" style="width: 44px;">
                         <div class="form-check m-0 d-flex justify-content-center">
                             <input class="form-check-input user-select-checkbox" type="checkbox" name="user_ids" value="{{ user.id }}" form="bulkDeleteUsersForm">
@@ -146,121 +150,11 @@
                         {% endif %}
                     </td>
                     <td class="pe-4 py-3 text-end">
-                        <button class="btn btn-sm btn-outline-secondary px-3" data-bs-toggle="modal" data-bs-target="#userModal-{{ user.id }}">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" onclick="openSharedUserModal('{{ user.id }}')">
                             <i class="bi bi-gear me-1"></i> Управление
                         </button>
                     </td>
                 </tr>
-
-                <!-- Modal управления пользователем -->
-                <div class="modal fade" id="userModal-{{ user.id }}" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content border-0 shadow">
-                            <form class="user-edit-form" data-user-id="{{ user.id }}" action="{{ url_for('admin.edit_user', user_id=user.id) }}" method="POST">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                
-                                <div class="modal-header border-bottom-0 pt-4 px-4 pb-0">
-                                    <h5 class="modal-title fw-bold text-dark mb-3">Пользователь: {{ user.username }}</h5>
-                                    <button type="button" class="btn-close field-actions-abs" data-bs-dismiss="modal"></button>
-                                </div>
-
-                                <!-- Навигация по вкладкам модалки -->
-                                <div class="px-4 border-bottom">
-                                    <ul class="nav nav-tabs border-0" id="userTabs-{{ user.id }}" role="tablist">
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link active bg-transparent text-dark fw-medium border-0 border-bottom border-primary border-3" style="border-radius: 0;" id="main-tab-{{ user.id }}" data-bs-toggle="tab" data-bs-target="#main-{{ user.id }}" type="button" role="tab">Основное</button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link bg-transparent text-muted fw-medium border-0" style="border-radius: 0;" id="access-tab-{{ user.id }}" data-bs-toggle="tab" data-bs-target="#access-{{ user.id }}" type="button" role="tab">Права доступа</button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link bg-transparent text-muted fw-medium border-0" style="border-radius: 0;" id="sec-tab-{{ user.id }}" data-bs-toggle="tab" data-bs-target="#sec-{{ user.id }}" type="button" role="tab">Безопасность</button>
-                                        </li>
-                                    </ul>
-                                </div>
-
-                                <div class="modal-body px-4 py-4 tab-content" id="userTabsContent-{{ user.id }}">
-                                    <!-- Вкладка Основное -->
-                                    <div class="tab-pane fade show active" id="main-{{ user.id }}" role="tabpanel">
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label small text-muted">Логин</label>
-                                                <input type="text" name="username" class="form-control" value="{{ user.username }}" required autocomplete="off">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label small text-muted">Описание (Название учреждения)</label>
-                                                <input type="text" name="description" class="form-control" value="{{ user.description or '' }}" autocomplete="off">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small text-muted">Роль</label>
-                                                <select name="role" class="form-select">
-                                                    <option value="user" {% if user.role == 'user' %}selected{% endif %}>Пользователь</option>
-                                                    <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>Руководитель отдела</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small text-muted">Группа</label>
-                                                <input type="text" name="group" class="form-control" list="groupsDataListList-{{ user.id }}" value="{{ user.group or '' }}" placeholder="Без группы">
-                                                <datalist id="groupsDataListList-{{ user.id }}">
-                                                    {% for g in all_groups %}
-                                                    <option value="{{ g }}">
-                                                    {% endfor %}
-                                                </datalist>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small text-muted">Отдел</label>
-                                                <select name="department_id" class="form-select">
-                                                    <option value="">Без отдела</option>
-                                                    {% for d in departments %}
-                                                    <option value="{{ d.id }}" {% if user.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Вкладка Права доступа -->
-                                    <div class="tab-pane fade" id="access-{{ user.id }}" role="tabpanel">
-                                        <p class="small text-muted mb-3">Выберите отчеты, к которым у пользователя будет доступ:</p>
-                                        <div class="border rounded p-3 bg-light scrollable-sm">
-                                            <div class="row g-2">
-                                                {% for t in templates %}
-                                                <div class="col-md-6">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input shadow-sm border-secondary" type="checkbox" name="template_ids" value="{{ t.id }}" {% if (user_assigned_pairs is defined and (user.id, t.id) in user_assigned_pairs) or (user_assigned_pairs is not defined and t in user.assigned_templates) %}checked{% endif %} id="access-{{ user.id }}-{{ t.id }}">
-                                                        <label class="form-check-label small" for="access-{{ user.id }}-{{ t.id }}">{{ t.short_name }}</label>
-                                                    </div>
-                                                </div>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Вкладка Безопасность -->
-                                    <div class="tab-pane fade" id="sec-{{ user.id }}" role="tabpanel">
-                                        <div class="mb-3">
-                                            <label class="form-label small text-muted">Сброс пароля (новый пароль)</label>
-                                            <input type="text" name="new_password" class="form-control" placeholder="Оставьте пустым, чтобы не менять пароль" autocomplete="off">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="modal-footer px-4 py-3 border-top bg-light d-flex justify-content-between align-items-center">
-                                    <button type="button" class="btn btn-outline-danger btn-sm px-3 shadow-sm rounded-pill" onclick="deleteUserAjax('{{ user.id }}')">Удалить учетную запись</button>
-                                    <div>
-                                        <button type="button" class="btn btn-light btn-sm px-3 me-2 border shadow-sm rounded-pill" data-bs-dismiss="modal">Отмена</button>
-                                        <button type="submit" class="btn btn-copp btn-sm px-4 shadow-sm rounded-pill">Сохранить изменения</button>
-                                    </div>
-                                </div>
-                            </form>
-                            
-                            <!-- Скрытая форма для одиночного удаления -->
-                            <form id="deleteUserForm-{{ user.id }}" action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" class="d-none">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            </form>
-                        </div>
-                    </div>
-                </div>
                 {% endfor %}
 
                 <!-- Пустое состояние при фильтрации -->
@@ -276,6 +170,118 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Единое модальное окно управления пользователем (Virtual Shared Modal) -->
+<div class="modal fade" id="sharedUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form id="sharedUserEditForm" class="user-edit-form" action="" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" id="sharedUserId" name="user_id" value=""/>
+                
+                <div class="modal-header border-bottom-0 pt-4 px-4 pb-0">
+                    <h5 class="modal-title fw-bold text-dark mb-3" id="sharedUserModalTitle">Управление пользователем</h5>
+                    <button type="button" class="btn-close field-actions-abs" data-bs-dismiss="modal"></button>
+                </div>
+
+                <!-- Навигация по вкладкам модалки -->
+                <div class="px-4 border-bottom">
+                    <ul class="nav nav-tabs border-0" id="sharedUserTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active bg-transparent text-dark fw-medium border-0 border-bottom border-primary border-3" style="border-radius: 0;" id="shared-main-tab" data-bs-toggle="tab" data-bs-target="#shared-main" type="button" role="tab">Основное</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link bg-transparent text-muted fw-medium border-0" style="border-radius: 0;" id="shared-access-tab" data-bs-toggle="tab" data-bs-target="#shared-access" type="button" role="tab">Права доступа</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link bg-transparent text-muted fw-medium border-0" style="border-radius: 0;" id="shared-sec-tab" data-bs-toggle="tab" data-bs-target="#shared-sec" type="button" role="tab">Безопасность</button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="modal-body px-4 py-4 tab-content" id="sharedUserTabsContent">
+                    <!-- Вкладка Основное -->
+                    <div class="tab-pane fade show active" id="shared-main" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Логин</label>
+                                <input type="text" id="sharedUsernameInput" name="username" class="form-control" required autocomplete="off">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Описание (Название учреждения)</label>
+                                <input type="text" id="sharedDescriptionInput" name="description" class="form-control" autocomplete="off">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Роль</label>
+                                <select id="sharedRoleSelect" name="role" class="form-select">
+                                    <option value="user">Пользователь</option>
+                                    <option value="manager">Руководитель отдела</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Группа</label>
+                                <input type="text" id="sharedGroupInput" name="group" class="form-control" list="sharedGroupsDataList" placeholder="Без группы">
+                                <datalist id="sharedGroupsDataList">
+                                    {% for g in all_groups %}
+                                    <option value="{{ g }}">
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Отдел</label>
+                                <select id="sharedDeptSelect" name="department_id" class="form-select">
+                                    <option value="">Без отдела</option>
+                                    {% for d in departments %}
+                                    <option value="{{ d.id }}">{{ d.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка Права доступа -->
+                    <div class="tab-pane fade" id="shared-access" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <p class="small text-muted m-0">Выберите отчеты, к которым у пользователя будет доступ:</p>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 rounded-pill" onclick="toggleAllUserTemplates(true)">Выбрать все</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 rounded-pill" onclick="toggleAllUserTemplates(false)">Снять все</button>
+                            </div>
+                        </div>
+                        <div class="border rounded p-3 bg-light scrollable-sm">
+                            <div class="row g-2">
+                                {% for t in templates %}
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input shadow-sm border-secondary shared-template-checkbox" type="checkbox" name="template_ids" value="{{ t.id }}" id="shared-access-{{ t.id }}">
+                                        <label class="form-check-label small" for="shared-access-{{ t.id }}">{{ t.short_name }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка Безопасность -->
+                    <div class="tab-pane fade" id="shared-sec" role="tabpanel">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Сброс пароля (новый пароль)</label>
+                            <input type="text" id="sharedNewPasswordInput" name="new_password" class="form-control" placeholder="Оставьте пустым, чтобы не менять пароль" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer px-4 py-3 border-top bg-light d-flex justify-content-between align-items-center">
+                    <button type="button" id="sharedDeleteUserBtn" class="btn btn-outline-danger btn-sm px-3 shadow-sm rounded-pill">Удалить учетную запись</button>
+                    <div>
+                        <button type="button" class="btn btn-light btn-sm px-3 me-2 border shadow-sm rounded-pill" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-copp btn-sm px-4 shadow-sm rounded-pill">Сохранить изменения</button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -369,24 +375,80 @@
             applyFilters();
         }
 
+        // Открытие единого модального окна управления пользователем
+        window.openSharedUserModal = function(userId) {
+            const row = document.getElementById('user-row-' + userId);
+            if (!row) return;
+
+            const rawUsername = row.getAttribute('data-raw-username') || '';
+            const rawDescription = row.getAttribute('data-raw-description') || '';
+            const role = row.getAttribute('data-role') || 'user';
+            const group = row.getAttribute('data-group') || '';
+            const deptId = row.getAttribute('data-dept-id') || '';
+            let assigned = [];
+            try {
+                assigned = JSON.parse(row.getAttribute('data-assigned-templates') || '[]');
+            } catch(e) { assigned = []; }
+            const assignedSet = new Set(assigned.map(Number));
+
+            document.getElementById('sharedUserId').value = userId;
+            document.getElementById('sharedUserModalTitle').textContent = `Пользователь: ${rawUsername}`;
+            document.getElementById('sharedUsernameInput').value = rawUsername;
+            document.getElementById('sharedDescriptionInput').value = rawDescription;
+            document.getElementById('sharedRoleSelect').value = role;
+            document.getElementById('sharedGroupInput').value = group;
+            document.getElementById('sharedDeptSelect').value = deptId;
+            document.getElementById('sharedNewPasswordInput').value = '';
+
+            const form = document.getElementById('sharedUserEditForm');
+            form.action = `/admin/edit_user/${userId}`;
+            form.setAttribute('data-user-id', userId);
+
+            const delBtn = document.getElementById('sharedDeleteUserBtn');
+            if (delBtn) {
+                delBtn.onclick = function() { deleteUserAjax(userId); };
+            }
+
+            // Отмечаем чекбоксы шаблонов
+            document.querySelectorAll('.shared-template-checkbox').forEach(cb => {
+                cb.checked = assignedSet.has(Number(cb.value));
+            });
+
+            // Активируем первую вкладку модалки
+            const firstTabBtn = document.getElementById('shared-main-tab');
+            if (firstTabBtn) {
+                const bsTab = bootstrap.Tab.getOrCreateInstance(firstTabBtn);
+                bsTab.show();
+            }
+
+            const modalEl = document.getElementById('sharedUserModal');
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+        };
+
+        window.toggleAllUserTemplates = function(checked) {
+            document.querySelectorAll('.shared-template-checkbox').forEach(cb => {
+                cb.checked = checked;
+            });
+        };
+
         // Удаление одного пользователя через AJAX
         window.deleteUserAjax = function(userId) {
             coppConfirm('Вы уверены, что хотите полностью удалить этого пользователя? Эта операция необратима.', async function() {
-                const form = document.getElementById('deleteUserForm-' + userId);
-                if (!form) return;
                 try {
-                    const res = await fetch(form.action, {
+                    const formData = new FormData();
+                    formData.append('csrf_token', '{{ csrf_token() }}');
+                    const res = await fetch(`/admin/delete_user/${userId}`, {
                         method: 'POST',
-                        body: new FormData(form),
+                        body: formData,
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const data = await res.json();
                     if (res.ok && data.status === 'success') {
-                        const modalEl = document.getElementById('userModal-' + userId);
+                        const modalEl = document.getElementById('sharedUserModal');
                         if (modalEl) {
                             const bsModal = bootstrap.Modal.getInstance(modalEl);
                             if (bsModal) bsModal.hide();
-                            setTimeout(() => { modalEl.remove(); }, 350);
                         }
                         const row = document.getElementById('user-row-' + userId);
                         if (row) {
@@ -410,26 +472,27 @@
             });
         };
 
-        // Редактирование пользователя через AJAX
-        document.querySelectorAll('.user-edit-form').forEach(form => {
-            form.addEventListener('submit', async function(e) {
+        // Редактирование пользователя через AJAX (sharedUserEditForm)
+        const sharedForm = document.getElementById('sharedUserEditForm');
+        if (sharedForm) {
+            sharedForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const userId = form.getAttribute('data-user-id');
-                const submitBtn = form.querySelector('button[type="submit"]');
+                const userId = sharedForm.getAttribute('data-user-id');
+                const submitBtn = sharedForm.querySelector('button[type="submit"]');
                 const origText = submitBtn.innerHTML;
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
 
                 try {
-                    const formData = new FormData(form);
-                    const res = await fetch(form.action, {
+                    const formData = new FormData(sharedForm);
+                    const res = await fetch(sharedForm.action, {
                         method: 'POST',
                         body: formData,
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const data = await res.json();
                     if (res.ok && data.status === 'success') {
-                        const modalEl = document.getElementById('userModal-' + userId);
+                        const modalEl = document.getElementById('sharedUserModal');
                         if (modalEl) {
                             const bsModal = bootstrap.Modal.getInstance(modalEl);
                             if (bsModal) bsModal.hide();
@@ -439,11 +502,17 @@
                         const row = document.getElementById('user-row-' + userId);
                         if (row && data.user) {
                             const u = data.user;
+                            row.setAttribute('data-raw-username', u.username || '');
+                            row.setAttribute('data-raw-description', u.description || '');
                             row.setAttribute('data-username', (u.username || '').toLowerCase());
                             row.setAttribute('data-description', (u.description || '').toLowerCase());
                             row.setAttribute('data-role', u.role || '');
                             row.setAttribute('data-group', u.group || '');
                             row.setAttribute('data-dept-id', u.department_id ? String(u.department_id) : '');
+
+                            // Обновляем список назначенных шаблонов в строке
+                            const checkedTmpls = Array.from(sharedForm.querySelectorAll('.shared-template-checkbox:checked')).map(cb => Number(cb.value));
+                            row.setAttribute('data-assigned-templates', JSON.stringify(checkedTmpls));
 
                             const userEl = row.querySelector('.user-cell-username');
                             if (userEl) userEl.textContent = u.username;
@@ -479,7 +548,7 @@
                         }
 
                         // Сбрасываем поле смены пароля в модалке
-                        const pwInput = form.querySelector('input[name="new_password"]');
+                        const pwInput = sharedForm.querySelector('input[name="new_password"]');
                         if (pwInput) pwInput.value = '';
 
                         if (typeof coppToast === 'function') {
@@ -495,7 +564,7 @@
                     submitBtn.innerHTML = origText;
                 }
             });
-        });
+        }
 
         // Кнопка "Удалить выбранных" (массовое удаление через AJAX)
         if (bulkDeleteBtn && bulkForm) {
@@ -523,8 +592,11 @@
                                     data.deleted_ids.forEach(uid => {
                                         const row = document.getElementById('user-row-' + uid);
                                         if (row) row.remove();
-                                        const modal = document.getElementById('userModal-' + uid);
-                                        if (modal) modal.remove();
+                                        const sharedModalEl = document.getElementById('sharedUserModal');
+                                        if (sharedModalEl && document.getElementById('sharedUserId')?.value == uid) {
+                                            const bsModal = bootstrap.Modal.getInstance(sharedModalEl);
+                                            if (bsModal) bsModal.hide();
+                                        }
                                     });
                                     updateCountersAfterDelete(data.deleted_ids.length);
                                 }

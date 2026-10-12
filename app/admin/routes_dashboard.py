@@ -69,6 +69,9 @@ def _get_users_tab_context(user):
     user_assigned_pairs = set(
         db.session.query(user_template_access.c.user_id, user_template_access.c.template_id).all()
     )
+    user_assigned_dict = {}
+    for uid, tid in user_assigned_pairs:
+        user_assigned_dict.setdefault(uid, []).append(tid)
 
     return {
         'users': users,
@@ -76,6 +79,7 @@ def _get_users_tab_context(user):
         'all_groups': all_groups,
         'departments': departments,
         'user_assigned_pairs': user_assigned_pairs,
+        'user_assigned_dict': user_assigned_dict,
     }
 
 def _get_reports_tab_context(user, sort_param=None):
@@ -128,8 +132,17 @@ def _get_reports_tab_context(user, sort_param=None):
         db.session.query(department_templates.c.department_id, department_templates.c.template_id).all()
     )
 
+    all_groups = sorted(list(set([u.group for u in users if u.group])))
+    if not all_groups:
+        all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+
+    template_assigned_dict = {}
+    for uid, tid in user_assigned_pairs:
+        template_assigned_dict.setdefault(tid, []).append(uid)
+
     return {
         'templates': all_templates,
+        'all_groups': all_groups,
         'pure_templates': pure_templates,
         'published_templates': published_templates,
         'revision_templates': revision_templates,
@@ -140,6 +153,7 @@ def _get_reports_tab_context(user, sort_param=None):
         'revisions_map': revisions_map,
         'assigned_counts': assigned_counts,
         'user_assigned_pairs': user_assigned_pairs,
+        'template_assigned_dict': template_assigned_dict,
         'report_attachment_pairs': report_attachment_pairs,
         'report_attachment_counts': report_attachment_counts,
         'template_submissions_counts': template_submissions_counts,
@@ -225,6 +239,12 @@ def _get_departments_tab_context(user):
         db.session.query(User.department_id, func.count()).filter(User.department_id.isnot(None)).group_by(User.department_id).all()
     )
     templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
+    pure_templates = [t for t in templates if getattr(t, 'is_template', False)]
+    published_templates = [t for t in templates if getattr(t, 'is_published', False) and not getattr(t, 'is_completed', False) and not getattr(t, 'is_archived', False)]
+    completed_templates = [t for t in templates if getattr(t, 'is_completed', False) and not getattr(t, 'is_archived', False)]
+    archived_templates = [t for t in templates if getattr(t, 'is_archived', False)]
+    draft_templates = [t for t in templates if not getattr(t, 'is_template', False) and not getattr(t, 'is_published', False) and not getattr(t, 'is_completed', False) and not getattr(t, 'is_archived', False)]
+
     dept_template_pairs = set(
         db.session.query(department_templates.c.department_id, department_templates.c.template_id).all()
     )
@@ -236,6 +256,11 @@ def _get_departments_tab_context(user):
         'departments': departments,
         'dept_member_counts': dept_member_counts,
         'templates': templates,
+        'pure_templates': pure_templates,
+        'published_templates': published_templates,
+        'completed_templates': completed_templates,
+        'archived_templates': archived_templates,
+        'draft_templates': draft_templates,
         'dept_template_pairs': dept_template_pairs,
         'users': users,
         'all_files': all_files,
@@ -320,16 +345,18 @@ def _get_database_tab_context(user):
 
     all_users = User.query.options(joinedload(User.department)).all()
     all_templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
+    total_submissions_count = ReportSubmission.query.count()
     all_submissions = ReportSubmission.query.options(
         joinedload(ReportSubmission.template),
         joinedload(ReportSubmission.user)
-    ).order_by(ReportSubmission.id.desc()).all()
+    ).order_by(ReportSubmission.id.desc()).limit(100).all()
     active_submissions = [sub for sub in all_submissions if getattr(sub, 'is_archived', False) == False]
     all_departments = Department.query.order_by(Department.name).all()
+    total_drafts_count = ReportDraft.query.count()
     all_drafts = ReportDraft.query.options(
         joinedload(ReportDraft.template),
         joinedload(ReportDraft.user)
-    ).order_by(ReportDraft.updated_at.desc()).all()
+    ).order_by(ReportDraft.updated_at.desc()).limit(100).all()
     all_tasks = BackgroundTask.query.order_by(BackgroundTask.created_at.desc()).limit(100).all()
     all_maintenance = MaintenanceSetting.query.all()
     dictionaries = Dictionary.query.order_by(Dictionary.name).all()
@@ -355,8 +382,8 @@ def _get_database_tab_context(user):
         db_size_mb = round(os.path.getsize(db_path) / (1024 * 1024), 2)
         
     total_records = (
-        len(all_users) + len(all_templates) + len(all_submissions) + 
-        len(all_departments) + len(all_drafts) + len(dictionaries) + 
+        len(all_users) + len(all_templates) + total_submissions_count + 
+        len(all_departments) + total_drafts_count + len(dictionaries) + 
         len(all_files) + len(all_tasks)
     )
     
@@ -373,8 +400,10 @@ def _get_database_tab_context(user):
         'all_users': all_users,
         'templates': all_templates,
         'all_submissions': all_submissions,
+        'total_submissions_count': total_submissions_count,
         'active_submissions': active_submissions,
         'all_drafts': all_drafts,
+        'total_drafts_count': total_drafts_count,
         'all_tasks': all_tasks,
         'all_maintenance': all_maintenance,
         'backups_list': backups_list,

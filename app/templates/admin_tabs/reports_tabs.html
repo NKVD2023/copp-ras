@@ -229,6 +229,85 @@
     </div>
 </div>
 
+<!-- Общее модальное окно назначения исполнителей отчета -->
+<div class="modal fade" id="sharedAssignTemplateUsersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <form id="sharedAssignTemplateUsersForm" method="POST" onsubmit="event.preventDefault(); submitAssignUsersAjax(this);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <div class="modal-header border-bottom-0 pt-4 px-4">
+                    <h6 class="modal-title fw-bold text-dark m-0" id="sharedAssignModalTitle">Доступ к форме</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                
+                <div class="modal-body px-4 py-2 modal-scrollable-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="small text-muted m-0">Выберите исполнителей отчета:</p>
+                        <span class="badge bg-secondary rounded-pill" id="sharedAssignCounter">0 выбрано</span>
+                    </div>
+                    
+                    {% if all_groups %}
+                    <div class="mb-3 pb-3 border-bottom border-2 report-assign-section-border">
+                        <label class="fw-bold text-dark mb-2 fs-base">Быстрый выбор по группам:</label>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for g in all_groups %}
+                            <div class="form-check">
+                                <input class="form-check-input shadow-sm border-secondary shared-group-checkbox" type="checkbox" value="{{ g }}" id="sharedGroup-{{ loop.index }}" onchange="toggleSharedGroup('{{ g }}', this.checked)">
+                                <label class="form-check-label cursor-pointer" for="sharedGroup-{{ loop.index }}">{{ g }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex flex-column gap-2 mb-3 pb-3 border-bottom border-2 report-assign-section-border">
+                        <div class="input-group input-group-sm shadow-sm rounded-pill overflow-hidden border border-light-subtle">
+                            <span class="input-group-text bg-white border-0 pe-2"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-0 ps-1" id="sharedAssignSearch" placeholder="Поиск по логину или описанию..." oninput="filterSharedAssignUsers(this.value)">
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div class="form-check m-0">
+                                <input class="form-check-input shadow-sm border-secondary" type="checkbox" id="sharedSelectAll" onchange="toggleSharedSelectAll(this.checked)">
+                                <label class="form-check-label fw-bold text-primary-copp ms-1 cursor-pointer small" for="sharedSelectAll">
+                                    Выбрать всех
+                                </label>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input shadow-sm" type="checkbox" id="sharedShowAssignedOnly" onchange="filterSharedAssignedOnly(this.checked)">
+                                <label class="form-check-label text-muted small cursor-pointer" for="sharedShowAssignedOnly">Только назначенные</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row px-2" id="sharedUsersList">
+                        {% set target_users = fill_users if fill_users is defined else users %}
+                        {% for u in target_users %}
+                            {% if u.role == 'user' %}
+                            <div class="form-check col-12 mb-2 border-bottom pb-2 shared-user-item" data-group="{{ u.group or '' }}" data-search="{{ (u.username ~ ' ' ~ (u.description or ''))|lower }}">
+                                <input class="form-check-input shadow-sm shared-user-checkbox" type="checkbox" name="user_ids" value="{{ u.id }}" id="sharedUserCheck-{{ u.id }}" onchange="updateSharedCounter()">
+                                <label class="form-check-label w-100 ms-1 cursor-pointer" for="sharedUserCheck-{{ u.id }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-dark fs-base">{{ u.username }}</span>
+                                        {% if u.group %}<span class="badge bg-light text-dark border">{{ u.group }}</span>{% endif %}
+                                    </div>
+                                    {% if u.description %}<div class="text-muted small mt-1">{{ u.description }}</div>{% endif %}
+                                </label>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-top-0 pb-4 px-4 mt-2">
+                    <button type="submit" class="btn btn-copp w-100 py-2 fw-bold" id="sharedAssignSubmitBtn">Сохранить доступы</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     function importTemplateFromExcel() {
         const fileInput = document.getElementById('import-template-file');
@@ -271,73 +350,111 @@
         });
     }
 
-    function toggleSelectAll(masterCheckbox, templateId) {
-        const checkboxes = document.querySelectorAll(`.user-item-${templateId} .user-checkbox-${templateId}`);
-        checkboxes.forEach(cb => {
-            // Check only visible ones if filtering is active, or all? Let's check all visible
-            const item = cb.closest(`.user-item-${templateId}`);
-            if (item.style.display !== 'none') {
-                cb.checked = masterCheckbox.checked;
+    window.openAssignUsersModal = function(templateId, templateName) {
+        const modalEl = document.getElementById('sharedAssignTemplateUsersModal');
+        if (!modalEl) return;
+
+        const form = document.getElementById('sharedAssignTemplateUsersForm');
+        form.action = `/admin/assign_template_users/${templateId}`;
+        form.dataset.templateId = templateId;
+
+        const titleEl = document.getElementById('sharedAssignModalTitle');
+        if (titleEl) {
+            titleEl.textContent = 'Доступ к форме: ' + (templateName || '');
+        }
+
+        // Reset search and filters
+        const searchInput = document.getElementById('sharedAssignSearch');
+        if (searchInput) searchInput.value = '';
+        const assignedOnlySwitch = document.getElementById('sharedShowAssignedOnly');
+        if (assignedOnlySwitch) assignedOnlySwitch.checked = false;
+        const selectAllCb = document.getElementById('sharedSelectAll');
+        if (selectAllCb) selectAllCb.checked = false;
+        document.querySelectorAll('.shared-group-checkbox').forEach(cb => cb.checked = false);
+
+        // Read currently assigned users for this template from the card
+        const card = document.querySelector(`.report-item[data-id="${templateId}"]`);
+        let assignedIds = new Set();
+        if (card) {
+            try {
+                const raw = card.getAttribute('data-assigned-users');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) {
+                        assignedIds = new Set(parsed.map(Number));
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to parse assigned users:', e);
+            }
+        }
+
+        // Check/uncheck user checkboxes
+        const userItems = document.querySelectorAll('.shared-user-item');
+        userItems.forEach(item => {
+            item.style.display = '';
+            const cb = item.querySelector('.shared-user-checkbox');
+            if (cb) {
+                cb.checked = assignedIds.has(Number(cb.value));
             }
         });
-        updateCounter(templateId);
-    }
 
-    function toggleGroup(templateId, groupName, isChecked) {
-        const items = document.querySelectorAll(`.user-item-${templateId}`);
+        updateSharedCounter();
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    };
+
+    window.toggleSharedSelectAll = function(isChecked) {
+        const items = document.querySelectorAll('.shared-user-item');
         items.forEach(item => {
-            if (item.getAttribute('data-group') === groupName) {
-                const cb = item.querySelector('input[type="checkbox"]');
+            if (item.style.display !== 'none') {
+                const cb = item.querySelector('.shared-user-checkbox');
                 if (cb) cb.checked = isChecked;
             }
         });
-        updateCounter(templateId);
-    }
+        updateSharedCounter();
+    };
 
-    function filterAssignUsers(templateId, searchTerm) {
-        searchTerm = searchTerm.toLowerCase().trim();
-        const items = document.querySelectorAll(`.user-item-${templateId}`);
-        const showAssignedOnly = document.getElementById(`showAssignedOnly-${templateId}`)?.checked;
+    window.toggleSharedGroup = function(groupName, isChecked) {
+        const items = document.querySelectorAll(`.shared-user-item[data-group="${groupName}"]`);
+        items.forEach(item => {
+            const cb = item.querySelector('.shared-user-checkbox');
+            if (cb) cb.checked = isChecked;
+        });
+        updateSharedCounter();
+    };
+
+    window.filterSharedAssignUsers = function(searchTerm) {
+        searchTerm = (searchTerm || '').toLowerCase().trim();
+        const showAssignedOnly = document.getElementById('sharedShowAssignedOnly')?.checked;
+        const items = document.querySelectorAll('.shared-user-item');
         
         items.forEach(item => {
-            const matchesSearch = item.getAttribute('data-search').includes(searchTerm);
-            const isAssigned = item.querySelector('input[type="checkbox"]').checked;
+            const matchesSearch = !searchTerm || item.getAttribute('data-search').includes(searchTerm);
+            const cb = item.querySelector('.shared-user-checkbox');
+            const isAssigned = cb ? cb.checked : false;
             
             let visible = matchesSearch;
             if (showAssignedOnly && !isAssigned) visible = false;
             
             item.style.display = visible ? '' : 'none';
         });
-    }
+    };
     
-    function filterAssignedOnly(templateId, isChecked) {
-        const searchInput = document.querySelector(`#access-template-${templateId} input[type="text"]`);
-        const searchTerm = searchInput ? searchInput.value : '';
-        filterAssignUsers(templateId, searchTerm);
-    }
+    window.filterSharedAssignedOnly = function(isChecked) {
+        const searchInput = document.getElementById('sharedAssignSearch');
+        filterSharedAssignUsers(searchInput ? searchInput.value : '');
+    };
 
-    function updateCounter(templateId) {
-        const checkboxes = document.querySelectorAll(`.user-checkbox-${templateId}`);
+    window.updateSharedCounter = function() {
+        const checkboxes = document.querySelectorAll('.shared-user-checkbox');
         const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        const badge = document.getElementById(`counter-${templateId}`);
+        const badge = document.getElementById('sharedAssignCounter');
         if (badge) {
             badge.textContent = `${checkedCount} выбрано`;
             badge.className = checkedCount > 0 ? 'badge bg-success rounded-pill' : 'badge bg-secondary rounded-pill';
         }
-    }
-    
-    // Initialize counters on modal open
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('show.bs.modal', function() {
-                const modalId = this.id;
-                if (modalId.startsWith('access-template-')) {
-                    const tId = modalId.replace('access-template-', '');
-                    updateCounter(tId);
-                }
-            });
-        });
-    });
+    };
 
     function copyDebtorsList(templateId) {
         const listContainer = document.getElementById('debtorsList-' + templateId);
@@ -445,9 +562,13 @@
 
     window.submitAssignUsersAjax = async function(formEl, templateId) {
         const submitBtn = formEl.querySelector('button[type="submit"]');
-        const origText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+        const origText = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+        }
+
+        const actualTemplateId = templateId || formEl.dataset.templateId;
 
         try {
             const res = await fetch(formEl.action, {
@@ -457,11 +578,20 @@
             });
             const data = await res.json();
             if (res.ok && data.status === 'success') {
-                const modalEl = document.getElementById('access-template-' + templateId);
+                const modalEl = document.getElementById('sharedAssignTemplateUsersModal');
                 if (modalEl) {
                     const bsModal = bootstrap.Modal.getInstance(modalEl);
                     if (bsModal) bsModal.hide();
                 }
+
+                if (actualTemplateId) {
+                    const card = document.querySelector(`.report-item[data-id="${actualTemplateId}"]`);
+                    if (card) {
+                        const checkedIds = Array.from(formEl.querySelectorAll('.shared-user-checkbox:checked')).map(cb => Number(cb.value));
+                        card.setAttribute('data-assigned-users', JSON.stringify(checkedIds));
+                    }
+                }
+
                 if (typeof coppToast === 'function') {
                     coppToast(data.message || 'Исполнители успешно сохранены', 'success');
                 }
@@ -474,8 +604,10 @@
         } catch (err) {
             coppAlert('Сетевая ошибка при сохранении исполнителей', 'error');
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origText;
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origText;
+            }
         }
     };
 
