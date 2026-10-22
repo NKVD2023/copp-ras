@@ -114,6 +114,39 @@
             overflow: hidden;
         }
 
+        /* Стили модального окна добавления/редактирования ручной строки */
+        #manualRowModal .tab-content {
+            display: block !important;
+            flex-grow: initial !important;
+            overflow: visible !important;
+        }
+        #manualRowModal .tab-pane {
+            display: none !important;
+            overflow: visible !important;
+        }
+        #manualRowModal .tab-pane.active {
+            display: block !important;
+            overflow: visible !important;
+        }
+        #mRowSheetPills .nav-link {
+            color: #00334e;
+            border-radius: 6px;
+        }
+        #mRowSheetPills .nav-link.active {
+            background-color: #00334e;
+            color: #ffffff;
+        }
+
+        /* Убираем спиннеры (стрелочки вверх/вниз) у числовых полей для чистого вида */
+        #manualRowModal input[type="number"]::-webkit-outer-spin-button,
+        #manualRowModal input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        #manualRowModal input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
         /* 5. Сама таблица с прокруткой */
         .table-responsive-custom {
             flex-grow: 1;
@@ -478,7 +511,7 @@
 
     {% if ns.has_data or sub.id or sub.is_manual %}
     {% set row_status = 'revision' if sub.is_revision else ('submitted' if sub.id else 'empty') %}
-    {% set full_org_name = sub.user.description or sub.user.username %}
+    {% set full_org_name = sub.org_name if (sub.is_manual and sub.org_name) else (sub.user.description or sub.user.username) %}
     {% set clean_name = full_org_name|clean_org_name %}
     {% for i in range(ns.max_len) %}
     <tr class="subgroup-data-row {% if sg_id %}subgroup-row-{{ sg_id }}{% endif %}" 
@@ -506,9 +539,13 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="font-size: 0.825rem; min-width: 190px; z-index: 1075;">
                         <li>
-                            <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2"
+                            <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2 btn-edit-manual-row"
                                     type="button"
-                                    onclick="openEditManualRowModal({{ sub.manual_row_id }}, {{ full_org_name | tojson | forceescape }}, {{ (sub.subgroup or '') | tojson | forceescape }}, {{ sub.data | tojson | forceescape }})">
+                                    data-row-id="{{ sub.manual_row_id }}"
+                                    data-org-name="{{ full_org_name }}"
+                                    data-subgroup="{{ sub.subgroup or '' }}"
+                                    data-row-values="{{ sub.data | tojson | forceescape }}"
+                                    onclick="handleEditManualRowClick(this)">
                                 <i class="bi bi-pencil-square text-primary"></i>
                                 <span>Редактировать строку</span>
                             </button>
@@ -517,7 +554,10 @@
                         <li>
                             <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2 text-danger"
                                     type="button"
-                                    onclick="deleteManualRow({{ template.id }}, {{ sub.manual_row_id }}, {{ full_org_name | tojson | forceescape }})">
+                                    data-template-id="{{ template.id }}"
+                                    data-row-id="{{ sub.manual_row_id }}"
+                                    data-org-name="{{ full_org_name }}"
+                                    onclick="handleDeleteManualRowClick(this)">
                                 <i class="bi bi-trash"></i>
                                 <span>Удалить строку</span>
                             </button>
@@ -797,15 +837,7 @@
                         </tfoot>
                     </table>
                 </div>
-                {% if current_user.role in ['admin', 'manager'] %}
-                <div class="p-3 bg-light border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>Если нужной организации нет в списке участников, вы можете добавить строку вручную</span>
-                    <button type="button" class="btn btn-sm btn-outline-copp px-3 d-flex align-items-center gap-2" onclick="openAddManualRowModal()">
-                        <i class="bi bi-plus-circle"></i>
-                        <span>Добавить строку вручную</span>
-                    </button>
-                </div>
-                {% endif %}
+
             </div>
             {% endfor %}
             
@@ -995,55 +1027,56 @@
                     <form id="manualRowForm" onsubmit="event.preventDefault(); submitManualRowForm();">
                         <input type="hidden" id="mRowEditId" value="">
 
-                        <!-- Верхняя плашка: Название и Подгруппа -->
-                        <div class="card p-3 mb-4 border bg-light-subtle rounded-3">
-                            <div class="row g-3">
-                                <div class="col-12 col-md-7">
-                                    <label class="form-label small fw-bold text-dark mb-1">
-                                        Название организации <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" id="mRowOrgName" 
-                                           placeholder="Например: МБОУ СОШ №5" required autocomplete="off">
-                                </div>
-                                <div class="col-12 col-md-5">
-                                    <label class="form-label small fw-bold text-dark mb-1">
-                                        Подгруппа (необязательно)
-                                    </label>
-                                    <input type="text" class="form-control" list="subgroupsList" id="mRowSubgroup" 
-                                           placeholder="Выберите или введите" autocomplete="off">
-                                    <datalist id="subgroupsList">
-                                        {% for sg in existing_subgroups %}
-                                        <option value="{{ sg }}"></option>
-                                        {% endfor %}
-                                    </datalist>
-                                </div>
+                        <!-- Организация и Подгруппа -->
+                        <div class="row g-3 pb-3 mb-3 border-bottom">
+                            <div class="col-12 col-md-7">
+                                <label class="form-label small fw-semibold text-dark mb-1" for="mRowOrgName">
+                                    Название организации <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="mRowOrgName" 
+                                       placeholder="Например: МБОУ СОШ №5" required autocomplete="off">
+                            </div>
+                            <div class="col-12 col-md-5">
+                                <label class="form-label small fw-semibold text-dark mb-1" for="mRowSubgroup">
+                                    Подгруппа <span class="text-muted fw-normal">(необязательно)</span>
+                                </label>
+                                <input type="text" class="form-control" list="subgroupsList" id="mRowSubgroup" 
+                                       placeholder="Выберите или введите" autocomplete="off">
+                                <datalist id="subgroupsList">
+                                    {% for sg in existing_subgroups %}
+                                    <option value="{{ sg }}"></option>
+                                    {% endfor %}
+                                </datalist>
                             </div>
                         </div>
 
-                        <!-- Навигация по вкладкам листов -->
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <label class="form-label small fw-bold text-muted text-uppercase mb-0">
-                                <i class="bi bi-ui-checks-grid me-1"></i>Данные по колонкам отчета:
-                            </label>
-                            {% if template.schema|length > 1 %}
-                            <span class="badge bg-light text-muted border small">Листов: {{ template.schema|length }}</span>
-                            {% endif %}
-                        </div>
-
+                        <!-- Навигация по вкладкам листов / Заголовок колонок -->
                         {% if template.schema|length > 1 %}
-                        <ul class="nav nav-pills mb-3 p-1 bg-light rounded border" id="mRowSheetPills" role="tablist">
-                            {% for sheet in template.schema %}
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link py-1 px-3 small fw-bold {% if loop.first %}active{% endif %}" 
-                                        id="mRowTabBtn-{{ loop.index0 }}" 
-                                        data-bs-toggle="pill" 
-                                        data-bs-target="#mRowSheetPane-{{ loop.index0 }}" 
-                                        type="button" role="tab">
-                                    {{ sheet.sheet_title }}
-                                </button>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2 d-block">
+                                <i class="bi bi-ui-checks-grid me-1"></i>Листы отчета:
+                            </label>
+                            <ul class="nav nav-pills p-1 bg-light rounded border gap-1" id="mRowSheetPills" role="tablist">
+                                {% for sheet in template.schema %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link py-1 px-3 small fw-bold {% if loop.first %}active{% endif %}" 
+                                            id="mRowTabBtn-{{ loop.index0 }}" 
+                                            data-bs-toggle="pill" 
+                                            data-bs-target="#mRowSheetPane-{{ loop.index0 }}" 
+                                            type="button" role="tab">
+                                        {{ sheet.sheet_title }}
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-1 border-bottom">
+                            <span class="small fw-bold text-muted text-uppercase">
+                                <i class="bi bi-ui-checks-grid me-1"></i>Данные по колонкам
+                            </span>
+                            <span class="small text-muted">{{ template.schema[0].sheet_title if template.schema else '' }}</span>
+                        </div>
                         {% endif %}
 
                         <div class="tab-content" id="mRowSheetContent">
@@ -1051,29 +1084,20 @@
                             <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
                                  id="mRowSheetPane-{{ loop.index0 }}" role="tabpanel">
                                 
-                                {% if template.schema|length == 1 %}
-                                <div class="fw-bold text-primary-copp small mb-3 pb-1 border-bottom">
-                                    Лист: {{ sheet.sheet_title }}
-                                </div>
-                                {% endif %}
-
                                 <div class="row g-3">
                                     {% for field in sheet.leaf_fields %}
                                     {% set f_type = field.get('type', '')|string|lower %}
                                     <div class="col-12 col-md-6">
-                                        <div class="p-2 border rounded-2 bg-white h-100 d-flex flex-column justify-content-between">
+                                        <div class="d-flex flex-column h-100 justify-content-between pb-1">
                                             <div>
                                                 <label class="form-label small fw-semibold text-dark mb-1 d-block" for="mRowF_{{ field.name }}">
                                                     {{ field.label }}
-                                                    {% if f_type in ['number', 'числовое'] %}
-                                                    <span class="badge bg-light text-muted border py-0 px-1 font-monospace" style="font-size: 0.68rem;">число</span>
-                                                    {% endif %}
                                                 </label>
                                                 {% if field.hint %}
-                                                <div class="form-text small text-muted mb-2 mt-0" style="font-size: 0.72rem;">{{ field.hint }}</div>
+                                                <div class="form-text small text-muted mt-0 mb-1" style="font-size: 0.72rem; line-height: 1.25;">{{ field.hint }}</div>
                                                 {% endif %}
                                             </div>
-                                            <div class="mt-2">
+                                            <div class="mt-1">
                                                 {% if f_type in ['number', 'числовое'] %}
                                                 <input type="number" step="any" class="form-control form-control-sm mrow-input" 
                                                        data-field-name="{{ field.name }}" id="mRowF_{{ field.name }}" placeholder="0">
@@ -1113,6 +1137,330 @@
 
         <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
+        // ==========================================
+        // Управление ручными строками сводной таблицы
+        // ==========================================
+        // Запрещаем изменение числовых значений при скролле колесиком мыши
+        document.addEventListener('wheel', function(e) {
+            // Если колесико крутят над активным числовым инпутом — сбрасываем фокус
+            if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'number') {
+                document.activeElement.blur();
+            }
+            // Также снимаем фокус, если событие произошло над числовым полем (для Firefox/Chrome)
+            if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+                e.target.blur();
+            }
+        }, { passive: true });
+
+        function openAddManualRowModal() {
+            const modalEl = document.getElementById('manualRowModal');
+            if (!modalEl) {
+                console.error('Modal #manualRowModal not found');
+                return;
+            }
+            const form = document.getElementById('manualRowForm');
+            if (form) form.reset();
+
+            const editIdInput = document.getElementById('mRowEditId');
+            if (editIdInput) editIdInput.value = '';
+
+            const titleEl = document.getElementById('manualRowModalTitle');
+            if (titleEl) titleEl.textContent = 'Добавить строку в сводную таблицу';
+
+            const saveBtnText = document.getElementById('btnSaveManualRowText');
+            if (saveBtnText) saveBtnText.textContent = 'Сохранить строку';
+
+            const orgInput = document.getElementById('mRowOrgName');
+            if (orgInput) orgInput.value = '';
+
+            const subgInput = document.getElementById('mRowSubgroup');
+            if (subgInput) subgInput.value = '';
+
+            // Очистить все поля данных
+            document.querySelectorAll('.mrow-input').forEach(el => {
+                el.value = '';
+            });
+
+            // Переключить на первый таб листа
+            const firstTabBtn = document.getElementById('mRowTabBtn-0');
+            if (firstTabBtn && typeof bootstrap !== 'undefined') {
+                const tab = bootstrap.Tab.getOrCreateInstance(firstTabBtn);
+                tab.show();
+            }
+
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+
+            setTimeout(() => {
+                if (orgInput) orgInput.focus();
+            }, 250);
+        }
+
+        function openEditManualRowModal(rowId, orgName, subgroup, data) {
+            const modalEl = document.getElementById('manualRowModal');
+            if (!modalEl) {
+                console.error('Modal #manualRowModal not found');
+                return;
+            }
+            const form = document.getElementById('manualRowForm');
+            if (form) form.reset();
+
+            const editIdInput = document.getElementById('mRowEditId');
+            if (editIdInput) editIdInput.value = rowId;
+
+            const titleEl = document.getElementById('manualRowModalTitle');
+            if (titleEl) titleEl.textContent = 'Редактировать строку в сводной таблице';
+
+            const saveBtnText = document.getElementById('btnSaveManualRowText');
+            if (saveBtnText) saveBtnText.textContent = 'Сохранить изменения';
+
+            const orgInput = document.getElementById('mRowOrgName');
+            if (orgInput) orgInput.value = orgName || '';
+
+            const subgInput = document.getElementById('mRowSubgroup');
+            if (subgInput) subgInput.value = subgroup || '';
+
+            let rowData = data;
+            if (typeof rowData === 'string') {
+                try {
+                    rowData = JSON.parse(rowData);
+                } catch (e) {
+                    rowData = {};
+                }
+            }
+            rowData = rowData || {};
+
+            // Заполнить значения полей
+            document.querySelectorAll('.mrow-input').forEach(el => {
+                const fieldName = el.getAttribute('data-field-name');
+                if (fieldName) {
+                    const val = rowData[fieldName];
+                    el.value = (val !== undefined && val !== null) ? val : '';
+                }
+            });
+
+            // Переключить на первый таб листа
+            const firstTabBtn = document.getElementById('mRowTabBtn-0');
+            if (firstTabBtn && typeof bootstrap !== 'undefined') {
+                const tab = bootstrap.Tab.getOrCreateInstance(firstTabBtn);
+                tab.show();
+            }
+
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+
+            setTimeout(() => {
+                if (orgInput) orgInput.focus();
+            }, 250);
+        }
+
+        function handleEditManualRowClick(btn) {
+            if (!btn) return;
+            const rowId = btn.getAttribute('data-row-id');
+            const orgName = btn.getAttribute('data-org-name');
+            const subgroup = btn.getAttribute('data-subgroup');
+            let data = {};
+            try {
+                data = JSON.parse(btn.getAttribute('data-row-values') || '{}');
+            } catch (e) {
+                console.error('Failed to parse manual row data:', e);
+            }
+            openEditManualRowModal(rowId, orgName, subgroup, data);
+        }
+
+        function submitManualRowForm() {
+            const orgInput = document.getElementById('mRowOrgName');
+            const orgName = (orgInput ? orgInput.value : '').trim();
+            if (!orgName) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Укажите название',
+                        text: 'Поле "Название организации" обязательно для заполнения',
+                        icon: 'warning',
+                        confirmButtonColor: '#00334E'
+                    }).then(() => {
+                        if (orgInput) orgInput.focus();
+                    });
+                } else {
+                    alert('Поле "Название организации" обязательно для заполнения');
+                    if (orgInput) orgInput.focus();
+                }
+                return;
+            }
+
+            const subgInput = document.getElementById('mRowSubgroup');
+            const subgroup = (subgInput ? subgInput.value : '').trim();
+
+            const rowData = {};
+            document.querySelectorAll('.mrow-input').forEach(el => {
+                const name = el.getAttribute('data-field-name');
+                if (name) {
+                    rowData[name] = el.value !== undefined ? el.value : '';
+                }
+            });
+
+            const editIdInput = document.getElementById('mRowEditId');
+            const editId = editIdInput ? editIdInput.value : '';
+            const isEdit = Boolean(editId);
+            const url = isEdit ? '/manual_row/{{ template.id }}/' + editId : '/manual_row/{{ template.id }}';
+
+            const saveBtn = document.getElementById('btnSaveManualRow');
+            const saveBtnText = document.getElementById('btnSaveManualRowText');
+            const originalText = saveBtnText ? saveBtnText.textContent : 'Сохранить';
+
+            if (saveBtn) saveBtn.disabled = true;
+            if (saveBtnText) saveBtnText.textContent = 'Сохранение...';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    org_name: orgName,
+                    subgroup: subgroup,
+                    data: rowData
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (saveBtn) saveBtn.disabled = false;
+                if (saveBtnText) saveBtnText.textContent = originalText;
+
+                if (res.status === 'success') {
+                    const modalEl = document.getElementById('manualRowModal');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const bsModal = bootstrap.Modal.getInstance(modalEl);
+                        if (bsModal) bsModal.hide();
+                    }
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Успешно!',
+                            text: res.message || (isEdit ? 'Строка успешно обновлена' : 'Строка успешно добавлена'),
+                            icon: 'success',
+                            confirmButtonColor: '#00334E',
+                            confirmButtonText: 'Отлично'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Ошибка',
+                            text: res.message || 'Не удалось сохранить строку',
+                            icon: 'error',
+                            confirmButtonColor: '#00334E'
+                        });
+                    } else {
+                        alert(res.message || 'Не удалось сохранить строку');
+                    }
+                }
+            })
+            .catch(err => {
+                if (saveBtn) saveBtn.disabled = false;
+                if (saveBtnText) saveBtnText.textContent = originalText;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Ошибка сети',
+                        text: 'Не удалось связаться с сервером: ' + err,
+                        icon: 'error',
+                        confirmButtonColor: '#00334E'
+                    });
+                } else {
+                    alert('Ошибка сети: ' + err);
+                }
+            });
+        }
+
+        function deleteManualRow(templateId, rowId, orgName) {
+            const safeOrgName = orgName ? String(orgName) : 'организации';
+
+            const doDelete = () => {
+                fetch('/manual_row_delete/' + templateId + '/' + rowId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                title: 'Удалено',
+                                text: res.message || 'Строка успешно удалена',
+                                icon: 'success',
+                                confirmButtonColor: '#00334E',
+                                confirmButtonText: 'Хорошо'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            window.location.reload();
+                        }
+                    } else {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                title: 'Ошибка удаления',
+                                text: res.message || 'Не удалось удалить строку',
+                                icon: 'error',
+                                confirmButtonColor: '#00334E'
+                            });
+                        } else {
+                            alert(res.message || 'Не удалось удалить строку');
+                        }
+                    }
+                })
+                .catch(err => {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Ошибка',
+                            text: 'Ошибка сети при удалении: ' + err,
+                            icon: 'error',
+                            confirmButtonColor: '#00334E'
+                        });
+                    } else {
+                        alert('Ошибка сети: ' + err);
+                    }
+                });
+            };
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Удалить строку?',
+                    text: 'Вы уверены, что хотите удалить строку "' + safeOrgName + '" из сводной таблицы?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Да, удалить',
+                    cancelButtonText: 'Отмена'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doDelete();
+                    }
+                });
+            } else {
+                if (confirm('Вы уверены, что хотите удалить строку "' + safeOrgName + '" из сводной таблицы?')) {
+                    doDelete();
+                }
+            }
+        }
+
+        function handleDeleteManualRowClick(btn) {
+            if (!btn) return;
+            const templateId = btn.getAttribute('data-template-id');
+            const rowId = btn.getAttribute('data-row-id');
+            const orgName = btn.getAttribute('data-org-name');
+            deleteManualRow(templateId, rowId, orgName);
+        }
+
         // Инициализация Bootstrap Tooltips (иконки подсказок в заголовках)
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
