@@ -32,6 +32,7 @@ from app.models import ReportTemplate, ReportSubmission, User, ReportDraft
 
 from app.extensions import db
 
+from datetime import datetime
 from app.utils import log_action
 
 
@@ -334,13 +335,15 @@ def view_data(template_id):
     
 
     # Получаем все сданные ответы по данному шаблону
-
     submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
 
-    
+    # Загружаем ручные строки для сводной таблицы
+    from app.models import ManualRow
+    manual_rows = ManualRow.query.filter_by(template_id=template_id).all()
+    for mr in manual_rows:
+        submissions.append(ManualRowAdapter(mr))
 
     # Сортируем ответы по порядку учреждений в списке пользователей (User.id)
-
     submissions.sort(key=get_sort_key)
 
     
@@ -446,7 +449,8 @@ def view_data(template_id):
         assigned_count = len(template.assigned_users)
     else:
         assigned_count = 0
-    total_assigned = max(assigned_count, len(submissions))
+    real_subs_count = len([s for s in submissions if not getattr(s, 'is_manual', False)])
+    total_assigned = max(assigned_count, real_subs_count)
 
     submitted_user_ids = {
         getattr(s, 'user_id', None) or (s.user.id if getattr(s, 'user', None) else None)
@@ -514,17 +518,12 @@ def inline_update(template_id):
     
 
     for item in updates:
-
         user_id = item.get('user_id')
-
+        manual_row_id = item.get('manual_row_id')
         field_name = item.get('field_name')
-
         value = item.get('value')
 
-        
-
-        if not user_id or not field_name:
-
+        if (not user_id and not manual_row_id) or not field_name:
             continue
 
 
@@ -582,6 +581,17 @@ def inline_update(template_id):
         # -----------------------------------
 
 
+
+        if manual_row_id:
+            from app.models import ManualRow
+            mr = ManualRow.query.filter_by(id=manual_row_id, template_id=template_id).first()
+            if mr:
+                data_copy = mr.data.copy() if mr.data else {}
+                data_copy[field_name] = value
+                mr.data = data_copy
+                mr.updated_by_id = current_user.id
+                mr.updated_at = datetime.utcnow()
+            continue
 
         submission = ReportSubmission.query.filter_by(template_id=template_id, user_id=user_id).first()
 
@@ -1064,7 +1074,7 @@ def add_manual_row(template_id):
     db.session.add(new_row)
     db.session.commit()
 
-    from app.admin.routes_logs import log_action
+    # log_action imported at top
     log_action(
         'Добавление строки в сводную таблицу',
         f'В отчет "{template.short_name}" вручную добавлена строка организации "{org_name}"' + (f' (подгруппа: {subgroup})' if subgroup else '')
@@ -1107,7 +1117,7 @@ def update_manual_row(template_id, row_id):
     manual_row.updated_at = datetime.utcnow()
     db.session.commit()
 
-    from app.admin.routes_logs import log_action
+    # log_action imported at top
     log_action(
         'Редактирование строки в сводной таблице',
         f'В отчете "{template.short_name}" обновлена строка организации "{manual_row.org_name}"'
@@ -1137,7 +1147,7 @@ def delete_manual_row(template_id, row_id):
     db.session.delete(manual_row)
     db.session.commit()
 
-    from app.admin.routes_logs import log_action
+    # log_action imported at top
     log_action(
         'Удаление строки из сводной таблицы',
         f'Из отчета "{template.short_name}" удалена строка организации "{org_name}"'
