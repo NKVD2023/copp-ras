@@ -130,6 +130,9 @@ def fill_report(template_id):
                             del json_data[field_name]
                     continue
                     
+                if field.get('type') == 'group':
+                    continue
+                    
                 val = json_data.get(field_name)
                 
                 # Приводим к списку для унифицированной проверки

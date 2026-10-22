@@ -124,17 +124,28 @@ def build_table_headers(fields):
         import copy
         for node in nodes:
             if node['children']:
-                # Add a synthetic child for the parent's own data
-                self_node = copy.deepcopy(node)
-                self_node['children'] = []
-                # Remove the original label to avoid confusing it with the parent title
-                self_node['field']['label'] = "Всего"
-                # Принудительно ставим тип number, чтобы колонка 'Всего' могла суммироваться в строке Итого
-                self_node['field']['type'] = 'number'
+                field_obj = node.get('field', {})
+                # Чистая группа колонок — ТОЛЬКО если type == 'group'!
+                # По умолчанию (числовые/текстовые поля) родитель ВСЕГДА имеет колонку '(Всего)'.
+                is_pure_group = field_obj.get('type') == 'group'
                 
-                # Prepend the synthetic node to children
-                node['children'].insert(0, self_node)
-                process_parents(node['children'][1:]) # skip the synthetic one we just added
+                if not is_pure_group:
+                    # Узел является реальным показателем с детализацией ('в т.ч.') — добавляем собственную колонку
+                    self_node = copy.deepcopy(node)
+                    self_node['children'] = []
+                    parent_label = (field_obj.get('label') or '').strip()
+                    if parent_label.lower().endswith('(всего)') or parent_label.lower().endswith('всего'):
+                        self_node['field']['label'] = parent_label
+                    else:
+                        self_node['field']['label'] = f"{parent_label} (Всего)"
+                    # Принудительно ставим тип number, чтобы колонка 'Всего' могла суммироваться в строке Итого
+                    self_node['field']['type'] = 'number'
+                    
+                    # Prepend the synthetic node to children
+                    node['children'].insert(0, self_node)
+                    process_parents(node['children'][1:]) # skip the synthetic one we just added
+                else:
+                    process_parents(node['children'])
     
     process_parents(tree)
     

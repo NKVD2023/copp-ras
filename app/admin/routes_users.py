@@ -39,12 +39,17 @@ def create_user():
     group = request.form.get('group', None)
     if group == '':
         group = None
+    subgroup = request.form.get('subgroup', None)
+    if subgroup:
+        subgroup = subgroup.strip() or None
+    else:
+        subgroup = None
 
     if User.query.filter_by(username=username).first():
         flash('Пользователь с таким логином уже существует')
         return redirect(url_for('admin.dashboard', tab='usersTab'))
 
-    user = User(username=username, role=role, description=description, group=group)
+    user = User(username=username, role=role, description=description, group=group, subgroup=subgroup)
     user.set_password(password)
     
     # Если создает менеджер, автоматически привязываем пользователя к его отделу
@@ -138,6 +143,13 @@ def edit_user(user_id):
         group = None
     user.group = group
 
+    subgroup = request.form.get('subgroup', None)
+    if subgroup:
+        subgroup = subgroup.strip() or None
+    else:
+        subgroup = None
+    user.subgroup = subgroup
+
     if current_user.role == 'admin':
         dept_id_val = request.form.get('department_id')
         user.department_id = int(dept_id_val) if (dept_id_val and dept_id_val.isdigit()) else None
@@ -168,6 +180,7 @@ def edit_user(user_id):
                 'description': user.description or '',
                 'role': user.role,
                 'group': user.group or '',
+                'subgroup': user.subgroup or '',
                 'department_id': user.department_id,
                 'department_name': dept_name
             }
@@ -211,7 +224,7 @@ def download_template():
     ws.title = "Пользователи"
     
     # Заголовки (точно как на скриншоте)
-    headers = ["Логин", "Пароль", "Описание", "группа"]
+    headers = ["Логин", "Пароль", "Описание", "группа", "подгруппа"]
     ws.append(headers)
     
     # Стилизация заголовков (полужирный)
@@ -224,6 +237,7 @@ def download_template():
     ws.column_dimensions['B'].width = 20
     ws.column_dimensions['C'].width = 40
     ws.column_dimensions['D'].width = 20
+    ws.column_dimensions['E'].width = 25
     
     output = io.BytesIO()
     wb.save(output)
@@ -273,6 +287,10 @@ def bulk_upload():
             
             if group == '':
                 group = None
+
+            subgroup = str(row[4]).strip() if len(row) > 4 and row[4] is not None else None
+            if subgroup == '':
+                subgroup = None
                 
             if not username or not password:
                 skipped_count += 1
@@ -285,7 +303,7 @@ def bulk_upload():
                 continue
                 
             # Создание
-            new_user = User(username=username, role=role, description=description, group=group)
+            new_user = User(username=username, role=role, description=description, group=group, subgroup=subgroup)
             new_user.set_password(password)
             db.session.add(new_user)
             added_count += 1
@@ -394,4 +412,68 @@ def bulk_delete_users():
 
     flash(f'Успешно удалено пользователей: {deleted_count}', 'success')
     return redirect(url_for('admin.dashboard', tab='usersTab'))
+
+
+@admin_bp.route('/users/bulk_set_subgroup', methods=['POST'])
+@login_required
+@roles_required('admin', 'manager')
+def bulk_set_subgroup():
+    """Массовое назначение или очистка подгруппы для выбранных пользователей."""
+    req_json = request.get_json(silent=True)
+    if req_json:
+        user_ids = req_json.get('user_ids', [])
+        subgroup = req_json.get('subgroup', '')
+    else:
+        user_ids = request.form.getlist('user_ids')
+        subgroup = request.form.get('subgroup', '')
+
+    subgroup = subgroup.strip() if subgroup else None
+
+    try:
+        user_ids = [int(uid) for uid in user_ids if uid and str(uid).isdigit()]
+    except (ValueError, TypeError):
+        user_ids = []
+
+    if not user_ids:
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Не выбрано ни одного пользователя'}), 400
+        flash('Не выбрано ни одного пользователя', 'warning')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+
+    if current_user.role == 'manager':
+        from app.utils import get_manager_department
+        dept = get_manager_department(current_user)
+        if not dept:
+            if is_ajax():
+                return jsonify({'status': 'error', 'message': 'Доступ запрещен'}), 403
+            flash('Доступ запрещен', 'danger')
+            return redirect(url_for('admin.dashboard', tab='usersTab'))
+        target_users = User.query.filter(User.id.in_(user_ids), User.department_id == dept.id, User.role == 'user').all()
+    else:
+        target_users = User.query.filter(User.id.in_(user_ids), User.role != 'admin').all()
+
+    if not target_users:
+        if is_ajax():
+            return jsonify({'status': 'error', 'message': 'Нет доступных пользователей для обновления'}), 400
+        flash('Нет доступных пользователей для обновления', 'warning')
+        return redirect(url_for('admin.dashboard', tab='usersTab'))
+
+    for u in target_users:
+        u.subgroup = subgroup
+
+    db.session.commit()
+    msg = f'Подгруппа «{subgroup}» назначена для {len(target_users)} пользователей' if subgroup else f'Подгруппа очищена для {len(target_users)} пользователей'
+    log_action('Назначение подгруппы', msg)
+
+    if is_ajax():
+        return jsonify({
+            'status': 'success',
+            'message': msg,
+            'subgroup': subgroup or '',
+            'updated_user_ids': [u.id for u in target_users]
+        })
+
+    flash(msg, 'success')
+    return redirect(url_for('admin.dashboard', tab='usersTab'))
+
 

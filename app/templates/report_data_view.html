@@ -15,7 +15,12 @@
     <title>ЦОПП | Отчеты</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logoblue2.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/cards.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/buttons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/tables.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
     <script src="{{ url_for('static', filename='js/html2pdf.bundle.min.js') }}"></script>
@@ -51,19 +56,46 @@
             /* Не даем вылезти за пределы */
         }
 
-        .view-header {
-            background: var(--bg-card);
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
+        .shadow-xs {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .nav-tabs {
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
+        .summary-toolbar {
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .status-filter-btn {
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid transparent;
+        }
+        .status-filter-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
+        .status-filter-btn.active {
+            box-shadow: 0 0 0 2px var(--primary-color) !important;
+        }
+
+        .nav-pills .nav-link {
+            color: var(--text-main);
+            background-color: #f1f5f9;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+        .nav-pills .nav-link:hover {
+            background-color: #e2e8f0;
+            color: var(--primary-color);
+        }
+        .nav-pills .nav-link.active {
+            background-color: var(--primary-color) !important;
+            color: #ffffff !important;
+            border-color: var(--primary-color) !important;
         }
 
         /* 4. Контейнер табов тоже растягивается */
@@ -134,6 +166,39 @@
             background-color: #f8fafc;
         }
 
+        /* Повышение z-index строки и липкой ячейки при открытии выпадающего меню (устраняет наложение соседних строк) */
+        .table-custom tr.dropdown-active-row,
+        .table-custom tr:has(.dropdown-menu.show) {
+            position: relative;
+            z-index: 1065 !important;
+        }
+
+        .table-custom td.sticky-col.dropdown-active-cell,
+        .table-custom td.sticky-col:has(.dropdown-menu.show) {
+            z-index: 1070 !important;
+        }
+
+        .table-custom .dropdown-menu {
+            z-index: 1075 !important;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .table-custom .dropdown-item {
+            font-size: 0.825rem;
+            font-weight: 500;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+
+        .table-custom .dropdown-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .table-custom .dropdown-item.text-danger:hover {
+            background-color: #fef2f2;
+            color: #dc2626 !important;
+        }
+
         /* Плейсхолдер для пустых ячеек */
         td[contenteditable="true"]:empty::before {
             content: "Данные не предоставлены";
@@ -171,77 +236,438 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
         }
+
+        /* Стили аккордеона подгрупп */
+        .subgroup-header-row {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s ease;
+        }
+        .subgroup-header-row:hover td {
+            background-color: #e2e8f0 !important;
+        }
+        .subgroup-chevron-icon {
+            display: inline-block;
+            transition: transform 0.2s ease;
+            font-size: 0.85rem;
+        }
+        .subgroup-chevron-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        .subgroup-total-row td {
+            font-size: 0.85rem;
+        }
+        .subgroup-cell-total {
+            background-color: #e9f2fb;
+        }
+
+        /* Фирменный зеленый цвет Microsoft Excel */
+        .btn-excel {
+            background-color: #107C41 !important;
+            border-color: #107C41 !important;
+            color: #ffffff !important;
+            font-weight: 500;
+        }
+        .btn-excel:hover, .btn-excel:focus {
+            background-color: #0b5a2f !important;
+            border-color: #0b5a2f !important;
+            color: #ffffff !important;
+        }
+        .btn-outline-excel {
+            background-color: #ffffff !important;
+            border-color: #107C41 !important;
+            color: #107C41 !important;
+            font-weight: 500;
+        }
+        .btn-outline-excel:hover, .btn-outline-excel:focus {
+            background-color: #107C41 !important;
+            border-color: #107C41 !important;
+            color: #ffffff !important;
+        }
+
+        /* Кнопка меню действий с отчетом (3 точки) */
+        .org-action-trigger {
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            background: transparent;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .org-action-trigger:hover,
+        .org-action-trigger:focus,
+        .show > .org-action-trigger {
+            background-color: #e2e8f0 !important;
+            color: #00334E !important;
+        }
+
+        .btn-xs {
+            padding: 2px 7px;
+            font-size: 0.72rem;
+            line-height: 1.3;
+            border-radius: 4px;
+        }
+
+        /* Компактные ячейки редактирования данных */
+        .editable-data-cell {
+            padding: 0.35rem 0.5rem !important;
+            min-height: 32px;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            outline: none;
+            transition: background-color 0.15s ease;
+        }
+        .editable-data-cell:focus {
+            background-color: #e0f2fe !important;
+            box-shadow: inset 0 0 0 2px #0284c7;
+            border-radius: 3px;
+        }
+
+        /* Стилизация и обрезка длинных заголовков листов */
+        .sheet-tab-title {
+            max-width: 220px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            vertical-align: middle;
+        }
+        .nav-pills .nav-link.active .sheet-tab-badge {
+            background-color: rgba(255, 255, 255, 0.25) !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.4) !important;
+        }
     </style>
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg py-2">
-        <div class="container-fluid px-4">
-            <a class="brand-container d-flex align-items-center text-decoration-none gap-3" href="/">
-                <div class="d-flex flex-column justify-content-center">
-                    <span class="brand-main lh-1 mb-1 brand-main-text">ЦОПП Республики Крым</span>
-                    <span class="brand-sub lh-1 brand-sub-text">Региональная Аналитическая Система</span>
-                </div>
-            </a>
-            <div class="d-flex align-items-center gap-2">
-                
-                <!-- Строка поиска -->
-                <div class="position-relative me-2 d-none d-lg-block">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                    <input type="text" id="orgSearchInput" class="form-control rounded-pill ps-5 bg-light border-0 search-pill w-280" placeholder="Поиск по организации..." autocomplete="off" >
-                </div>
-
-                <!-- Кнопки действий -->
-                <button type="button" onclick="exportExcel(this, '{{ template.id }}')"
-                    class="btn btn-sm btn-success px-4 rounded-pill shadow-sm text-white btn-modern d-flex align-items-center gap-1" id="exportExcelBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel mb-1" viewBox="0 0 16 16">
-                        <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z" />
-                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z" />
-                    </svg>
-                    В Excel
-                </button>
-
-                <button type="button" class="btn btn-sm btn-primary px-4 rounded-pill shadow-sm text-white btn-modern d-flex align-items-center gap-1" onclick="saveAllChanges()" id="saveChangesBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-save mb-1" viewBox="0 0 16 16">
-                      <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
-                    </svg>
-                    Сохранить
-                </button>
-
-                <!-- <button onclick="document.getElementById('tab-analytics').click()" class="btn btn-sm btn-copp px-4 rounded-pill shadow-sm btn-modern me-2"><i class="bi bi-bar-chart-fill me-1"></i>Аналитика</button> -->
-                
-                <a href="/" class="btn btn-sm btn-light border px-4 rounded-pill shadow-sm btn-modern text-muted d-flex align-items-center gap-1 ms-1">
+    <!-- Tier 1: Верхняя навигационная панель (Назад, Название, Excel, Сохранить) -->
+    <nav class="navbar py-2 px-3 bg-white border-bottom shadow-xs">
+        <div class="container-fluid px-2 d-flex align-items-center justify-content-between gap-3">
+            <!-- Слева: Кнопка Назад + Название отчета -->
+            <div class="d-flex align-items-center gap-3 min-w-0">
+                <a href="/" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 d-flex align-items-center gap-1 flex-shrink-0" title="Вернуться к списку отчетов">
                     <i class="bi bi-arrow-left"></i>
-                    Назад
+                    <span class="d-none d-sm-inline">Назад</span>
                 </a>
+                <div class="min-w-0">
+                    <h5 class="fw-bold mb-0 text-truncate text-primary-copp" title="{{ template.name }}" style="font-size: 1.15rem; line-height: 1.25;">
+                        {{ template.name }}
+                    </h5>
+                </div>
+            </div>
+
+            <!-- Справа: Кнопки действий (Excel экспорт/импорт + Добавить строку + Умное сохранение) -->
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                {% if current_user.role in ['admin', 'manager'] %}
+                <button type="button" class="btn btn-sm btn-copp px-3 rounded-3 d-flex align-items-center gap-1 shadow-xs" 
+                        onclick="openAddManualRowModal()" title="Добавить организацию/строку в сводную таблицу вручную">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Добавить строку</span>
+                </button>
+                {% endif %}
+                <!-- Сдвоенная группа кнопок Excel в фирменном зеленом стиле Excel -->
+                <div class="btn-group shadow-xs">
+                    <button type="button" onclick="exportExcel(this, '{{ template.id }}')"
+                        class="btn btn-sm btn-excel px-3 d-flex align-items-center gap-1" id="exportExcelBtn" title="Скачать сводную таблицу в Excel">
+                        <i class="bi bi-file-earmark-excel"></i>
+                        <span>В Excel</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-excel px-3 d-flex align-items-center gap-1"
+                        data-bs-toggle="modal" data-bs-target="#importSummaryModal" id="importSummaryBtn" title="Импорт отредактированного файла Excel">
+                        <i class="bi bi-file-earmark-arrow-up"></i>
+                        <span class="d-none d-md-inline">Импорт</span>
+                    </button>
+                </div>
+
+                <!-- Умная кнопка Сохранить -->
+                <button type="button" class="btn btn-sm btn-light border text-muted px-3 rounded-3 d-flex align-items-center gap-1 shadow-xs" 
+                    onclick="saveAllChanges()" id="saveChangesBtn" disabled title="Нет несохраненных изменений">
+                    <i class="bi bi-check2" id="saveChangesBtnIcon"></i>
+                    <span id="saveChangesBtnText">Сохранено</span>
+                </button>
             </div>
         </div>
     </nav>
 
     <div class="full-view-container">
-        <div class="view-header pb-3">
-            <h4 class="fw-bold text-dark m-0">{{ template.name }}</h4>
+        <!-- Tier 2: Инструментальная панель (Вкладки листов + Интерактивные фильтры статусов + Поиск) -->
+        {% set ns_stats = namespace(total=0, submitted=0, revision=0) %}
+        {% for s in submissions %}
+            {% if s.is_revision %}
+                {% set ns_stats.revision = ns_stats.revision + 1 %}
+            {% elif s.id %}
+                {% set ns_stats.submitted = ns_stats.submitted + 1 %}
+            {% endif %}
+            {% set ns_stats.total = ns_stats.total + 1 %}
+        {% endfor %}
+        <div class="summary-toolbar px-3 py-2 bg-white border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-xs">
+            <!-- Слева: Вкладки листов с компактной обрезкой и подсказками -->
+            <div class="d-flex align-items-center gap-1 overflow-auto py-1 flex-grow-1 flex-shrink-1" style="max-width: 48%; scrollbar-width: thin;">
+                {% if template.schema|length > 1 %}
+                <ul class="nav nav-pills flex-nowrap gap-1 mb-0" id="dataSheetsTabs" role="tablist">
+                    {% for sheet in template.schema %}
+                    <li class="nav-item">
+                        <button class="nav-link py-1 px-2 rounded-pill d-flex align-items-center gap-1 text-nowrap {% if loop.first %}active{% endif %}" id="tab-{{ loop.index }}"
+                            data-bs-toggle="tab" data-bs-target="#panel-{{ loop.index }}" type="button" style="font-size: 0.825rem;"
+                            title="Лист {{ loop.index }}: {{ sheet.sheet_title }}">
+                            <span class="badge rounded-pill bg-white text-dark border sheet-tab-badge" style="font-size: 0.7rem;">{{ loop.index }}</span>
+                            <span class="sheet-tab-title d-inline-block">{{ sheet.sheet_title }}</span>
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="d-flex align-items-center text-muted small fw-medium text-truncate" style="max-width: 320px;" title="{{ template.schema[0].sheet_title if template.schema else 'Таблица данных' }}">
+                    <i class="bi bi-table me-1 text-primary-copp flex-shrink-0"></i>
+                    <span class="fw-bold text-dark text-truncate">{{ template.schema[0].sheet_title if template.schema else 'Таблица данных' }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- По центру: Интерактивные фильтры-статусы -->
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm py-1 px-3 rounded-pill fw-medium status-filter-btn active" data-filter="all" id="filterBtnAll" title="Показать все учреждения" style="font-size: 0.825rem; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
+                    <i class="bi bi-buildings me-1 text-muted"></i>Всего: <strong id="statTotalCount">{{ stats.total if stats else ns_stats.total }}</strong>
+                </button>
+                <button type="button" class="btn btn-sm py-1 px-3 rounded-pill fw-medium status-filter-btn" data-filter="submitted" id="filterBtnSubmitted" title="Показать только сданные отчеты" style="font-size: 0.825rem; background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">
+                    <i class="bi bi-check-circle me-1"></i>Сдано: <strong id="statSubmittedCount">{{ stats.submitted if stats else ns_stats.submitted }}</strong>
+                </button>
+                <button type="button" class="btn btn-sm py-1 px-3 rounded-pill fw-medium status-filter-btn" data-filter="revision" id="filterBtnRevision" title="Показать только отчеты на доработке" style="font-size: 0.825rem; background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a;">
+                    <i class="bi bi-clock-history me-1"></i>На доработке: <strong id="statRevisionCount">{{ stats.revision if stats else ns_stats.revision }}</strong>
+                </button>
+            </div>
+
+            <!-- Справа: Быстрый поиск с индикатором и кнопкой очистки -->
+            <div class="d-flex align-items-center gap-2" style="min-width: 250px; max-width: 340px;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 text-muted ps-2 pe-1">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="orgSearchInput" class="form-control bg-light border-start-0 border-end-0 ps-1" placeholder="Поиск по организации..." autocomplete="off">
+                    <span class="input-group-text bg-light border-start-0 text-muted small pe-2 d-none" id="searchCountBadge" style="font-size: 0.75rem;">
+                        0/0
+                    </span>
+                    <button class="btn btn-light border border-start-0 text-muted d-none" type="button" id="btnClearOrgSearch" title="Очистить поиск">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <ul class="nav nav-tabs" id="dataSheetsTabs" role="tablist">
-            {% for sheet in template.schema %}
-            <li class="nav-item">
-                <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-{{ loop.index }}"
-                    data-bs-toggle="tab" data-bs-target="#panel-{{ loop.index }}" type="button">Лист: {{
-                    sheet.sheet_title }}</button>
-            </li>
-            {% endfor %}
-            <!-- Временно скрыто по просьбе заказчика
-            <li class="nav-item ms-auto">
-                <button class="nav-link bg-light text-dark fw-bold border" id="tab-analytics"
-                    data-bs-toggle="tab" data-bs-target="#panel-analytics" type="button" onclick="renderDashboards()">
-                    <i class="bi bi-bar-chart-line me-1"></i> Аналитика и PDF
-                </button>
-            </li>
-            -->
-        </ul>
+        {% macro render_submission(sub, sheet, template, current_user, sg_id='') %}
+    {% set ns = namespace(max_len=1, has_data=false) %}
+    {% for field in sheet.leaf_fields %}
+        {% set val = sub.data.get(field.name) %}
+        {% if val is not none %}
+            {% if val is iterable and val is not string %}
+                {% for v in val %}
+                    {% if v is not none and v|string|trim != '' %}
+                        {% set ns.has_data = true %}
+                    {% endif %}
+                {% endfor %}
+                {% if val|length > ns.max_len %}
+                    {% set ns.max_len = val|length %}
+                {% endif %}
+            {% elif val|string|trim != '' %}
+                {% set ns.has_data = true %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
 
-        <div class="tab-content" id="dataSheetsTabsContent">
+    {% if ns.has_data or sub.id or sub.is_manual %}
+    {% set row_status = 'revision' if sub.is_revision else ('submitted' if sub.id else 'empty') %}
+    {% set full_org_name = sub.user.description or sub.user.username %}
+    {% set clean_name = full_org_name|clean_org_name %}
+    {% for i in range(ns.max_len) %}
+    <tr class="subgroup-data-row {% if sg_id %}subgroup-row-{{ sg_id }}{% endif %}" 
+        data-status="{{ row_status }}"
+        data-org-name="{{ full_org_name|lower }}" 
+        {% if sg_id %}data-subgroup-parent="{{ sg_id }}"{% endif %}
+        {% if sub.is_revision %}style="background-color: #fffbe6;"{% endif %}>
+        {% if i == 0 %}
+        <td class="py-1 px-3 fw-bold sticky-col align-middle {% if sub.is_revision %}bg-warning bg-opacity-10{% endif %}" rowspan="{{ ns.max_len }}">
+            <div class="d-flex align-items-center justify-content-between gap-1 w-100">
+                <span class="org-name text-truncate" title="{{ full_org_name }}" style="max-width: calc(100% - 28px); cursor: default;">
+                    {{ clean_name }}
+                </span>
+                
+                {% if sub.is_manual %}
+                <div class="dropdown flex-shrink-0">
+                    <button class="btn btn-xs btn-light text-muted border-0 p-1 rounded-circle org-action-trigger" 
+                            type="button" 
+                            data-bs-toggle="dropdown" 
+                            data-bs-boundary="viewport"
+                            data-bs-popper-config='{"strategy":"fixed"}'
+                            aria-expanded="false" 
+                            title="Действия со строкой">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="font-size: 0.825rem; min-width: 190px; z-index: 1075;">
+                        <li>
+                            <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2"
+                                    type="button"
+                                    onclick="openEditManualRowModal({{ sub.manual_row_id }}, {{ full_org_name | tojson | forceescape }}, {{ (sub.subgroup or '') | tojson | forceescape }}, {{ sub.data | tojson | forceescape }})">
+                                <i class="bi bi-pencil-square text-primary"></i>
+                                <span>Редактировать строку</span>
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2 text-danger"
+                                    type="button"
+                                    onclick="deleteManualRow({{ template.id }}, {{ sub.manual_row_id }}, {{ full_org_name | tojson | forceescape }})">
+                                <i class="bi bi-trash"></i>
+                                <span>Удалить строку</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                {% elif sub.id %}
+                <div class="dropdown flex-shrink-0">
+                    <button class="btn btn-xs btn-light text-muted border-0 p-1 rounded-circle org-action-trigger" 
+                            type="button" 
+                            data-bs-toggle="dropdown" 
+                            data-bs-boundary="viewport"
+                            data-bs-popper-config='{"strategy":"fixed"}'
+                            aria-expanded="false" 
+                            title="Действия с отчетом">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border py-1" style="font-size: 0.825rem; min-width: 190px; z-index: 1075;">
+                        {% if sub.is_revision %}
+                        <li>
+                            <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2 btn-return-revision"
+                                    type="button"
+                                    data-template-id="{{ template.id }}" 
+                                    data-user-id="{{ sub.user.id }}" 
+                                    data-org-name="{{ full_org_name }}" 
+                                    data-comment="{{ sub.revision_comment or '' }}">
+                                <i class="bi bi-pencil-square text-warning"></i>
+                                <span>Изменить замечание</span>
+                            </button>
+                        </li>
+                        {% else %}
+                        <li>
+                            <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2 btn-return-revision"
+                                    type="button"
+                                    data-template-id="{{ template.id }}" 
+                                    data-user-id="{{ sub.user.id }}" 
+                                    data-org-name="{{ full_org_name }}" 
+                                    data-comment="">
+                                <i class="bi bi-arrow-counterclockwise text-warning"></i>
+                                <span>Вернуть на доработку</span>
+                            </button>
+                        </li>
+                        {% endif %}
+
+                        {% if current_user.role == 'admin' %}
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <button class="dropdown-item py-1 px-3 d-flex align-items-center gap-2 text-danger btn-delete-submission"
+                                    type="button"
+                                    data-template-id="{{ template.id }}" 
+                                    data-user-id="{{ sub.user.id }}" 
+                                    data-org-name="{{ full_org_name }}">
+                                <i class="bi bi-trash"></i>
+                                <span>Удалить отчет</span>
+                            </button>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if sub.is_revision %}
+            <div class="mt-1 d-flex align-items-center gap-1 flex-wrap">
+                <span class="badge text-dark border border-warning border-opacity-50 px-2 py-0" style="background-color: #fff3cd; font-size: 0.7rem; font-weight: 500;">
+                    <i class="bi bi-clock-history me-1 text-warning"></i>На доработке
+                </span>
+                {% if sub.revision_comment %}
+                <span class="small text-muted fst-italic text-truncate" style="font-size: 0.72rem; max-width: 220px; font-weight: normal;" title="{{ sub.revision_comment }}">
+                    <i class="bi bi-chat-left-quote me-1 text-warning"></i>{{ sub.revision_comment }}
+                </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </td>
+        {% endif %}
+        
+        {% for field in sheet.leaf_fields %}
+        {% set is_active = field.get('is_active', True) %}
+        {% set val = sub.data.get(field.name, '') %}
+        {% if not is_active and (val is none or val == '' or val == []) %}
+            {% set val = 'Сбор завершен' %}
+        {% endif %}
+        
+        {% if val is iterable and val is not string %}
+            <td class="p-0 align-top text-center {% if not is_active %}bg-light text-muted{% else %}text-dark{% endif %}" title="{% if is_active %}Кликните для редактирования{% else %}Сбор данных завершен{% endif %}">
+                {% set cell_val = val[i] if i < val|length else '' %}
+                <div class="editable-data-cell" 
+                     contenteditable="{% if is_active %}true{% else %}false{% endif %}" 
+                     {% if sub.is_manual %}data-manual-row-id="{{ sub.manual_row_id }}"{% else %}data-user-id="{{ sub.user.id }}"{% endif %}
+                     data-field-name="{{ field.name }}"
+                     data-field-type="{{ field.type }}"
+                     {% if sg_id %}data-subgroup-id="{{ sg_id }}"{% endif %}
+                     data-is-multiple="true"
+                     data-index="{{ i }}">{{ cell_val }}</div>
+            </td>
+        {% else %}
+            {% if i == 0 %}
+            <td class="p-0 align-middle text-center {% if not is_active %}bg-light text-muted{% else %}text-dark{% endif %}" title="{% if is_active %}Кликните для редактирования{% else %}Сбор данных завершен{% endif %}" rowspan="{{ ns.max_len }}">
+                <div class="editable-data-cell" 
+                     contenteditable="{% if is_active %}true{% else %}false{% endif %}" 
+                     {% if sub.is_manual %}data-manual-row-id="{{ sub.manual_row_id }}"{% else %}data-user-id="{{ sub.user.id }}"{% endif %}
+                     data-field-name="{{ field.name }}"
+                     data-field-type="{{ field.type }}"
+                     {% if sg_id %}data-subgroup-id="{{ sg_id }}"{% endif %}
+                     data-is-multiple="false">{{ val }}</div>
+            </td>
+            {% endif %}
+        {% endif %}
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    
+    {% if ns.max_len > 1 %}
+    <tr class="fw-bold subgroup-data-row {% if sg_id %}subgroup-row-{{ sg_id }}{% endif %}" 
+        data-status="{{ row_status }}"
+        data-org-name="{{ full_org_name|lower }}"
+        {% if sg_id %}data-subgroup-parent="{{ sg_id }}"{% endif %}>
+        <td class="py-1 px-3 sticky-col align-middle text-start bg-section">Итого по организации</td>
+        {% for field in sheet.leaf_fields %}
+            {% set f_type = field.get('type', '')|string|lower %}
+            {% if f_type in ['number', 'числовое'] %}
+                {% set ns_sub = namespace(total=0.0, has_data=false) %}
+                {% set val = sub.data.get(field.name) %}
+                {% if val is not none and val != '' %}
+                    {% if val is iterable and val is not string %}
+                        {% for v in val %}
+                            {% if v is not none and v != '' %}
+                                {% set ns_sub.total = ns_sub.total + v|float(0) %}
+                                {% set ns_sub.has_data = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% set ns_sub.total = ns_sub.total + val|float(0) %}
+                        {% set ns_sub.has_data = true %}
+                    {% endif %}
+                {% endif %}
+                <td class="py-1 px-2 align-middle text-center bg-section">
+                    {{ ns_sub.total if ns_sub.has_data else '0' }}
+                </td>
+            {% else %}
+                <td class="py-1 px-2 align-middle text-center bg-section">-</td>
+            {% endif %}
+        {% endfor %}
+    </tr>
+    {% endif %}
+    {% endif %}
+{% endmacro %}
+
+<div class="tab-content" id="dataSheetsTabsContent">
             {% for sheet in template.schema %}
             <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="panel-{{ loop.index }}"
                 role="tabpanel">
@@ -252,10 +678,10 @@
                             {% for row in sheet.header_rows %}
                             <tr>
                                 {% if loop.first %}
-                                <th class="p-3 sticky-col align-middle" rowspan="{{ max_depth }}">Наименование образовательного учреждения</th>
+                                <th class="py-2 px-3 sticky-col align-middle" rowspan="{{ max_depth }}">Наименование образовательного учреждения</th>
                                 {% endif %}
                                 {% for cell in row %}
-                                <th class="p-3 text-center report-col-header align-middle" 
+                                <th class="py-2 px-2 text-center report-col-header align-middle" 
                                     {% if cell.colspan > 1 %}colspan="{{ cell.colspan }}"{% endif %}
                                     {% if cell.rowspan > 1 %}rowspan="{{ cell.rowspan }}"{% endif %}>
                                     {{ cell.label }}
@@ -271,161 +697,74 @@
                             {% endfor %}
                         </thead>
                         <tbody>
-                            {% for sub in submissions %}
-                            {% set t_groups = sheet.get('target_groups', []) %}
-                            {% set old_group = sheet.get('target_group') %}
-                            {% set all_t_groups = t_groups + ([old_group] if old_group and old_group not in t_groups else []) %}
-                            {% set is_user_visible = not all_t_groups or sub.user.group in all_t_groups %}
-                            {% if is_user_visible %}
-                            {% set ns = namespace(max_len=1, has_data=false) %}
-                            {% for field in sheet.leaf_fields %}
-                                {% set val = sub.data.get(field.name) %}
-                                {% if val is not none %}
-                                    {% if val is iterable and val is not string %}
-                                        {% for v in val %}
-                                            {% if v is not none and v|string|trim != '' %}
-                                                {% set ns.has_data = true %}
+                            {% set total_rendered = namespace(count=0) %}
+                            {% for block in sheet.blocks %}
+                                {% if block.type == 'subgroup' %}
+                                    {% set total_rendered.count = total_rendered.count + block.submissions|length %}
+                                    <!-- Заголовок подгруппы (Аккордеон) -->
+                                    <tr class="subgroup-header-row" data-subgroup-id="{{ block.subgroup_id }}" role="button" title="Кликните, чтобы свернуть / развернуть подгруппу">
+                                        <td class="p-2 ps-3 fw-bold sticky-col align-middle text-primary-copp" style="background-color: #f1f5f9;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-chevron-down subgroup-chevron-icon transition-transform" id="chevron-{{ block.subgroup_id }}"></i>
+                                                <span class="subgroup-title-text">{{ block.subgroup_name }}</span>
+                                                <span class="badge rounded-pill bg-white text-muted border border-secondary border-opacity-25 ms-1 fw-normal" style="font-size: 0.72rem;">
+                                                    {{ block.submissions|length }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td colspan="{{ sheet.leaf_fields|length }}" class="p-2 text-muted small align-middle fst-italic" style="background-color: #f1f5f9;">
+                                            <span class="opacity-75"><i class="bi bi-arrows-collapse me-1"></i>Нажмите, чтобы свернуть / развернуть подгруппу</span>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Строки учреждений подгруппы -->
+                                    {% for sub in block.submissions %}
+                                        {{ render_submission(sub, sheet, template, current_user, block.subgroup_id) }}
+                                    {% endfor %}
+
+                                    <!-- Строка промежуточного итога подгруппы -->
+                                    <tr class="subgroup-total-row fw-bold" data-subgroup-id="{{ block.subgroup_id }}" style="background-color: #e9f2fb; border-top: 1px solid #b8daff; border-bottom: 2px solid #b8daff;">
+                                        <td class="p-2 ps-4 sticky-col align-middle text-primary-copp" style="background-color: #e9f2fb;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-calculator opacity-75"></i>
+                                                <span>{{ block.subgroup_name }} всего</span>
+                                            </div>
+                                        </td>
+                                        {% for field in sheet.leaf_fields %}
+                                            {% set f_type = field.get('type', '')|string|lower %}
+                                            {% if f_type in ['number', 'числовое'] %}
+                                                <td class="p-2 text-center align-middle subgroup-cell-total" 
+                                                    data-subgroup-id="{{ block.subgroup_id }}" 
+                                                    data-field-name="{{ field.name }}"
+                                                    style="color: #00334E; font-weight: 700;">
+                                                    {{ block.totals.get(field.name, 0) }}
+                                                </td>
+                                            {% else %}
+                                                <td class="p-2 text-center align-middle text-muted">-</td>
                                             {% endif %}
                                         {% endfor %}
-                                        {% if val|length > ns.max_len %}
-                                            {% set ns.max_len = val|length %}
-                                        {% endif %}
-                                    {% elif val|string|trim != '' %}
-                                        {% set ns.has_data = true %}
-                                    {% endif %}
+                                    </tr>
+                                {% elif block.type == 'general' %}
+                                    {% set total_rendered.count = total_rendered.count + block.submissions|length %}
+                                    <!-- Организации без подгруппы (в общем списке) -->
+                                    {% for sub in block.submissions %}
+                                        {{ render_submission(sub, sheet, template, current_user, '') }}
+                                    {% endfor %}
                                 {% endif %}
                             {% endfor %}
 
-                            {% if ns.has_data or sub.id %}
-                            {% for i in range(ns.max_len) %}
-                            <tr data-org-name="{{ (sub.user.description or sub.user.username)|lower }}" {% if sub.is_revision %}style="background-color: #fffbe6;"{% endif %}>
-                                {% if i == 0 %}
-                                <td class="p-3 fw-bold sticky-col align-middle {% if sub.is_revision %}bg-warning bg-opacity-10{% endif %}" rowspan="{{ ns.max_len }}">
-                                    <div>{{ sub.user.description or sub.user.username }}</div>
-                                    {% if sub.is_revision %}
-                                    <div class="mt-1 d-flex flex-column gap-1">
-                                        <span class="badge text-dark border border-warning border-opacity-50 px-2 py-1" style="background-color: #fff3cd; width: fit-content;">
-                                            <i class="bi bi-clock-history me-1 text-warning"></i>На доработке
-                                        </span>
-                                        {% if sub.revision_comment %}
-                                        <div class="small text-muted fst-italic p-2 rounded bg-white border border-warning border-opacity-25" style="font-size: 0.75rem; font-weight: normal; line-height: 1.25;" title="{{ sub.revision_comment }}">
-                                            <i class="bi bi-chat-left-quote me-1 text-warning"></i>{{ sub.revision_comment }}
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    {% if sub.id %}
-                                    <div class="mt-2">
-                                        {% if sub.is_revision %}
-                                        <button class="btn btn-sm btn-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p shadow-sm btn-return-revision" 
-                                                data-template-id="{{ template.id }}" 
-                                                data-user-id="{{ sub.user.id }}" 
-                                                data-org-name="{{ sub.user.description or sub.user.username }}" 
-                                                data-comment="{{ sub.revision_comment or '' }}" 
-                                                title="Изменить комментарий к доработке">
-                                            <i class="bi bi-pencil-square"></i> Изменить замечание
-                                        </button>
-                                        {% else %}
-                                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p btn-return-revision" 
-                                                data-template-id="{{ template.id }}" 
-                                                data-user-id="{{ sub.user.id }}" 
-                                                data-org-name="{{ sub.user.description or sub.user.username }}" 
-                                                data-comment="" 
-                                                title="Вернуть отчет на доработку">
-                                            <i class="bi bi-arrow-counterclockwise"></i> На доработку
-                                        </button>
-                                        {% endif %}
-                                        
-                                        {% if current_user.role == 'admin' %}
-                                        <button class="btn btn-sm btn-outline-danger w-100 fw-bold d-flex align-items-center justify-content-center gap-1 fs-xs-p mt-1 btn-delete-submission" 
-                                                data-template-id="{{ template.id }}" 
-                                                data-user-id="{{ sub.user.id }}" 
-                                                data-org-name="{{ sub.user.description or sub.user.username }}" 
-                                                title="Безвозвратно удалить отчет">
-                                            <i class="bi bi-trash"></i> Удалить
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                </td>
-                                {% endif %}
-                                
-                                {% for field in sheet.leaf_fields %}
-                                {% set is_active = field.get('is_active', True) %}
-                                {% set val = sub.data.get(field.name, '') %}
-                                {% if not is_active and (val is none or val == '' or val == []) %}
-                                    {% set val = 'Сбор завершен' %}
-                                {% endif %}
-                                
-                                {% if val is iterable and val is not string %}
-                                    <td class="p-0 align-top text-center {% if not is_active %}bg-light text-muted{% else %}text-dark{% endif %}" title="{% if is_active %}Кликните для редактирования{% else %}Сбор данных завершен{% endif %}">
-                                        {% set cell_val = val[i] if i < val|length else '' %}
-                                        <div class="p-3" 
-                                             contenteditable="{% if is_active %}true{% else %}false{% endif %}" 
-                                             data-user-id="{{ sub.user.id }}"
-                                             data-field-name="{{ field.name }}"
-                                             data-is-multiple="true"
-                                             data-index="{{ i }}">{{ cell_val }}</div>
-                                    </td>
-                                {% else %}
-                                    {% if i == 0 %}
-                                    <td class="p-0 align-middle text-center {% if not is_active %}bg-light text-muted{% else %}text-dark{% endif %}" title="{% if is_active %}Кликните для редактирования{% else %}Сбор данных завершен{% endif %}" rowspan="{{ ns.max_len }}">
-                                        <div class="p-3" 
-                                             contenteditable="{% if is_active %}true{% else %}false{% endif %}" 
-                                             data-user-id="{{ sub.user.id }}"
-                                             data-field-name="{{ field.name }}"
-                                             data-is-multiple="false">{{ val }}</div>
-                                    </td>
-                                    {% endif %}
-                                {% endif %}
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                            
-                            {% if ns.max_len > 1 %}
-                            <tr class="fw-bold" data-org-name="{{ (sub.user.description or sub.user.username)|lower }}">
-                                <td class="p-3 sticky-col align-middle text-start bg-section">Итого по организации</td>
-                                {% for field in sheet.leaf_fields %}
-                                    {% set f_type = field.get('type', '')|string|lower %}
-                                    {% if f_type in ['number', 'числовое'] %}
-                                        {% set ns_sub = namespace(total=0.0, has_data=false) %}
-                                        {% set val = sub.data.get(field.name) %}
-                                        {% if val is not none and val != '' %}
-                                            {% if val is iterable and val is not string %}
-                                                {% for v in val %}
-                                                    {% if v is not none and v != '' %}
-                                                        {% set ns_sub.total = ns_sub.total + v|float(0) %}
-                                                        {% set ns_sub.has_data = true %}
-                                                    {% endif %}
-                                                {% endfor %}
-                                            {% else %}
-                                                {% set ns_sub.total = ns_sub.total + val|float(0) %}
-                                                {% set ns_sub.has_data = true %}
-                                            {% endif %}
-                                        {% endif %}
-                                        <td class="p-3 align-middle text-center bg-section">
-                                            {{ ns_sub.total if ns_sub.has_data else '0' }}
-                                        </td>
-                                    {% else %}
-                                        <td class="p-3 align-middle text-center bg-section">-</td>
-                                    {% endif %}
-                                {% endfor %}
-                            </tr>
-                            {% endif %}
-                            {% endif %}
-                            {% endif %}
-                            {% else %}
+                            {% if total_rendered.count == 0 %}
                             <tr>
                                 <td colspan="{{ sheet.leaf_fields|length + 1 }}"
                                     class="text-center py-5 text-muted bg-white">Нет привязанных организаций.</td>
                             </tr>
-                            {% endfor %}
+                            {% endif %}
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td class="p-3 sticky-col text-dark">Итого</td>
+                                <td class="py-2 px-3 sticky-col text-dark">Итого</td>
                                 {% for field in sheet.leaf_fields %}
-                                <td class="p-3 text-center text-primary-copp">
+                                <td class="py-2 px-2 text-center text-primary-copp grand-total-cell" data-field-name="{{ field.name }}">
                                     {% if field.type == 'number' %}
                                     {% set ns = namespace(total=0, has_data=false) %}
                                     {% for sub in submissions %}
@@ -458,6 +797,15 @@
                         </tfoot>
                     </table>
                 </div>
+                {% if current_user.role in ['admin', 'manager'] %}
+                <div class="p-3 bg-light border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>Если нужной организации нет в списке участников, вы можете добавить строку вручную</span>
+                    <button type="button" class="btn btn-sm btn-outline-copp px-3 d-flex align-items-center gap-2" onclick="openAddManualRowModal()">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Добавить строку вручную</span>
+                    </button>
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
             
@@ -486,7 +834,284 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <!-- Модальное окно обратного импорта сводной таблицы Excel -->
+    <div class="modal fade" id="importSummaryModal" tabindex="-1" aria-labelledby="importSummaryModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: 1150px;">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header border-bottom py-3 px-4" style="background-color: #f8fafc;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px; background: #00334E; color: #ffffff;">
+                            <i class="bi bi-file-earmark-arrow-up fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="importSummaryModalLabel">Импорт сводных данных из Excel</h5>
+                            <small class="text-muted">Проверка изменений и синхронизация отредактированной таблицы</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                
+                <div class="modal-body p-4">
+                    <!-- ШАГ 1: ВЫБОР ФАЙЛА -->
+                    <div id="importStepUpload">
+                        <div class="alert alert-light border d-flex gap-3 align-items-start mb-4" style="border-radius: 12px; background-color: #f8fafc;">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 32px; height: 32px; background: rgba(0, 51, 78, 0.08); color: #00334E;">
+                                <i class="bi bi-info-circle fs-5"></i>
+                            </div>
+                            <div class="small">
+                                <strong class="d-block mb-1" style="color: #00334E; font-size: 0.95rem;">Как работает синхронизация:</strong>
+                                Вы можете скачать сводную таблицу в Excel, внести любые необходимые правки показателей оффлайн и загрузить файл обратно.
+                                Система выполнит <strong>безопасную сверку с базой данных</strong>, покажет наглядный предпросмотр каждого измененного значения с возможностью быстрого поиска, и только после вашего подтверждения применит правки.
+                                <div class="mt-2 text-muted"><i class="bi bi-shield-check me-1 text-success"></i> Режим: <strong>полная синхронизация</strong> (значения показателей в системе будут приведены в точное соответствие с файлом).</div>
+                            </div>
+                        </div>
+
+                        <div class="card border rounded-3 p-4 mb-4 bg-light bg-opacity-50">
+                            <label for="summaryExcelFile" class="form-label fw-bold text-dark mb-2 fs-6">
+                                <i class="bi bi-filetype-xlsx me-1 text-success"></i> Выберите отредактированный Excel файл (.xlsx):
+                            </label>
+                            <input class="form-control form-control-lg fs-6 bg-white" type="file" id="summaryExcelFile" accept=".xlsx, .xlsm">
+                            <div class="form-text mt-2 text-muted">
+                                <i class="bi bi-lightbulb me-1"></i> Загружайте файл, ранее выгруженный кнопкой «В Excel» из этого же отчета.
+                            </div>
+                        </div>
+
+                        <div id="importUploadError" class="alert alert-danger py-2 px-3 small d-none mb-3 border-danger border-opacity-25 rounded-3">
+                            <i class="bi bi-exclamation-triangle me-1"></i> <span id="importUploadErrorText"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Отмена</button>
+                            <button type="button" class="btn btn-copp px-4 d-flex align-items-center gap-2 fw-medium" id="btnPreviewImport">
+                                <i class="bi bi-search"></i> Проверить файл
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ШАГ 2: ПРЕДПРОСМОТР (DIFF) -->
+                    <div id="importStepPreview" class="d-none">
+                        <!-- Статистика с высокой контрастностью -->
+                        <div class="d-flex flex-wrap gap-2 mb-3 align-items-center justify-content-between p-3 rounded-3" style="background-color: #f8fafc; border: 1px solid var(--border-color);">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <span class="badge px-3 py-2 fw-medium border" style="background-color: #f1f5f9; color: #334155; font-size: 0.85rem;">
+                                    <i class="bi bi-buildings me-1 text-muted"></i> Распознано: <strong id="previewOrgsFound" class="text-dark">0</strong>
+                                </span>
+                                <span class="badge px-3 py-2 fw-medium" style="background-color: rgba(0, 51, 78, 0.08); color: #00334E; border: 1px solid rgba(0, 51, 78, 0.25); font-size: 0.85rem;">
+                                    <i class="bi bi-pencil-square me-1"></i> Изменений: <strong id="previewTotalChanges">0</strong>
+                                </span>
+                                <span class="badge px-3 py-2 fw-medium" style="background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.85rem;">
+                                    <i class="bi bi-check-circle me-1"></i> Учреждений с правками: <strong id="previewChangedOrgs">0</strong>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Предупреждения (warnings) -->
+                        <div id="previewWarningsAlert" class="alert alert-warning py-2 px-3 small d-none mb-3 rounded-3">
+                            <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle me-1"></i> Предупреждения:</div>
+                            <ul class="mb-0 ps-3" id="previewWarningsList"></ul>
+                        </div>
+
+                        <!-- Сообщение, если изменений нет -->
+                        <div id="previewNoChanges" class="text-center py-5 d-none">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px; background-color: #ecfdf5; color: #10b981;">
+                                <i class="bi bi-check2-circle fs-1"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark">Все данные уже актуальны</h5>
+                            <p class="text-muted small">В загруженном файле не обнаружено изменений по сравнению с текущей базой данных.</p>
+                        </div>
+
+                        <!-- Поиск по результатам diff -->
+                        <div id="previewSearchContainer" class="mb-3 d-none">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 text-muted ps-3">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" id="importDiffSearch" class="form-control border-start-0 ps-1" placeholder="Быстрый поиск по учреждению, листу или показателю...">
+                                <button class="btn btn-outline-secondary d-none" type="button" id="btnClearDiffSearch" title="Очистить поиск">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Таблица изменений -->
+                        <div id="previewTableContainer" class="table-responsive border rounded-3 mb-3 d-none" style="max-height: 440px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0" id="previewDiffTable" style="font-size: 0.875rem;">
+                                <thead class="sticky-top" style="z-index: 5; background-color: #f1f5f9;">
+                                    <tr>
+                                        <th class="ps-3 py-2 text-uppercase text-muted" style="width: 32%; font-size: 0.75rem; letter-spacing: 0.5px; font-weight: 600;">Организация</th>
+                                        <th class="py-2 text-uppercase text-muted" style="width: 18%; font-size: 0.75rem; letter-spacing: 0.5px; font-weight: 600;">Лист</th>
+                                        <th class="py-2 text-uppercase text-muted" style="width: 25%; font-size: 0.75rem; letter-spacing: 0.5px; font-weight: 600;">Показатель</th>
+                                        <th class="pe-3 py-2 text-uppercase text-muted text-center" style="width: 25%; font-size: 0.75rem; letter-spacing: 0.5px; font-weight: 600;">Изменение значения</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewTableBody">
+                                    <!-- Строки изменений рендерятся через JS -->
+                                </tbody>
+                            </table>
+                            <div id="previewSearchNoResults" class="text-center py-4 text-muted small d-none">
+                                <i class="bi bi-search me-1"></i> По вашему запросу ничего не найдено
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <button type="button" class="btn btn-outline-secondary px-3 d-flex align-items-center gap-1" id="btnBackToUpload">
+                                <i class="bi bi-arrow-left"></i> Выбрать другой файл
+                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Отмена</button>
+                                <button type="button" class="btn btn-copp px-4 d-flex align-items-center gap-2 fw-medium shadow-sm" id="btnApplyImport">
+                                    <i class="bi bi-check-lg fs-5"></i> Применить изменения
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ИНДИКАТОР ЗАГРУЗКИ -->
+                    <div id="importStepLoading" class="text-center py-5 d-none">
+                        <div class="spinner-border text-primary-copp" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                        <h6 class="fw-bold mt-3 text-dark" id="importLoadingText">Проверка файла...</h6>
+                        <p class="text-muted small">Пожалуйста, подождите. Сервер сверяет данные с базой данных.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- МОДАЛЬНОЕ ОКНО: ДОБАВЛЕНИЕ / РЕДАКТИРОВАНИЕ РУЧНОЙ СТРОКИ -->
+    <div class="modal fade" id="manualRowModal" tabindex="-1" aria-labelledby="manualRowModalTitle" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom py-3" style="background-color: #00334e; color: #fff;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-building-add fs-5"></i>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="manualRowModalTitle">Добавить строку в сводную таблицу</h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="manualRowForm" onsubmit="event.preventDefault(); submitManualRowForm();">
+                        <input type="hidden" id="mRowEditId" value="">
+
+                        <!-- Верхняя плашка: Название и Подгруппа -->
+                        <div class="card p-3 mb-4 border bg-light-subtle rounded-3">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-7">
+                                    <label class="form-label small fw-bold text-dark mb-1">
+                                        Название организации <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="mRowOrgName" 
+                                           placeholder="Например: МБОУ СОШ №5" required autocomplete="off">
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <label class="form-label small fw-bold text-dark mb-1">
+                                        Подгруппа (необязательно)
+                                    </label>
+                                    <input type="text" class="form-control" list="subgroupsList" id="mRowSubgroup" 
+                                           placeholder="Выберите или введите" autocomplete="off">
+                                    <datalist id="subgroupsList">
+                                        {% for sg in existing_subgroups %}
+                                        <option value="{{ sg }}"></option>
+                                        {% endfor %}
+                                    </datalist>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Навигация по вкладкам листов -->
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-0">
+                                <i class="bi bi-ui-checks-grid me-1"></i>Данные по колонкам отчета:
+                            </label>
+                            {% if template.schema|length > 1 %}
+                            <span class="badge bg-light text-muted border small">Листов: {{ template.schema|length }}</span>
+                            {% endif %}
+                        </div>
+
+                        {% if template.schema|length > 1 %}
+                        <ul class="nav nav-pills mb-3 p-1 bg-light rounded border" id="mRowSheetPills" role="tablist">
+                            {% for sheet in template.schema %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link py-1 px-3 small fw-bold {% if loop.first %}active{% endif %}" 
+                                        id="mRowTabBtn-{{ loop.index0 }}" 
+                                        data-bs-toggle="pill" 
+                                        data-bs-target="#mRowSheetPane-{{ loop.index0 }}" 
+                                        type="button" role="tab">
+                                    {{ sheet.sheet_title }}
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+
+                        <div class="tab-content" id="mRowSheetContent">
+                            {% for sheet in template.schema %}
+                            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                                 id="mRowSheetPane-{{ loop.index0 }}" role="tabpanel">
+                                
+                                {% if template.schema|length == 1 %}
+                                <div class="fw-bold text-primary-copp small mb-3 pb-1 border-bottom">
+                                    Лист: {{ sheet.sheet_title }}
+                                </div>
+                                {% endif %}
+
+                                <div class="row g-3">
+                                    {% for field in sheet.leaf_fields %}
+                                    {% set f_type = field.get('type', '')|string|lower %}
+                                    <div class="col-12 col-md-6">
+                                        <div class="p-2 border rounded-2 bg-white h-100 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <label class="form-label small fw-semibold text-dark mb-1 d-block" for="mRowF_{{ field.name }}">
+                                                    {{ field.label }}
+                                                    {% if f_type in ['number', 'числовое'] %}
+                                                    <span class="badge bg-light text-muted border py-0 px-1 font-monospace" style="font-size: 0.68rem;">число</span>
+                                                    {% endif %}
+                                                </label>
+                                                {% if field.hint %}
+                                                <div class="form-text small text-muted mb-2 mt-0" style="font-size: 0.72rem;">{{ field.hint }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="mt-2">
+                                                {% if f_type in ['number', 'числовое'] %}
+                                                <input type="number" step="any" class="form-control form-control-sm mrow-input" 
+                                                       data-field-name="{{ field.name }}" id="mRowF_{{ field.name }}" placeholder="0">
+                                                {% elif f_type == 'select' %}
+                                                <select class="form-select form-select-sm mrow-input" 
+                                                        data-field-name="{{ field.name }}" id="mRowF_{{ field.name }}">
+                                                    <option value="">-- Выберите значение --</option>
+                                                    {% for opt in field.options %}
+                                                    <option value="{{ opt }}">{{ opt }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                {% else %}
+                                                <input type="text" class="form-control form-control-sm mrow-input" 
+                                                       data-field-name="{{ field.name }}" id="mRowF_{{ field.name }}" placeholder="Введите значение...">
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light border-top py-2 d-flex justify-content-between">
+                    <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-sm btn-copp px-4 d-flex align-items-center gap-2 fw-medium shadow-xs" 
+                            id="btnSaveManualRow" onclick="submitManualRowForm()">
+                        <i class="bi bi-check-lg fs-5"></i>
+                        <span id="btnSaveManualRowText">Сохранить строку</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
         // Инициализация Bootstrap Tooltips (иконки подсказок в заголовках)
         document.addEventListener('DOMContentLoaded', () => {
@@ -632,6 +1257,53 @@
     </script>
 
     <script>
+        function updateSaveButtonState() {
+            const btn = document.getElementById('saveChangesBtn');
+            const icon = document.getElementById('saveChangesBtnIcon');
+            const text = document.getElementById('saveChangesBtnText');
+            if (!btn) return;
+
+            const cells = document.querySelectorAll('div[contenteditable="true"]');
+            const changedFields = new Set();
+
+            cells.forEach(cell => {
+                const newValue = cell.innerText.trim();
+                // Если исходное значение еще не зафиксировано, фиксируем текущее
+                if (!cell.hasAttribute('data-initial')) {
+                    cell.setAttribute('data-initial', newValue);
+                }
+                const baseValue = cell.hasAttribute('data-original-value') 
+                    ? cell.getAttribute('data-original-value') 
+                    : cell.getAttribute('data-initial');
+                if (newValue !== baseValue) {
+                    const uid = cell.getAttribute('data-user-id') || '';
+                    const mRowId = cell.getAttribute('data-manual-row-id') || '';
+                    const entityKey = mRowId ? `m_${mRowId}` : uid;
+                    const fname = cell.getAttribute('data-field-name') || '';
+                    const idx = cell.getAttribute('data-index') || '0';
+                    changedFields.add(entityKey + '_' + fname + '_' + idx);
+                }
+            });
+
+            const changedCount = changedFields.size;
+
+            if (changedCount > 0) {
+                btn.disabled = false;
+                btn.classList.remove('btn-light', 'text-muted');
+                btn.classList.add('btn-copp');
+                btn.title = `Несохраненных изменений: ${changedCount}. Нажмите для сохранения`;
+                if (icon) icon.className = 'bi bi-floppy me-1';
+                if (text) text.innerHTML = `Сохранить <span class="badge bg-white text-primary-copp ms-1">${changedCount}</span>`;
+            } else {
+                btn.disabled = true;
+                btn.classList.remove('btn-copp');
+                btn.classList.add('btn-light', 'text-muted');
+                btn.title = 'Нет несохраненных изменений';
+                if (icon) icon.className = 'bi bi-check2 me-1';
+                if (text) text.textContent = 'Сохранено';
+            }
+        }
+
         function saveAllChanges() {
             const btn = document.getElementById('saveChangesBtn');
             const cells = document.querySelectorAll('div[contenteditable="true"]');
@@ -640,18 +1312,20 @@
             const currentData = {};
             cells.forEach(cell => {
                 const uid = cell.getAttribute('data-user-id');
+                const mRowId = cell.getAttribute('data-manual-row-id');
+                const entityKey = mRowId ? `m_${mRowId}` : uid;
                 const fname = cell.getAttribute('data-field-name');
                 const isMulti = cell.getAttribute('data-is-multiple') === 'true';
                 const idx = cell.getAttribute('data-index') || 0;
                 const val = cell.innerText.trim();
                 
-                if (!currentData[uid]) currentData[uid] = {};
-                if (!currentData[uid][fname]) currentData[uid][fname] = isMulti ? [] : null;
+                if (!currentData[entityKey]) currentData[entityKey] = {};
+                if (!currentData[entityKey][fname]) currentData[entityKey][fname] = isMulti ? [] : null;
                 
                 if (isMulti) {
-                    currentData[uid][fname][idx] = val;
+                    currentData[entityKey][fname][idx] = val;
                 } else {
-                    currentData[uid][fname] = val;
+                    currentData[entityKey][fname] = val;
                 }
             });
 
@@ -673,15 +1347,18 @@
 
                 if (newValue !== baseValue) {
                     const uid = cell.getAttribute('data-user-id');
+                    const mRowId = cell.getAttribute('data-manual-row-id');
+                    const entityKey = mRowId ? `m_${mRowId}` : uid;
                     const fname = cell.getAttribute('data-field-name');
-                    const key = uid + '_' + fname;
+                    const key = entityKey + '_' + fname;
                     
                     if (!updatesMap[key]) {
                         updatesMap[key] = true;
                         updates.push({
-                            user_id: uid,
+                            user_id: uid || null,
+                            manual_row_id: mRowId || null,
                             field_name: fname,
-                            value: currentData[uid][fname]
+                            value: currentData[entityKey][fname]
                         });
                     }
                     cellsToUpdate.push(cell);
@@ -693,39 +1370,116 @@
                 return;
             }
             
-            const originalBtnHTML = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Сохранение...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Сохранение...';
             
-            fetch('/inline_update/{{ template.id }}', { headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+            fetch('/inline_update/{{ template.id }}', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
-                , 'X-CSRFToken': '{{ csrf_token() }}'},
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body: JSON.stringify(updates)
             })
             .then(res => res.json())
             .then(data => {
-                btn.disabled = false;
-                btn.innerHTML = originalBtnHTML;
-                
                 if (data.status === 'success') {
                     cellsToUpdate.forEach(cell => {
                         cell.style.backgroundColor = '#d1e7dd';
                         cell.setAttribute('data-original-value', cell.innerText.trim());
+                        cell.setAttribute('data-initial', cell.innerText.trim());
                         setTimeout(() => { cell.style.backgroundColor = ''; }, 1000);
                     });
+                    updateSaveButtonState();
+                    coppAlert('Все изменения успешно сохранены', 'success');
                 } else {
-                    coppAlert('Ошибка: ' + data.message, 'error');
+                    updateSaveButtonState();
+                    coppAlert('Ошибка сохранения: ' + data.message, 'error');
                 }
             })
             .catch(err => {
-                btn.disabled = false;
-                btn.innerHTML = originalBtnHTML;
+                updateSaveButtonState();
                 coppAlert('Ошибка сети: ' + err, 'error');
             });
         }
         
+        
+        // Обработка сворачивания / разворачивания подгрупп (Аккордеон)
+        document.addEventListener('click', function(e) {
+            const headerRow = e.target.closest('.subgroup-header-row');
+            if (headerRow) {
+                const sgId = headerRow.getAttribute('data-subgroup-id');
+                if (!sgId) return;
+                const chevron = headerRow.querySelector('.subgroup-chevron-icon');
+                const rows = document.querySelectorAll('.subgroup-row-' + sgId);
+                
+                let isCollapsed = false;
+                rows.forEach(row => {
+                    if (row.style.display === 'none') {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                        isCollapsed = true;
+                    }
+                });
+                if (chevron) {
+                    if (isCollapsed) {
+                        chevron.classList.add('collapsed');
+                    } else {
+                        chevron.classList.remove('collapsed');
+                    }
+                }
+            }
+        });
+
+        // Динамический пересчет итогов подгруппы и общих итогов при inline-редактировании
+        function recalculateLiveTotals(cell) {
+            const fieldName = cell.getAttribute('data-field-name');
+            const sgId = cell.getAttribute('data-subgroup-id');
+            const table = cell.closest('.table-custom');
+            if (!table || !fieldName) return;
+
+            // 1. Пересчет итога подгруппы
+            if (sgId) {
+                const sgCells = table.querySelectorAll(`.editable-data-cell[data-subgroup-id="${sgId}"][data-field-name="${fieldName}"]`);
+                let sgSum = 0;
+                let hasSgNum = false;
+                sgCells.forEach(c => {
+                    const txt = c.innerText.trim();
+                    if (txt !== '') {
+                        const n = parseFloat(txt);
+                        if (!isNaN(n)) {
+                            sgSum += n;
+                            hasSgNum = true;
+                        }
+                    }
+                });
+                const sgTotalCell = table.querySelector(`.subgroup-cell-total[data-subgroup-id="${sgId}"][data-field-name="${fieldName}"]`);
+                if (sgTotalCell) {
+                    sgTotalCell.innerText = hasSgNum ? (Number.isInteger(sgSum) ? sgSum : sgSum.toFixed(2)) : '0';
+                }
+            }
+
+            // 2. Пересчет общего итога в tfoot
+            const allCells = table.querySelectorAll(`.editable-data-cell[data-field-name="${fieldName}"]`);
+            let grandSum = 0;
+            let hasGrandNum = false;
+            allCells.forEach(c => {
+                const txt = c.innerText.trim();
+                if (txt !== '') {
+                    const n = parseFloat(txt);
+                    if (!isNaN(n)) {
+                        grandSum += n;
+                        hasGrandNum = true;
+                    }
+                }
+            });
+            const grandCell = table.querySelector(`.grand-total-cell[data-field-name="${fieldName}"]`);
+            if (grandCell) {
+                grandCell.innerText = hasGrandNum ? (Number.isInteger(grandSum) ? grandSum : grandSum.toFixed(2)) : '0';
+            }
+        }
+
         // Highlight cell when user types to show it has unsaved changes
         document.addEventListener('input', function(e) {
             if(e.target && e.target.hasAttribute('contenteditable')) {
@@ -741,6 +1495,8 @@
                 } else {
                     e.target.style.backgroundColor = ''; // Возвращаем обычный фон, если стерли изменения
                 }
+                recalculateLiveTotals(e.target);
+                updateSaveButtonState();
             }
         });
         
@@ -752,28 +1508,209 @@
             }
         });
     </script>
-    <!-- Логика поиска по организациям -->
+
+    <!-- Логика фильтрации и поиска по сводной таблице -->
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        let currentStatusFilter = 'all';
+
+        function updateStatusFilterButtonsUI() {
+            const btnAll = document.getElementById('filterBtnAll');
+            const btnSub = document.getElementById('filterBtnSubmitted');
+            const btnRev = document.getElementById('filterBtnRevision');
+
+            [btnAll, btnSub, btnRev].forEach(b => {
+                if (!b) return;
+                b.classList.remove('active');
+                b.style.boxShadow = 'none';
+                b.style.fontWeight = '500';
+            });
+
+            if (currentStatusFilter === 'submitted' && btnSub) {
+                btnSub.classList.add('active');
+                btnSub.style.boxShadow = '0 0 0 2px #16a34a';
+                btnSub.style.fontWeight = '700';
+            } else if (currentStatusFilter === 'revision' && btnRev) {
+                btnRev.classList.add('active');
+                btnRev.style.boxShadow = '0 0 0 2px #b45309';
+                btnRev.style.fontWeight = '700';
+            } else if (btnAll) {
+                btnAll.classList.add('active');
+                btnAll.style.boxShadow = '0 0 0 2px #00334E';
+                btnAll.style.fontWeight = '700';
+            }
+        }
+
+        function setStatusFilter(filter) {
+            if (currentStatusFilter === filter && filter !== 'all') {
+                currentStatusFilter = 'all';
+            } else {
+                currentStatusFilter = filter;
+            }
+            updateStatusFilterButtonsUI();
+            applyTableFilters();
+        }
+
+        function applyTableFilters() {
             const searchInput = document.getElementById('orgSearchInput');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    const searchTerm = this.value.toLowerCase();
-                    // Ищем все строки данных (игнорируем строку Итого в tfoot)
-                    const rows = document.querySelectorAll('.table-custom tbody tr');
-                    
-                    rows.forEach(row => {
-                        const orgName = row.getAttribute('data-org-name');
-                        if (orgName !== null) {
-                            if (orgName.includes(searchTerm)) {
-                                row.style.display = '';
-                            } else {
-                                row.style.display = 'none';
+            const searchTerm = (searchInput ? searchInput.value : '').toLowerCase().trim();
+            const clearBtn = document.getElementById('btnClearOrgSearch');
+            const badge = document.getElementById('searchCountBadge');
+
+            if (clearBtn) {
+                if (searchTerm) {
+                    clearBtn.classList.remove('d-none');
+                } else {
+                    clearBtn.classList.add('d-none');
+                }
+            }
+
+            const tables = document.querySelectorAll('.table-custom');
+            const activePane = document.querySelector('.tab-pane.active') || document.querySelector('.tab-pane');
+            const activeTable = activePane ? activePane.querySelector('.table-custom') : null;
+
+            tables.forEach(table => {
+                const headerRows = table.querySelectorAll('.subgroup-header-row');
+                const totalRows = table.querySelectorAll('.subgroup-total-row');
+                const dataRows = table.querySelectorAll('tbody tr[data-org-name]');
+
+                const isFilterActive = (searchTerm !== '' || currentStatusFilter !== 'all');
+
+                if (!isFilterActive) {
+                    headerRows.forEach(hr => hr.style.display = '');
+                    totalRows.forEach(tr => tr.style.display = '');
+                    dataRows.forEach(dr => {
+                        const sgId = dr.getAttribute('data-subgroup-parent');
+                        const chevron = sgId ? document.getElementById('chevron-' + sgId) : null;
+                        const isCollapsed = chevron && chevron.classList.contains('collapsed');
+                        dr.style.display = isCollapsed ? 'none' : '';
+                    });
+                    return;
+                }
+
+                const matchingSgIds = new Set();
+
+                dataRows.forEach(row => {
+                    const orgName = (row.getAttribute('data-org-name') || '').toLowerCase();
+                    const rowStatus = row.getAttribute('data-status') || '';
+                    const sgId = row.getAttribute('data-subgroup-parent');
+
+                    const matchesStatus = (currentStatusFilter === 'all') || (rowStatus === currentStatusFilter);
+                    const matchesSearch = !searchTerm || orgName.includes(searchTerm);
+
+                    if (matchesStatus && matchesSearch) {
+                        row.style.display = '';
+                        if (sgId) matchingSgIds.add(sgId);
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                headerRows.forEach(hr => {
+                    const sgId = hr.getAttribute('data-subgroup-id');
+                    const headerText = hr.innerText.toLowerCase();
+                    if (matchingSgIds.has(sgId) || (searchTerm && headerText.includes(searchTerm) && currentStatusFilter === 'all')) {
+                        hr.style.display = '';
+                        if (searchTerm && headerText.includes(searchTerm) && currentStatusFilter === 'all') {
+                            table.querySelectorAll('.subgroup-row-' + sgId).forEach(r => {
+                                r.style.display = '';
+                            });
+                        }
+                    } else {
+                        hr.style.display = 'none';
+                    }
+                });
+
+                totalRows.forEach(tr => {
+                    const sgId = tr.getAttribute('data-subgroup-id');
+                    if (matchingSgIds.has(sgId)) {
+                        tr.style.display = '';
+                    } else {
+                        tr.style.display = 'none';
+                    }
+                });
+            });
+
+            // Подсчет статистики соответствий для активной вкладки
+            if (badge && activeTable) {
+                if (searchTerm !== '' || currentStatusFilter !== 'all') {
+                    const allActiveRows = activeTable.querySelectorAll('tbody tr[data-org-name]');
+                    const totalOrgs = new Set();
+                    const matchedOrgs = new Set();
+                    allActiveRows.forEach(r => {
+                        const org = r.getAttribute('data-org-name');
+                        if (org) {
+                            totalOrgs.add(org);
+                            if (r.style.display !== 'none') {
+                                matchedOrgs.add(org);
                             }
                         }
                     });
+                    const activeMatchedCount = matchedOrgs.size;
+                    const activeTotalCount = totalOrgs.size;
+                    badge.textContent = `${activeMatchedCount}/${activeTotalCount}`;
+                    badge.classList.remove('d-none');
+                    if (activeMatchedCount === 0) {
+                        badge.classList.add('text-danger');
+                        badge.classList.remove('text-muted');
+                    } else {
+                        badge.classList.remove('text-danger');
+                        badge.classList.add('text-muted');
+                    }
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Инициализация кнопок фильтров статуса
+            const filterButtons = document.querySelectorAll('.status-filter-btn');
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filter = this.getAttribute('data-filter') || 'all';
+                    setStatusFilter(filter);
+                });
+            });
+
+            // Поиск по организациям
+            const searchInput = document.getElementById('orgSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', applyTableFilters);
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        this.value = '';
+                        applyTableFilters();
+                    }
                 });
             }
+
+            const btnClear = document.getElementById('btnClearOrgSearch');
+            if (btnClear && searchInput) {
+                btnClear.addEventListener('click', function() {
+                    searchInput.value = '';
+                    searchInput.focus();
+                    applyTableFilters();
+                });
+            }
+
+            // Переключение вкладок листов
+            const tabButtons = document.querySelectorAll('#dataSheetsTabs [data-bs-toggle="tab"]');
+            tabButtons.forEach(btn => {
+                btn.addEventListener('shown.bs.tab', function() {
+                    applyTableFilters();
+                });
+            });
+
+            // Инициализация исходных значений для всех ячеек, чтобы избежать ложных изменений
+            document.querySelectorAll('div[contenteditable="true"]').forEach(cell => {
+                if (!cell.hasAttribute('data-initial')) {
+                    cell.setAttribute('data-initial', cell.innerText.trim());
+                }
+            });
+
+            // Начальная инициализация состояния кнопки Сохранить и фильтра
+            updateStatusFilterButtonsUI();
+            updateSaveButtonState();
         });
 
         function exportExcel(btn, templateId) {
@@ -881,6 +1818,37 @@
             });
         }
 
+        // Динамическое повышение z-index строки и sticky-ячейки при открытии выпадающего меню (устранение наложения соседних строк)
+        document.addEventListener('show.bs.dropdown', function (e) {
+            const trigger = e.target;
+            const td = trigger.closest('td.sticky-col') || trigger.closest('td');
+            const tr = trigger.closest('tr');
+            if (td) {
+                td.classList.add('dropdown-active-cell');
+                td.style.setProperty('z-index', '1070', 'important');
+            }
+            if (tr) {
+                tr.classList.add('dropdown-active-row');
+                tr.style.setProperty('z-index', '1065', 'important');
+                tr.style.setProperty('position', 'relative', 'important');
+            }
+        });
+
+        document.addEventListener('hidden.bs.dropdown', function (e) {
+            const trigger = e.target;
+            const td = trigger.closest('td.sticky-col') || trigger.closest('td');
+            const tr = trigger.closest('tr');
+            if (td) {
+                td.classList.remove('dropdown-active-cell');
+                td.style.removeProperty('z-index');
+            }
+            if (tr) {
+                tr.classList.remove('dropdown-active-row');
+                tr.style.removeProperty('z-index');
+                tr.style.removeProperty('position');
+            }
+        });
+
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.btn-return-revision');
             if (btn) {
@@ -950,7 +1918,273 @@
                 });
             }
         });
+
+        // =======================================================
+        // ОБРАТНЫЙ ИМПОРТ ОТРЕДАКТИРОВАННОГО EXCEL В СВОДНУЮ ТАБЛИЦУ
+        // =======================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            let pendingImportDiffs = [];
+
+            const modalEl = document.getElementById('importSummaryModal');
+            const stepUpload = document.getElementById('importStepUpload');
+            const stepPreview = document.getElementById('importStepPreview');
+            const stepLoading = document.getElementById('importStepLoading');
+            const loadingText = document.getElementById('importLoadingText');
+            const uploadError = document.getElementById('importUploadError');
+            const uploadErrorText = document.getElementById('importUploadErrorText');
+            const fileInput = document.getElementById('summaryExcelFile');
+            const btnPreview = document.getElementById('btnPreviewImport');
+            const btnBack = document.getElementById('btnBackToUpload');
+            const btnApply = document.getElementById('btnApplyImport');
+
+            function resetImportModal() {
+                if (fileInput) fileInput.value = '';
+                if (uploadError) uploadError.classList.add('d-none');
+                if (stepUpload) stepUpload.classList.remove('d-none');
+                if (stepPreview) stepPreview.classList.add('d-none');
+                if (stepLoading) stepLoading.classList.add('d-none');
+                const sInput = document.getElementById('importDiffSearch');
+                if (sInput) sInput.value = '';
+                const bClear = document.getElementById('btnClearDiffSearch');
+                if (bClear) bClear.classList.add('d-none');
+                const noRes = document.getElementById('previewSearchNoResults');
+                if (noRes) noRes.classList.add('d-none');
+                pendingImportDiffs = [];
+            }
+
+            if (modalEl) {
+                modalEl.addEventListener('show.bs.modal', resetImportModal);
+            }
+
+            if (btnBack) {
+                btnBack.addEventListener('click', () => {
+                    stepPreview.classList.add('d-none');
+                    stepUpload.classList.remove('d-none');
+                    stepLoading.classList.add('d-none');
+                });
+            }
+
+            if (btnPreview) {
+                btnPreview.addEventListener('click', () => {
+                    uploadError.classList.add('d-none');
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        uploadErrorText.innerText = 'Пожалуйста, выберите файл Excel (.xlsx).';
+                        uploadError.classList.remove('d-none');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    stepUpload.classList.add('d-none');
+                    stepPreview.classList.add('d-none');
+                    loadingText.innerText = 'Анализ Excel-файла и поиск различий...';
+                    stepLoading.classList.remove('d-none');
+
+                    fetch('/preview_summary_import/{{ template.id }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        stepLoading.classList.add('d-none');
+                        if (data.status === 'success') {
+                            pendingImportDiffs = data.diffs || [];
+                            renderImportPreview(data);
+                            stepPreview.classList.remove('d-none');
+                        } else {
+                            stepUpload.classList.remove('d-none');
+                            uploadErrorText.innerText = data.message || 'Ошибка обработки файла';
+                            uploadError.classList.remove('d-none');
+                        }
+                    })
+                    .catch(err => {
+                        stepLoading.classList.add('d-none');
+                        stepUpload.classList.remove('d-none');
+                        uploadErrorText.innerText = 'Ошибка сети при передаче файла: ' + err;
+                        uploadError.classList.remove('d-none');
+                    });
+                });
+            }
+
+            function renderImportPreview(data) {
+                document.getElementById('previewOrgsFound').innerText = data.total_orgs_found || 0;
+                document.getElementById('previewTotalChanges').innerText = data.total_changes || 0;
+                document.getElementById('previewChangedOrgs').innerText = data.changed_orgs_count || 0;
+
+                // Предупреждения (warnings)
+                const warnBox = document.getElementById('previewWarningsAlert');
+                const warnList = document.getElementById('previewWarningsList');
+                if (data.warnings && data.warnings.length > 0) {
+                    warnList.innerHTML = '';
+                    data.warnings.forEach(w => {
+                        const li = document.createElement('li');
+                        li.innerText = w;
+                        warnList.appendChild(li);
+                    });
+                    warnBox.classList.remove('d-none');
+                } else {
+                    warnBox.classList.add('d-none');
+                }
+
+                const noChangesBox = document.getElementById('previewNoChanges');
+                const searchContainer = document.getElementById('previewSearchContainer');
+                const searchInput = document.getElementById('importDiffSearch');
+                const btnClearSearch = document.getElementById('btnClearDiffSearch');
+                const noResultsBox = document.getElementById('previewSearchNoResults');
+                const tableContainer = document.getElementById('previewTableContainer');
+                const tbody = document.getElementById('previewTableBody');
+                tbody.innerHTML = '';
+
+                if (searchInput) searchInput.value = '';
+                if (btnClearSearch) btnClearSearch.classList.add('d-none');
+                if (noResultsBox) noResultsBox.classList.add('d-none');
+
+                if (!data.diffs || data.diffs.length === 0) {
+                    noChangesBox.classList.remove('d-none');
+                    if (searchContainer) searchContainer.classList.add('d-none');
+                    tableContainer.classList.add('d-none');
+                    btnApply.disabled = true;
+                } else {
+                    noChangesBox.classList.add('d-none');
+                    if (searchContainer) searchContainer.classList.remove('d-none');
+                    tableContainer.classList.remove('d-none');
+                    btnApply.disabled = false;
+
+                    data.diffs.forEach(d => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'diff-row';
+                        tr.dataset.search = `${d.org_name || ''} ${d.sheet_title || ''} ${d.field_label || ''}`.toLowerCase();
+                        tr.innerHTML = `
+                            <td class="ps-3 py-2">
+                                <div class="fw-bold" style="color: #00334E;">
+                                    <i class="bi bi-building text-muted me-1 small"></i>${escapeHtml(d.org_name)}
+                                </div>
+                            </td>
+                            <td class="py-2">
+                                <span class="badge border" style="background-color: #f8fafc; color: #475569; font-weight: 500;">
+                                    <i class="bi bi-file-earmark-text me-1 text-muted"></i>${escapeHtml(d.sheet_title)}
+                                </span>
+                            </td>
+                            <td class="py-2">
+                                <div class="text-dark fw-medium" title="${escapeHtml(d.field_label)}">${escapeHtml(d.field_label)}</div>
+                            </td>
+                            <td class="pe-3 py-2 text-center">
+                                <div class="d-inline-flex align-items-center gap-2 justify-content-center">
+                                    <span class="badge text-muted border text-decoration-line-through px-2 py-1" style="background-color: #f1f5f9; font-size: 0.85rem;" title="Текущее значение в базе данных">
+                                        ${escapeHtml(d.old_val_display)}
+                                    </span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span class="badge fw-bold px-2 py-1 shadow-sm" style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.85rem;" title="Новое значение из Excel файла">
+                                        ${escapeHtml(d.new_val_display)}
+                                    </span>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+
+            // Живой фильтр по строкам изменений
+            const searchInput = document.getElementById('importDiffSearch');
+            const btnClearSearch = document.getElementById('btnClearDiffSearch');
+            const noResultsBox = document.getElementById('previewSearchNoResults');
+            const diffTbody = document.getElementById('previewTableBody');
+
+            function filterDiffRows() {
+                if (!searchInput || !diffTbody) return;
+                const q = (searchInput.value || '').trim().toLowerCase();
+                if (btnClearSearch) {
+                    if (q.length > 0) btnClearSearch.classList.remove('d-none');
+                    else btnClearSearch.classList.add('d-none');
+                }
+                const rows = diffTbody.querySelectorAll('.diff-row');
+                let visibleCount = 0;
+                rows.forEach(r => {
+                    const s = r.dataset.search || '';
+                    const match = !q || s.includes(q);
+                    r.style.display = match ? '' : 'none';
+                    if (match) visibleCount++;
+                });
+                if (noResultsBox) {
+                    if (visibleCount === 0 && rows.length > 0) noResultsBox.classList.remove('d-none');
+                    else noResultsBox.classList.add('d-none');
+                }
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', filterDiffRows);
+            }
+            if (btnClearSearch) {
+                btnClearSearch.addEventListener('click', () => {
+                    searchInput.value = '';
+                    filterDiffRows();
+                    searchInput.focus();
+                });
+            }
+
+            function escapeHtml(str) {
+                if (str === null || str === undefined) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            if (btnApply) {
+                btnApply.addEventListener('click', () => {
+                    if (!pendingImportDiffs || pendingImportDiffs.length === 0) return;
+
+                    stepPreview.classList.add('d-none');
+                    loadingText.innerText = 'Сохранение изменений в базу данных...';
+                    stepLoading.classList.remove('d-none');
+
+                    fetch('/apply_summary_import/{{ template.id }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ diffs: pendingImportDiffs })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        stepLoading.classList.add('d-none');
+                        if (data.status === 'success') {
+                            const bsModal = bootstrap.Modal.getInstance(modalEl);
+                            if (bsModal) bsModal.hide();
+
+                            Swal.fire({
+                                title: 'Успешно!',
+                                text: data.message,
+                                icon: 'success',
+                                confirmButtonColor: '#00334E',
+                                confirmButtonText: 'Отлично'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            stepPreview.classList.remove('d-none');
+                            Swal.fire('Ошибка сохранения', data.message || 'Не удалось применить изменения', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        stepLoading.classList.add('d-none');
+                        stepPreview.classList.remove('d-none');
+                        Swal.fire('Ошибка', 'Ошибка сети при сохранении: ' + err, 'error');
+                    });
+                });
+            }
+        });
 </script>
 </body>
 
 </html>
+

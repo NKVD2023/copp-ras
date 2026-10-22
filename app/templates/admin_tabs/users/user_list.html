@@ -19,7 +19,7 @@
         <!-- Фильтры в один ряд -->
         <div class="row g-2 align-items-center">
             <!-- Поиск -->
-            <div class="col-12 col-md-5 col-lg-4">
+            <div class="col-12 col-md-4 col-lg-3">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 text-muted">
                         <i class="bi bi-search"></i>
@@ -41,7 +41,7 @@
             </div>
 
             <!-- Фильтр по группе -->
-            <div class="col-6 col-md-2 col-lg-3">
+            <div class="col-6 col-md-2 col-lg-2">
                 <select id="groupFilter" class="form-select bg-light border-light-subtle text-secondary">
                     <option value="">Все группы</option>
                     {% for g in all_groups %}
@@ -51,8 +51,19 @@
                 </select>
             </div>
 
+            <!-- Фильтр по подгруппе -->
+            <div class="col-6 col-md-2 col-lg-2">
+                <select id="subgroupFilter" class="form-select bg-light border-light-subtle text-secondary">
+                    <option value="">Все подгруппы</option>
+                    {% for sg in all_subgroups %}
+                    <option value="{{ sg }}">{{ sg }}</option>
+                    {% endfor %}
+                    <option value="__none__">Без подгруппы</option>
+                </select>
+            </div>
+
             <!-- Фильтр по отделу -->
-            <div class="col-12 col-md-3 col-lg-3">
+            <div class="col-6 col-md-2 col-lg-3">
                 <select id="departmentFilter" class="form-select bg-light border-light-subtle text-secondary">
                     <option value="">Все отделы</option>
                     {% for d in departments %}
@@ -75,6 +86,9 @@
         <div class="d-flex align-items-center gap-2">
             <button type="button" class="btn btn-sm btn-light border shadow-sm" id="deselectAllBtn">
                 <i class="bi bi-x-lg me-1 small"></i> Снять выбор
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-copp bg-white shadow-sm" id="bulkSubgroupBtn" data-bs-toggle="modal" data-bs-target="#bulkSubgroupModal">
+                <i class="bi bi-tags me-1"></i> Назначить подгруппу
             </button>
             <button type="button" class="btn btn-sm btn-danger px-3 shadow-sm" id="bulkDeleteBtn">
                 <i class="bi bi-trash3 me-1"></i> Удалить выбранных (<span id="deleteBtnCount">0</span>)
@@ -114,6 +128,7 @@
                     data-description="{{ (user.description or '')|lower }}" 
                     data-role="{{ user.role }}" 
                     data-group="{{ user.group or '' }}" 
+                    data-subgroup="{{ user.subgroup or '' }}" 
                     data-dept-id="{{ user.department_id or '' }}"
                     data-assigned-templates="{{ user_assigned_dict.get(user.id, [])|tojson if user_assigned_dict is defined else '[]' }}">
                     <td class="ps-4 py-3 text-center" style="width: 44px;">
@@ -136,11 +151,16 @@
                         {% endif %}
                     </td>
                     <td class="py-3 user-cell-group">
-                        {% if user.group %}
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal">{{ user.group }}</span>
-                        {% else %}
-                            <span class="text-muted small">—</span>
-                        {% endif %}
+                        <div class="d-flex flex-wrap gap-1 align-items-center">
+                            {% if user.group %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal user-badge-group">{{ user.group }}</span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                            {% if user.subgroup %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal user-badge-subgroup" title="Подгруппа"><i class="bi bi-tag me-1"></i>{{ user.subgroup }}</span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="py-3 user-cell-role">
                         {% if user.role == 'manager' %}
@@ -213,14 +233,23 @@
                                 <label class="form-label small text-muted">Описание (Название учреждения)</label>
                                 <input type="text" id="sharedDescriptionInput" name="description" class="form-control" autocomplete="off">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label small text-muted">Роль</label>
                                 <select id="sharedRoleSelect" name="role" class="form-select">
                                     <option value="user">Пользователь</option>
                                     <option value="manager">Руководитель отдела</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted">Отдел</label>
+                                <select id="sharedDeptSelect" name="department_id" class="form-select">
+                                    <option value="">Без отдела</option>
+                                    {% for d in departments %}
+                                    <option value="{{ d.id }}">{{ d.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
                                 <label class="form-label small text-muted">Группа</label>
                                 <input type="text" id="sharedGroupInput" name="group" class="form-control" list="sharedGroupsDataList" placeholder="Без группы">
                                 <datalist id="sharedGroupsDataList">
@@ -229,14 +258,14 @@
                                     {% endfor %}
                                 </datalist>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Отдел</label>
-                                <select id="sharedDeptSelect" name="department_id" class="form-select">
-                                    <option value="">Без отдела</option>
-                                    {% for d in departments %}
-                                    <option value="{{ d.id }}">{{ d.name }}</option>
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted">Подгруппа</label>
+                                <input type="text" id="sharedSubgroupInput" name="subgroup" class="form-control" list="sharedSubgroupsDataList" placeholder="Без подгруппы">
+                                <datalist id="sharedSubgroupsDataList">
+                                    {% for sg in all_subgroups %}
+                                    <option value="{{ sg }}">
                                     {% endfor %}
-                                </select>
+                                </datalist>
                             </div>
                         </div>
                     </div>
@@ -285,12 +314,51 @@
     </div>
 </div>
 
+<!-- Модальное окно массового назначения подгруппы -->
+<div class="modal fade" id="bulkSubgroupModal" tabindex="-1" aria-labelledby="bulkSubgroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom px-4 py-3 bg-light">
+                <h6 class="modal-title fw-bold text-dark m-0" id="bulkSubgroupModalLabel">
+                    <i class="bi bi-tags text-primary me-2"></i>Назначение подгруппы
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-light border small text-muted mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle text-primary fs-5"></i>
+                    <span>Выбрано пользователей: <strong class="text-dark" id="modalSubgroupUsersCount">0</strong></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-dark">Название подгруппы</label>
+                    <input type="text" id="bulkSubgroupInput" class="form-control" list="bulkSubgroupsDatalist" placeholder="Например: Городские округа, Муниципальные районы..." autocomplete="off">
+                    <datalist id="bulkSubgroupsDatalist">
+                        {% for sg in all_subgroups %}
+                        <option value="{{ sg }}">
+                        {% endfor %}
+                    </datalist>
+                    <div class="form-text small text-muted mt-2">
+                        <i class="bi bi-lightbulb me-1"></i> Оставьте поле пустым, если хотите убрать подгруппу у выбранных учреждений.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer px-4 py-3 border-top bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-light btn-sm px-3 border shadow-sm rounded-pill" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" id="confirmBulkSubgroupBtn" class="btn btn-copp btn-sm px-4 shadow-sm rounded-pill">
+                    <i class="bi bi-check2 me-1"></i> Сохранить подгруппу
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const userSearch = document.getElementById('userSearch');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
         const roleFilter = document.getElementById('roleFilter');
         const groupFilter = document.getElementById('groupFilter');
+        const subgroupFilter = document.getElementById('subgroupFilter');
         const departmentFilter = document.getElementById('departmentFilter');
         const resetFiltersBtn = document.getElementById('resetFiltersBtn');
         const filteredCount = document.getElementById('filteredCount');
@@ -302,6 +370,7 @@
         const bulkActionsBar = document.getElementById('bulkActionsBar');
         const selectedUsersCount = document.getElementById('selectedUsersCount');
         const deleteBtnCount = document.getElementById('deleteBtnCount');
+        const modalSubgroupUsersCount = document.getElementById('modalSubgroupUsersCount');
         const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
         const deselectAllBtn = document.getElementById('deselectAllBtn');
         const bulkForm = document.getElementById('bulkDeleteUsersForm');
@@ -312,6 +381,7 @@
 
             if (selectedUsersCount) selectedUsersCount.textContent = count;
             if (deleteBtnCount) deleteBtnCount.textContent = count;
+            if (modalSubgroupUsersCount) modalSubgroupUsersCount.textContent = count;
 
             if (bulkActionsBar) {
                 if (count > 0) {
@@ -397,6 +467,7 @@
             document.getElementById('sharedDescriptionInput').value = rawDescription;
             document.getElementById('sharedRoleSelect').value = role;
             document.getElementById('sharedGroupInput').value = group;
+            document.getElementById('sharedSubgroupInput').value = row.getAttribute('data-subgroup') || '';
             document.getElementById('sharedDeptSelect').value = deptId;
             document.getElementById('sharedNewPasswordInput').value = '';
 
@@ -508,6 +579,7 @@
                             row.setAttribute('data-description', (u.description || '').toLowerCase());
                             row.setAttribute('data-role', u.role || '');
                             row.setAttribute('data-group', u.group || '');
+                            row.setAttribute('data-subgroup', u.subgroup || '');
                             row.setAttribute('data-dept-id', u.department_id ? String(u.department_id) : '');
 
                             // Обновляем список назначенных шаблонов в строке
@@ -530,11 +602,17 @@
 
                             const groupEl = row.querySelector('.user-cell-group');
                             if (groupEl) {
+                                let groupHtml = '<div class="d-flex flex-wrap gap-1 align-items-center">';
                                 if (u.group) {
-                                    groupEl.innerHTML = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal">${u.group}</span>`;
+                                    groupHtml += `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal user-badge-group">${u.group}</span>`;
                                 } else {
-                                    groupEl.innerHTML = '<span class="text-muted small">—</span>';
+                                    groupHtml += '<span class="text-muted small">—</span>';
                                 }
+                                if (u.subgroup) {
+                                    groupHtml += `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal user-badge-subgroup" title="Подгруппа"><i class="bi bi-tag me-1"></i>${u.subgroup}</span>`;
+                                }
+                                groupHtml += '</div>';
+                                groupEl.innerHTML = groupHtml;
                             }
 
                             const roleEl = row.querySelector('.user-cell-role');
@@ -622,10 +700,11 @@
             const query = (userSearch ? userSearch.value : '').trim().toLowerCase();
             const role = roleFilter ? roleFilter.value : '';
             const group = groupFilter ? groupFilter.value : '';
+            const subgroup = subgroupFilter ? subgroupFilter.value : '';
             const dept = departmentFilter ? departmentFilter.value : '';
 
             let visibleCount = 0;
-            const hasActiveFilter = query !== '' || role !== '' || group !== '' || dept !== '';
+            const hasActiveFilter = query !== '' || role !== '' || group !== '' || subgroup !== '' || dept !== '';
 
             if (clearSearchBtn) {
                 clearSearchBtn.classList.toggle('d-none', query === '');
@@ -639,6 +718,7 @@
                 const description = row.getAttribute('data-description') || '';
                 const rowRole = row.getAttribute('data-role') || '';
                 const rowGroup = row.getAttribute('data-group') || '';
+                const rowSubgroup = row.getAttribute('data-subgroup') || '';
                 const rowDept = row.getAttribute('data-dept-id') || '';
 
                 // Поиск по логину или описанию
@@ -655,6 +735,14 @@
                     matchesGroup = rowGroup === group;
                 }
 
+                // Фильтр по подгруппе
+                let matchesSubgroup = true;
+                if (subgroup === '__none__') {
+                    matchesSubgroup = !rowSubgroup;
+                } else if (subgroup) {
+                    matchesSubgroup = rowSubgroup === subgroup;
+                }
+
                 // Фильтр по отделу
                 let matchesDept = true;
                 if (dept === '__none__') {
@@ -663,7 +751,7 @@
                     matchesDept = rowDept === dept;
                 }
 
-                if (matchesSearch && matchesRole && matchesGroup && matchesDept) {
+                if (matchesSearch && matchesRole && matchesGroup && matchesSubgroup && matchesDept) {
                     row.style.display = '';
                     visibleCount++;
                 } else {
@@ -698,6 +786,9 @@
         if (groupFilter) {
             groupFilter.addEventListener('change', applyFilters);
         }
+        if (subgroupFilter) {
+            subgroupFilter.addEventListener('change', applyFilters);
+        }
         if (departmentFilter) {
             departmentFilter.addEventListener('change', applyFilters);
         }
@@ -711,9 +802,83 @@
             if (userSearch) userSearch.value = '';
             if (roleFilter) roleFilter.value = '';
             if (groupFilter) groupFilter.value = '';
+            if (subgroupFilter) subgroupFilter.value = '';
             if (departmentFilter) departmentFilter.value = '';
             applyFilters();
         };
+
+        // Обработка кнопки "Сохранить подгруппу" в модальном окне массового назначения
+        const confirmBulkSubgroupBtn = document.getElementById('confirmBulkSubgroupBtn');
+        if (confirmBulkSubgroupBtn) {
+            confirmBulkSubgroupBtn.addEventListener('click', async function () {
+                const checkedBoxes = document.querySelectorAll('.user-select-checkbox:checked');
+                const userIds = Array.from(checkedBoxes).map(cb => cb.value);
+                if (userIds.length === 0) return;
+
+                const subgroupVal = document.getElementById('bulkSubgroupInput').value.trim();
+                const origHtml = confirmBulkSubgroupBtn.innerHTML;
+                confirmBulkSubgroupBtn.disabled = true;
+                confirmBulkSubgroupBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('csrf_token', '{{ csrf_token() }}');
+                    formData.append('subgroup', subgroupVal);
+                    userIds.forEach(id => formData.append('user_ids', id));
+
+                    const res = await fetch('/admin/users/bulk_set_subgroup', {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success') {
+                        if (data.updated_user_ids) {
+                            data.updated_user_ids.forEach(uid => {
+                                const row = document.getElementById('user-row-' + uid);
+                                if (row) {
+                                    row.setAttribute('data-subgroup', data.subgroup || '');
+                                    const groupEl = row.querySelector('.user-cell-group');
+                                    const rowGroup = row.getAttribute('data-group') || '';
+                                    if (groupEl) {
+                                        let groupHtml = '<div class="d-flex flex-wrap gap-1 align-items-center">';
+                                        if (rowGroup) {
+                                            groupHtml += `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal user-badge-group">${rowGroup}</span>`;
+                                        } else {
+                                            groupHtml += '<span class="text-muted small">—</span>';
+                                        }
+                                        if (data.subgroup) {
+                                            groupHtml += `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal user-badge-subgroup" title="Подгруппа"><i class="bi bi-tag me-1"></i>${data.subgroup}</span>`;
+                                        }
+                                        groupHtml += '</div>';
+                                        groupEl.innerHTML = groupHtml;
+                                    }
+                                }
+                            });
+                        }
+
+                        // Закрываем модалку
+                        const modalEl = document.getElementById('bulkSubgroupModal');
+                        if (modalEl) {
+                            const bsModal = bootstrap.Modal.getInstance(modalEl);
+                            if (bsModal) bsModal.hide();
+                        }
+
+                        applyFilters();
+                        if (typeof coppToast === 'function') {
+                            coppToast(data.message || 'Подгруппа успешно обновлена', 'success');
+                        }
+                    } else {
+                        coppAlert(data.message || 'Ошибка назначения подгруппы', 'error');
+                    }
+                } catch (err) {
+                    coppAlert('Сетевая ошибка при назначении подгруппы', 'error');
+                } finally {
+                    confirmBulkSubgroupBtn.disabled = false;
+                    confirmBulkSubgroupBtn.innerHTML = origHtml;
+                }
+            });
+        }
 
         // Логика переключения вкладок в модальных окнах
         const tabButtons = document.querySelectorAll('.nav-tabs .nav-link');

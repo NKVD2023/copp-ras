@@ -111,8 +111,10 @@ class ExcelParser:
                 if node.label != "root":
                     is_group = len(node.children) > 0
                     
-                    type_val = 'Текстовое'
-                    if not is_group:
+                    if is_group:
+                        type_val = 'group'
+                    else:
+                        type_val = 'Текстовое'
                         lower_label = node.label.lower()
                         numeric_keywords = ['количество', 'кол-во', 'сколько', 'число', 'сумма', 'всего', 'из них']
                         if any(kw in lower_label for kw in numeric_keywords):

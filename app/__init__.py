@@ -33,10 +33,20 @@ def create_app(config_class: type = Config) -> Flask:
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # ── База данных ───────────────────────────────────────────────────────────
     with app.app_context():
         from app import models  # noqa: F401 — регистрирует модели в SQLAlchemy
         db.create_all()
+        # Автоматическая миграция новых колонок для существующих БД
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            if 'users' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('users')]
+                if 'subgroup' not in cols:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN subgroup VARCHAR(100)"))
+                    db.session.commit()
+        except Exception:
+            pass
 
     # ── Проверка срока жизни сессии (24 часа) ──────────────────────────────────
     @app.before_request
@@ -173,6 +183,7 @@ def create_app(config_class: type = Config) -> Flask:
         return dt
 
     import json
+    import re
 
     @app.template_filter('fromjson')
     def fromjson_filter(value):
@@ -183,6 +194,22 @@ def create_app(config_class: type = Config) -> Flask:
             except Exception:
                 return []
         return value or []
+
+    @app.template_filter('clean_org_name')
+    def clean_org_name_filter(name):
+        """Очищает префиксы организационно-правовых форм (ГБПОУ РК, ГБОУВО и т.д.) для компактного отображения в таблицах."""
+        if not name or not isinstance(name, str):
+            return name or ''
+        cleaned = re.sub(
+            r'^(ГБПОУ\s*РК|ГБОУВО\s*РК|ГАОУСПО\s*РК|ГА\s*ОУСПО\s*РК|ГБПОУ|ГБОУ\s*ВО\s*РК|ГБОУВО|ГАОУСПО|ГАПОУ\s*РК|ГАПОУ|АНО\s*ПОО|АНПОО|ФГБОУ\s*ВО|ФГБОУВО)\s*',
+            '',
+            name.strip(),
+            flags=re.IGNORECASE
+        ).strip()
+        if (cleaned.startswith('«') and cleaned.endswith('»') and cleaned.count('«') == 1 and cleaned.count('»') == 1) or \
+           (cleaned.startswith('"') and cleaned.endswith('"') and cleaned.count('"') == 2):
+            cleaned = cleaned[1:-1].strip()
+        return cleaned or name
 
     # ── Blueprints ────────────────────────────────────────────────────────────
     from app.auth.routes import auth_bp

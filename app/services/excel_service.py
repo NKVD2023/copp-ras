@@ -359,7 +359,7 @@ class ExcelService:
         fields = sheet_data.get('fields', [])
         header_rows, leaf_fields = build_table_headers(fields)
         max_depth = len(header_rows) if header_rows else 1
-        max_col = len(leaf_fields) + 1
+        max_col = len(leaf_fields) + 2
 
         # 1. ЗАГОЛОВОК ЛИСТА
         title_cell = ws.cell(row=1, column=1, value=report_title)
@@ -384,13 +384,15 @@ class ExcelService:
                 cell.border = thin_border
 
         ws.cell(row=start_row, column=1, value="Организация")
+        ws.cell(row=start_row, column=2, value="ID")
         if max_depth > 1:
             ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row + max_depth - 1, end_column=1)
+            ws.merge_cells(start_row=start_row, start_column=2, end_row=start_row + max_depth - 1, end_column=2)
 
         occupied = set()
         for row_idx, h_row in enumerate(header_rows):
             c_row = start_row + row_idx
-            current_col = 2
+            current_col = 3
             for cell_info in h_row:
                 while (c_row, current_col) in occupied:
                     current_col += 1
@@ -408,16 +410,56 @@ class ExcelService:
                         end_row=c_row + cell_info['rowspan'] - 1,
                         end_column=current_col + cell_info['colspan'] - 1
                     )
+                    if cell_info['colspan'] >= 3:
+                        ws.cell(row=c_row, column=current_col).alignment = Alignment(horizontal="left", vertical="center", wrap_text=True, indent=1)
+
+        # Скрытые подсказки с системным именем поля в шапке (для гарантированного обратного импорта)
+        from openpyxl.comments import Comment
+        from openpyxl.cell.cell import MergedCell
+        bottom_header_row = start_row + max_depth - 1
+        for idx, f in enumerate(leaf_fields):
+            f_col = 3 + idx
+            f_key = f.get('name') or f.get('id')
+            if f_key:
+                try:
+                    # Устанавливаем комментарий во все доступные (не объединенные) ячейки шапки данной колонки
+                    for r_chk in range(start_row, bottom_header_row + 1):
+                        cell_to_comment = ws.cell(row=r_chk, column=f_col)
+                        if not isinstance(cell_to_comment, MergedCell):
+                            cell_to_comment.comment = Comment(f"field_key:{f_key}", "COPP")
+                except Exception:
+                    pass
 
         ws.column_dimensions['A'].width = 50
-        for col_idx in range(2, max_col + 1):
+        ws.column_dimensions['B'].width = 10
+        ws.column_dimensions['B'].hidden = True
+        for col_idx in range(3, max_col + 1):
             ws.column_dimensions[get_column_letter(col_idx)].width = 25
 
         # 3. ДАННЫЕ
         current_row = start_row + max_depth
 
-        for sub in submissions:
-            org_name = sub.user.description if sub.user.description else sub.user.username
+        # Фильтруем организации, доступные для данного листа
+        t_groups = sheet_data.get('target_groups', [])
+        old_group = sheet_data.get('target_group')
+        all_t_groups = list(t_groups) + ([old_group] if old_group and old_group not in t_groups else [])
+
+        sheet_subs = []
+        for s in submissions:
+            user = getattr(s, 'user', None)
+            is_manual = getattr(s, 'is_manual', False)
+            if not user and not is_manual:
+                continue
+            if user and not is_manual and all_t_groups and getattr(user, 'group', None) and user.group not in all_t_groups:
+                continue
+            sheet_subs.append(s)
+
+        from app.reports.routes_data import get_sort_key
+        sheet_subs.sort(key=get_sort_key)
+
+        def render_sub_rows(sub, c_row):
+            org_name = (sub.user.description if sub.user.description else sub.user.username) if getattr(sub, 'user', None) else getattr(sub, 'org_name', 'Организация')
+            user_id = sub.user.id if (getattr(sub, 'user', None) and not getattr(sub, 'is_manual', False)) else ""
 
             has_data = False
             max_len = 1
@@ -434,14 +476,17 @@ class ExcelService:
                         has_data = True
 
             if not has_data:
-                continue
+                return c_row, {}, {}
 
-            start_merge_row = current_row
+            start_merge_row = c_row
             sub_totals = {f.get('name') or f.get('id'): 0.0 for f in leaf_fields if str(f.get('type', '')).lower() in ['number', 'числовое']}
             has_subtotals = {f.get('name') or f.get('id'): False for f in leaf_fields if str(f.get('type', '')).lower() in ['number', 'числовое']}
 
             for i in range(max_len):
-                row_data = [org_name if i == 0 else ""]
+                row_data = [
+                    org_name if i == 0 else "",
+                    user_id if i == 0 else ""
+                ]
 
                 for f in leaf_fields:
                     field_key = f.get('name') or f.get('id')
@@ -476,17 +521,18 @@ class ExcelService:
                 ws.append(row_data)
 
                 for col_idx, _ in enumerate(row_data, 1):
-                    cell = ws.cell(row=current_row, column=col_idx)
+                    cell = ws.cell(row=c_row, column=col_idx)
                     cell.font = data_font
                     cell.border = thin_border
-                    cell.alignment = align_left if col_idx == 1 else align_center
+                    cell.alignment = align_left if col_idx in [1, 2] else align_center
 
-                current_row += 1
+                c_row += 1
 
             if max_len > 1:
                 ws.merge_cells(start_row=start_merge_row, start_column=1, end_row=start_merge_row + max_len - 1, end_column=1)
+                ws.merge_cells(start_row=start_merge_row, start_column=2, end_row=start_merge_row + max_len - 1, end_column=2)
 
-                col_idx = 2
+                col_idx = 3
                 for f in leaf_fields:
                     field_key = f.get('name') or f.get('id')
                     val = sub.data.get(field_key)
@@ -494,7 +540,7 @@ class ExcelService:
                         ws.merge_cells(start_row=start_merge_row, start_column=col_idx, end_row=start_merge_row + max_len - 1, end_column=col_idx)
                     col_idx += 1
 
-                subtotal_row = ['Итого по организации']
+                subtotal_row = ['Итого по организации', '']
                 for f in leaf_fields:
                     field_key = f.get('name') or f.get('id')
                     f_type = str(f.get('type', '')).lower()
@@ -510,16 +556,108 @@ class ExcelService:
 
                 subtotal_font = Font(name='Arial', size=10, bold=True)
                 for col_idx, _ in enumerate(subtotal_row, 1):
-                    cell = ws.cell(row=current_row, column=col_idx)
+                    cell = ws.cell(row=c_row, column=col_idx)
                     cell.font = subtotal_font
                     cell.border = thin_border
-                    cell.alignment = align_left if col_idx == 1 else align_center
+                    cell.alignment = align_left if col_idx in [1, 2] else align_center
                     cell.fill = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
+
+                c_row += 1
+
+            return c_row, sub_totals, has_subtotals
+
+        # Стилизация строки подгруппы
+        subgroup_total_fill = PatternFill(start_color="EBF3FA", end_color="EBF3FA", fill_type="solid")
+        subgroup_total_font = Font(name='Arial', size=11, bold=True, color="00334E")
+
+        # Вывод учреждений строго по порядку в списке пользователей
+        processed_subgroups = set()
+        current_general_chunk = []
+
+        for sub in sheet_subs:
+            sg = (getattr(sub.user, 'subgroup', None) or '').strip() if sub.user else ''
+
+            if not sg:
+                current_general_chunk.append(sub)
+            else:
+                if sg in processed_subgroups:
+                    continue
+
+                # Выводим накопленные организации без подгруппы
+                if current_general_chunk:
+                    for g_sub in current_general_chunk:
+                        current_row, _, _ = render_sub_rows(g_sub, current_row)
+                    current_general_chunk = []
+
+                # Собираем всех участников этой подгруппы в порядке списка пользователей
+                sg_subs = [
+                    s for s in sheet_subs
+                    if (getattr(s.user, 'subgroup', None) or '').strip() == sg
+                ]
+                sg_subs.sort(key=get_sort_key)
+
+                # Заголовочная строка подгруппы (обозначает начало группы в Excel)
+                subgroup_header_row = [sg] + [''] * (max_col - 1)
+                ws.append(subgroup_header_row)
+
+                subgroup_header_fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+                subgroup_header_font = Font(name='Arial', size=11, bold=True, color="00334E")
+
+                for col_idx in range(1, max_col + 1):
+                    cell = ws.cell(row=current_row, column=col_idx)
+                    cell.font = subgroup_header_font
+                    cell.fill = subgroup_header_fill
+                    cell.border = thin_border
+                    cell.alignment = align_left
+
+                if max_col > 1:
+                    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=max_col)
 
                 current_row += 1
 
+                sg_accum_totals = {f.get('name') or f.get('id'): 0.0 for f in leaf_fields if str(f.get('type', '')).lower() in ['number', 'числовое']}
+                sg_has_totals = {f.get('name') or f.get('id'): False for f in leaf_fields if str(f.get('type', '')).lower() in ['number', 'числовое']}
+
+                for s in sg_subs:
+                    current_row, sub_totals, has_subtotals = render_sub_rows(s, current_row)
+                    for k, v in sub_totals.items():
+                        if has_subtotals.get(k):
+                            sg_accum_totals[k] += v
+                            sg_has_totals[k] = True
+
+                # Строка промежуточного итога подгруппы: [Название подгруппы] всего (без кавычек)
+                subgroup_total_row = [f"{sg} всего", '']
+                for f in leaf_fields:
+                    field_key = f.get('name') or f.get('id')
+                    f_type = str(f.get('type', '')).lower()
+                    if f_type in ['number', 'числовое']:
+                        if sg_has_totals[field_key]:
+                            val = sg_accum_totals[field_key]
+                            subgroup_total_row.append(int(val) if val.is_integer() else round(val, 2))
+                        else:
+                            subgroup_total_row.append(0)
+                    else:
+                        subgroup_total_row.append('-')
+
+                ws.append(subgroup_total_row)
+
+                for col_idx, _ in enumerate(subgroup_total_row, 1):
+                    cell = ws.cell(row=current_row, column=col_idx)
+                    cell.font = subgroup_total_font
+                    cell.fill = subgroup_total_fill
+                    cell.border = thin_border
+                    cell.alignment = align_left if col_idx in [1, 2] else align_center
+
+                current_row += 1
+                processed_subgroups.add(sg)
+
+        # Выводим оставшиеся организации без подгруппы в конце
+        if current_general_chunk:
+            for g_sub in current_general_chunk:
+                current_row, _, _ = render_sub_rows(g_sub, current_row)
+
         # 4. ИТОГО
-        total_row = ['Итого']
+        total_row = ['Итого', '']
         for f in leaf_fields:
             f_type = str(f.get('type', '')).lower()
             if f_type in ['number', 'числовое']:
@@ -550,13 +688,14 @@ class ExcelService:
         ws.append(total_row)
 
         ExcelService._autosize_excel(ws)
+        ws.column_dimensions['B'].hidden = True
 
         for col_idx in range(1, max_col + 1):
             cell = ws.cell(row=current_row, column=col_idx)
             cell.font = total_font
             cell.fill = total_fill
             cell.border = thin_border
-            cell.alignment = align_left if col_idx == 1 else align_center
+            cell.alignment = align_left if col_idx in [1, 2] else align_center
 
     @staticmethod
     def export_report(template, submissions):
@@ -821,3 +960,419 @@ class ExcelService:
             else:
                 padding = 15 if is_header else 5
                 ws.row_dimensions[row[0].row].height = max_lines * default_row_height + padding
+
+    @staticmethod
+    def normalize_org_name(name):
+        """
+        Нормализует наименование учреждения для надежного сопоставления:
+        - приведение к нижнему регистру
+        - удаление кавычек («, », ", ', `)
+        - замена буквы 'ё' на 'е'
+        - замена неразрывных пробелов и сжатие пробельных последовательностей
+        """
+        if not name:
+            return ""
+        clean = re.sub(r'[\'\"«»„“”`]', '', str(name)).lower()
+        clean = clean.replace('ё', 'е').replace('\xa0', ' ')
+        clean = re.sub(r'\s+', ' ', clean).strip()
+        return clean
+
+    @staticmethod
+    def parse_summary_excel(file_stream_or_path, template):
+        """
+        Разбирает отредактированный Excel файл сводной таблицы (выгруженный через export_report).
+        Сопоставляет данные учреждений и колонок, находит все различия с текущей БД.
+        Поддерживает:
+        - Гибридную идентификацию учреждений (скрытая колонка B с user_id + fallback по наименованию).
+        - Гибридную идентификацию колонок (комментарии field_key + наименования заголовков + порядок).
+        - Полную синхронизацию (пустая ячейка/тире означает сброс значения).
+        - Авто-пропуск строк итогов (Итого, Итого по организации, [Группа] всего, заголовки подгрупп).
+        - Многострочные отчеты (is_multiple).
+        """
+        from app.models import User, ReportSubmission
+        from app.utils import build_table_headers
+
+        try:
+            wb = openpyxl.load_workbook(file_stream_or_path, data_only=True)
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Не удалось открыть Excel файл: {str(e)}'
+            }
+
+        # 1. Загружаем пользователей и строим словари соответствий
+        all_users = User.query.all()
+        users_by_id = {u.id: u for u in all_users}
+        users_by_desc = {}
+        users_by_username = {}
+
+        for u in all_users:
+            if u.description:
+                users_by_desc[ExcelService.normalize_org_name(u.description)] = u
+            if u.username:
+                users_by_username[ExcelService.normalize_org_name(u.username)] = u
+
+        # 2. Загружаем существующие сданные отчеты для этого шаблона
+        existing_submissions = ReportSubmission.query.filter_by(template_id=template.id).all()
+        subs_by_user_id = {s.user_id: s for s in existing_submissions}
+
+        all_diffs = []
+        warnings = []
+        matched_user_ids = set()
+
+        schema = template.schema if isinstance(template.schema, list) else json.loads(template.schema or '[]')
+
+        for sheet_idx, sheet_data in enumerate(schema):
+            clean_title = re.sub(r'[\\*?:/\[\]]', '', str(sheet_data.get('sheet_title', ''))).strip()[:31]
+
+            # Ищем лист в файле: сначала по точному имени, затем case-insensitive, затем по индексу
+            ws = None
+            if clean_title in wb.sheetnames:
+                ws = wb[clean_title]
+            else:
+                for sname in wb.sheetnames:
+                    if sname.strip().lower() == clean_title.lower():
+                        ws = wb[sname]
+                        break
+            if not ws and sheet_idx < len(wb.worksheets):
+                ws = wb.worksheets[sheet_idx]
+                warnings.append(f'Лист "{clean_title}" не найден по имени, использован лист #{sheet_idx + 1} ("{ws.title}").')
+
+            if not ws:
+                warnings.append(f'Лист "{clean_title}" отсутствует в файле — пропущен.')
+                continue
+
+            fields = sheet_data.get('fields', [])
+            header_rows, leaf_fields = build_table_headers(fields)
+            max_depth = len(header_rows) if header_rows else 1
+
+            # Поиск строки шапки (где в столбце A написано "Организация")
+            header_start_row = 2
+            for r in range(1, min(10, (ws.max_row or 1) + 1)):
+                val = ws.cell(row=r, column=1).value
+                if val and 'организац' in str(val).lower():
+                    header_start_row = r
+                    break
+
+            header_bottom_row = header_start_row + max_depth - 1
+
+            # Определяем, есть ли скрытый столбец ID в колонке B
+            is_col_b_id = False
+            col_b_val = ws.cell(row=header_bottom_row, column=2).value
+            if col_b_val and str(col_b_val).strip().lower() in ['id', '_id', '_user_id', 'ид']:
+                is_col_b_id = True
+            elif ws.column_dimensions['B'].hidden:
+                is_col_b_id = True
+            else:
+                # Проверим первые строки с данными: числовое ли значение в B, равное ID пользователя
+                for test_r in range(header_bottom_row + 1, min(header_bottom_row + 6, (ws.max_row or 1) + 1)):
+                    test_b = ws.cell(row=test_r, column=2).value
+                    if test_b is not None:
+                        try:
+                            tid = int(test_b)
+                            if tid in users_by_id:
+                                is_col_b_id = True
+                                break
+                        except (ValueError, TypeError):
+                            pass
+
+            id_col = 2 if is_col_b_id else None
+            data_start_col = 3 if is_col_b_id else 2
+
+            # Построим словарь понятных названий для каждого поля
+            field_display_names = {}
+            for f in fields:
+                fk = f.get('name') or f.get('id')
+                if fk:
+                    field_display_names[fk] = f.get('label', fk)
+
+            def get_friendly_field_label(f_item):
+                fk = f_item.get('name') or f_item.get('id')
+                leaf_lbl = f_item.get('label', fk)
+                orig_lbl = field_display_names.get(fk)
+                if orig_lbl and orig_lbl != leaf_lbl:
+                    if leaf_lbl and orig_lbl in leaf_lbl:
+                        return leaf_lbl
+                    return f"{orig_lbl} ({leaf_lbl})"
+                return leaf_lbl or fk
+
+            # Сопоставление колонок листа с полями схемы
+            col_to_field = {}
+            for col_idx in range(data_start_col, (ws.max_column or 0) + 1):
+                field_match = None
+
+                # 1. Проверяем комментарии по всей высоте шапки в данной колонке
+                for hr in range(header_start_row, header_bottom_row + 1):
+                    h_cell = ws.cell(row=hr, column=col_idx)
+                    if h_cell.comment and h_cell.comment.text:
+                        m = re.search(r'field_key:([^\s\r\n]+)', h_cell.comment.text)
+                        if m:
+                            fk = m.group(1).strip()
+                            for f in leaf_fields:
+                                if (f.get('name') or f.get('id')) == fk:
+                                    field_match = f
+                                    break
+                    if field_match:
+                        break
+
+                # 2. Позиционное соответствие (основной детерминированный механизм для выгрузок ЦОПП: 1-к-1 с leaf_fields)
+                f_idx = col_idx - data_start_col
+                if not field_match and 0 <= f_idx < len(leaf_fields):
+                    field_match = leaf_fields[f_idx]
+
+                # 3. Fallback: поиск по уникальному тексту заголовка (только если имя уникально среди leaf_fields!)
+                if not field_match:
+                    header_val = ws.cell(row=header_bottom_row, column=col_idx).value
+                    if not header_val:
+                        for hr in range(header_bottom_row - 1, header_start_row - 1, -1):
+                            hv = ws.cell(row=hr, column=col_idx).value
+                            if hv:
+                                header_val = hv
+                                break
+                    if header_val:
+                        norm_label = ExcelService.normalize_org_name(header_val)
+                        matching_fields = [f for f in leaf_fields if ExcelService.normalize_org_name(f.get('label')) == norm_label]
+                        if len(matching_fields) == 1:
+                            field_match = matching_fields[0]
+
+                if field_match:
+                    col_to_field[col_idx] = field_match
+
+            if not col_to_field:
+                warnings.append(f'На листе "{ws.title}" не удалось сопоставить колонки показателей.')
+                continue
+
+            # Чтение строк с данными
+            current_user = None
+            user_rows = {} # uid -> list of dict {col_idx: cell_value}
+            
+            for r in range(header_bottom_row + 1, (ws.max_row or 0) + 1):
+                val_a = ws.cell(row=r, column=1).value
+                val_b = ws.cell(row=r, column=id_col).value if id_col else None
+
+                # Проверка пустой строки
+                is_row_empty = True
+                if val_a is not None and str(val_a).strip() != '':
+                    is_row_empty = False
+                else:
+                    for c in col_to_field:
+                        cv = ws.cell(row=r, column=c).value
+                        if cv not in [None, '', '-', '—']:
+                            is_row_empty = False
+                            break
+                if is_row_empty:
+                    continue
+
+                # Проверка служебных строк
+                if val_a is not None and str(val_a).strip() != '':
+                    str_a = str(val_a).strip()
+                    lower_a = str_a.lower()
+
+                    # Итого или Итого по организации
+                    if lower_a == 'итого' or lower_a.startswith('итого по организации'):
+                        current_user = None
+                        continue
+
+                    # Промежуточный итог подгруппы (заканчивается на "всего")
+                    norm_a = ExcelService.normalize_org_name(str_a)
+                    if lower_a.endswith('всего') and norm_a not in users_by_desc and norm_a not in users_by_username:
+                        current_user = None
+                        continue
+
+                    # Проверяем, не является ли это строкой заголовка подгруппы
+                    if norm_a not in users_by_desc and norm_a not in users_by_username:
+                        data_empty = all(ws.cell(row=r, column=c).value in [None, '', '-', '—'] for c in col_to_field)
+                        if data_empty:
+                            current_user = None
+                            continue
+
+                # Идентификация учреждения
+                detected_user = None
+                if id_col and val_b is not None and str(val_b).strip() != '':
+                    try:
+                        uid = int(val_b)
+                        if uid in users_by_id:
+                            detected_user = users_by_id[uid]
+                    except (ValueError, TypeError):
+                        pass
+
+                if not detected_user and val_a is not None and str(val_a).strip() != '':
+                    norm_a = ExcelService.normalize_org_name(val_a)
+                    if norm_a in users_by_desc:
+                        detected_user = users_by_desc[norm_a]
+                    elif norm_a in users_by_username:
+                        detected_user = users_by_username[norm_a]
+
+                if detected_user:
+                    current_user = detected_user
+                    matched_user_ids.add(current_user.id)
+                elif val_a is None or str(val_a).strip() == '':
+                    # Объединенная ячейка (продолжение предыдущего пользователя в многострочном ответе)
+                    pass
+                else:
+                    norm_a = ExcelService.normalize_org_name(val_a)
+                    if norm_a not in ['итого', 'всего'] and not norm_a.endswith('всего'):
+                        warnings.append(f'Лист "{ws.title}", строка {r}: учреждение "{val_a}" не найдено в базе данных — строка пропущена.')
+                    current_user = None
+                    continue
+
+                if not current_user:
+                    continue
+
+                # Считываем ячейки строки
+                row_cells = {}
+                for c, field in col_to_field.items():
+                    row_cells[c] = ws.cell(row=r, column=c).value
+
+                if current_user.id not in user_rows:
+                    user_rows[current_user.id] = []
+                user_rows[current_user.id].append(row_cells)
+
+            # Сопоставление с базой данных и формирование списка изменений
+            for uid, rows_list in user_rows.items():
+                user = users_by_id[uid]
+                sub = subs_by_user_id.get(uid)
+                old_data = sub.data.copy() if (sub and sub.data) else {}
+
+                for c, field in col_to_field.items():
+                    f_key = field.get('name') or field.get('id')
+                    f_label = get_friendly_field_label(field)
+                    f_type = str(field.get('type', '')).lower()
+                    is_numeric = f_type in ['number', 'числовое']
+                    is_multiple = field.get('is_multiple', False) or len(rows_list) > 1
+
+                    old_val = old_data.get(f_key)
+
+                    if not is_multiple:
+                        raw_cell_val = rows_list[0][c]
+                        if raw_cell_val in [None, '', '-', '—']:
+                            new_val = None
+                        elif is_numeric:
+                            try:
+                                num_str = str(raw_cell_val).replace(' ', '').replace(',', '.')
+                                num_float = float(num_str)
+                                new_val = int(num_float) if num_float.is_integer() else round(num_float, 2)
+                            except (ValueError, TypeError):
+                                new_val = str(raw_cell_val).strip()
+                        else:
+                            new_val = str(raw_cell_val).strip()
+
+                        # Сравнение старого и нового значения
+                        is_diff = False
+                        if old_val != new_val:
+                            if old_val in [None, '', '-', '—'] and new_val in [None, '', '-', '—']:
+                                is_diff = False
+                            elif is_numeric and old_val not in [None, '', '-', '—'] and new_val not in [None, '', '-', '—']:
+                                try:
+                                    if float(old_val) == float(new_val):
+                                        is_diff = False
+                                    else:
+                                        is_diff = True
+                                except Exception:
+                                    is_diff = True
+                            elif not is_numeric:
+                                str_old = str(old_val).strip() if old_val not in [None, '', '-', '—'] else ""
+                                str_new = str(new_val).strip() if new_val not in [None, '', '-', '—'] else ""
+                                is_diff = (str_old != str_new)
+                            else:
+                                is_diff = True
+
+                        if is_diff:
+                            all_diffs.append({
+                                'user_id': uid,
+                                'org_name': user.description or user.username,
+                                'sheet_title': sheet_data.get('sheet_title', 'Лист'),
+                                'field_name': f_key,
+                                'field_label': f_label,
+                                'old_val': old_val,
+                                'new_val': new_val,
+                                'old_val_display': "-" if old_val in [None, '', '-', '—'] else str(old_val),
+                                'new_val_display': "-" if new_val in [None, '', '-', '—'] else str(new_val),
+                                'is_multiple': False
+                            })
+                    else:
+                        # Многострочные значения
+                        new_list = []
+                        has_any = False
+                        for r_dict in rows_list:
+                            raw_val = r_dict[c]
+                            if raw_val in [None, '', '-', '—']:
+                                item_val = ""
+                            elif is_numeric:
+                                try:
+                                    num_str = str(raw_val).replace(' ', '').replace(',', '.')
+                                    num_float = float(num_str)
+                                    item_val = int(num_float) if num_float.is_integer() else round(num_float, 2)
+                                    has_any = True
+                                except (ValueError, TypeError):
+                                    item_val = str(raw_val).strip()
+                                    has_any = True
+                            else:
+                                item_val = str(raw_val).strip()
+                                has_any = True
+                            new_list.append(item_val)
+
+                        new_val = new_list if has_any else []
+                        old_list = old_val if isinstance(old_val, list) else ([old_val] if old_val not in [None, ''] else [])
+
+                        # Сравниваем списки (исключая пустые/тире элементы)
+                        clean_new = [str(x).strip() for x in new_val if x not in [None, '', '-', '—']]
+                        clean_old = [str(x).strip() for x in old_list if x not in [None, '', '-', '—']]
+
+                        if clean_old != clean_new:
+                            all_diffs.append({
+                                'user_id': uid,
+                                'org_name': user.description or user.username,
+                                'sheet_title': sheet_data.get('sheet_title', 'Лист'),
+                                'field_name': f_key,
+                                'field_label': f_label,
+                                'old_val': old_val,
+                                'new_val': new_val,
+                                'old_val_display': ", ".join(clean_old) if clean_old else "-",
+                                'new_val_display': ", ".join(clean_new) if clean_new else "-",
+                                'is_multiple': True
+                            })
+
+        return {
+            'success': True,
+            'diffs': all_diffs,
+            'total_changes': len(all_diffs),
+            'changed_orgs_count': len(set(d['user_id'] for d in all_diffs)),
+            'total_orgs_found': len(matched_user_ids),
+            'warnings': warnings
+        }
+
+    @staticmethod
+    def apply_summary_changes(template, diffs):
+        """
+        Применяет список проверенных изменений в базе данных (ReportSubmission).
+        Возвращает (количество измененных полей, количество обновленных учреждений).
+        """
+        from app.models import ReportSubmission
+        from app.extensions import db
+
+        user_updates = {}
+        for d in diffs:
+            uid = d['user_id']
+            if uid not in user_updates:
+                user_updates[uid] = {}
+            user_updates[uid][d['field_name']] = d['new_val']
+
+        for uid, fields_dict in user_updates.items():
+            sub = ReportSubmission.query.filter_by(template_id=template.id, user_id=uid).first()
+            if not sub:
+                sub = ReportSubmission(template_id=template.id, user_id=uid, data={})
+                db.session.add(sub)
+
+            data_copy = sub.data.copy() if sub.data else {}
+            for fname, nval in fields_dict.items():
+                if nval is None:
+                    # Режим полной синхронизации: сброс значения
+                    data_copy[fname] = None
+                else:
+                    data_copy[fname] = nval
+
+            sub.data = data_copy
+
+        db.session.commit()
+        return len(diffs), len(user_updates)

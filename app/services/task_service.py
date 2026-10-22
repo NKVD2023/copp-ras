@@ -17,6 +17,10 @@ class TaskService:
             try:
                 template = ReportTemplate.query.get(template_id)
                 submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
+                from app.models import ManualRow
+                from app.reports.routes_data import ManualRowAdapter
+                for mr in ManualRow.query.filter_by(template_id=template_id).all():
+                    submissions.append(ManualRowAdapter(mr))
                 
                 # Use ExcelService to generate output
                 output, filename = ExcelService.export_report(template, submissions)
@@ -84,6 +88,10 @@ class TaskService:
                     if not template:
                         continue
                     submissions = ReportSubmission.query.filter_by(template_id=template_id).all()
+                    from app.models import ManualRow
+                    from app.reports.routes_data import ManualRowAdapter
+                    for mr in ManualRow.query.filter_by(template_id=template_id).all():
+                        submissions.append(ManualRowAdapter(mr))
                     templates_data.append((template, submissions))
 
                 if not templates_data:

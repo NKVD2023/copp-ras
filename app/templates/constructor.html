@@ -389,7 +389,12 @@
             validateSum: true
         };
         
-        if (!isGroup) {
+        if (isGroup) {
+            newField.type = 'group';
+            newField.required = false;
+            newField.is_multiple = false;
+            newField.hint = hintInput.value.trim();
+        } else {
             newField.type = typeInput.value;
             newField.required = reqInput.checked;
             newField.is_multiple = multInput ? multInput.checked : false;
@@ -417,6 +422,10 @@
         if (hintInput) hintInput.value = '';
         if (reqInput) reqInput.checked = false;
         if (multInput) multInput.checked = false;
+        if (groupInput) {
+            groupInput.checked = false;
+            toggleGroupMode(sIdx);
+        }
         // Скрываем обёртку блока выбора шаблона (а не сам select напрямую)
         toggleDictionarySelect(sIdx, 'number');
         typeInput.value = 'number'; // reset to default
@@ -445,6 +454,116 @@
     function updateFieldType(sIdx, fIdx, newType) {
         reportStructure[sIdx].fields[fIdx].type = newType;
         renderStructure();
+    }
+
+    function toggleFieldIsGroup(sIdx, fIdx, isGroup) {
+        reportStructure[sIdx].fields[fIdx].isGroup = isGroup;
+        if (isGroup) {
+            reportStructure[sIdx].fields[fIdx].type = 'group';
+            reportStructure[sIdx].fields[fIdx].required = false;
+        } else {
+            reportStructure[sIdx].fields[fIdx].type = 'number';
+        }
+        renderStructure();
+    }
+
+    function insertChildFieldAt(sIdx, fIdx) {
+        const parentField = reportStructure[sIdx].fields[fIdx];
+        parentField.isGroup = true;
+        parentField.type = 'group';
+        const childLevel = (parentField.level || 0) + 1;
+        const fieldName = `s${sIdx}_c${Date.now().toString().slice(-6)}`;
+        const newField = {
+            name: fieldName,
+            id: fieldName,
+            label: 'Новый подстолбец',
+            type: 'number',
+            required: false,
+            isGroup: false,
+            level: childLevel,
+            validateSum: true
+        };
+        reportStructure[sIdx].fields.splice(fIdx + 1, 0, newField);
+        renderStructure();
+    }
+
+    function renderHeaderPreviewHtml(fields) {
+        if (!fields || fields.length === 0) {
+            return '<div class="p-3 text-muted small text-center">Пока нет добавленных колонок</div>';
+        }
+        let tree = [];
+        let stack = [];
+        for (let f of fields) {
+            let lvl = parseInt(f.level || 0);
+            let node = { field: f, children: [] };
+            while (stack.length > 0 && stack[stack.length - 1].level >= lvl) {
+                stack.pop();
+            }
+            if (stack.length === 0) {
+                tree.push(node);
+            } else {
+                stack[stack.length - 1].node.children.push(node);
+            }
+            stack.push({ level: lvl, node: node });
+        }
+        function getColspan(n) {
+            if (!n.children || n.children.length === 0) return 1;
+            let sum = 0;
+            for (let c of n.children) sum += getColspan(c);
+            return sum;
+        }
+        function getMaxDepth(nodes) {
+            if (!nodes || nodes.length === 0) return 0;
+            let maxD = 0;
+            for (let n of nodes) {
+                if (n.children && n.children.length > 0) {
+                    maxD = Math.max(maxD, 1 + getMaxDepth(n.children));
+                } else {
+                    maxD = Math.max(maxD, 1);
+                }
+            }
+            return maxD;
+        }
+        let maxDepth = getMaxDepth(tree);
+        if (maxDepth === 0) maxDepth = 1;
+        let headerRows = [];
+        for (let d = 0; d < maxDepth; d++) headerRows.push([]);
+        function buildHeaders(nodes, currentDepth) {
+            for (let n of nodes) {
+                let cs = getColspan(n);
+                let lbl = n.field.label || 'Без названия';
+                let isPureGroup = Boolean(n.field.isGroup) || n.field.type === 'group';
+                if (!n.children || n.children.length === 0) {
+                    headerRows[currentDepth].push({
+                        label: lbl,
+                        colspan: 1,
+                        rowspan: maxDepth - currentDepth,
+                        isGroup: isPureGroup
+                    });
+                } else {
+                    headerRows[currentDepth].push({
+                        label: lbl,
+                        colspan: cs,
+                        rowspan: 1,
+                        isGroup: isPureGroup
+                    });
+                    buildHeaders(n.children, currentDepth + 1);
+                }
+            }
+        }
+        buildHeaders(tree, 0);
+        let html = '<table class="table table-bordered table-sm mb-0 text-center align-middle" style="font-size: 0.8rem;">';
+        html += '<thead class="table-light">';
+        for (let row of headerRows) {
+            html += '<tr>';
+            for (let cell of row) {
+                let bgStyle = cell.isGroup ? 'background-color: #f1f5f9; font-weight: 700; color: #00334e;' : 'font-weight: 600;';
+                html += `<th colspan="${cell.colspan}" rowspan="${cell.rowspan}" style="${bgStyle} padding: 6px 8px; vertical-align: middle;">${cell.label}</th>`;
+            }
+            html += '</tr>';
+        }
+        html += '</thead></table>';
+        return html;
     }
 
     function getSheetGroupsLabel(sheet) {
@@ -617,15 +736,9 @@
                 parentStack.push({idx: i, lvl: lvl});
             }
             
-            // Если у поля есть дети (благодаря стрелкам), отмечаем его для стилизации
+            // По умолчанию поле НЕ группа. Чистая группа — только если тип group.
             for (let i = 0; i < sheet.fields.length; i++) {
-                if (childrenCount[i] > 0) {
-                    sheet.fields[i].isGroup = true;
-                } else if (sheet.fields[i].type === 'group') {
-                    sheet.fields[i].isGroup = true;
-                } else {
-                    sheet.fields[i].isGroup = false;
-                }
+                sheet.fields[i].isGroup = (sheet.fields[i].type === 'group');
             }
             
             return `
@@ -682,20 +795,35 @@
                             // Показывать ли подсказку? (если больше 2 детей и проверка включена)
                             const hasManyChildren = (childrenCount[fIdx] > 2) && validateSum && (f.type !== 'group');
 
+                            const isFieldGroup = (f.type === 'group');
                             let controlsHtml = '';
-                            if (f.type === 'select') {
+                            if (isFieldGroup) {
+                                controlsHtml = `
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1"><i class="bi bi-folder2-open me-1"></i>Шапка группы</span>
+                                    <div class="form-check form-switch mb-0 ms-2">
+                                        <input class="form-check-input" type="checkbox" id="isgrp-${sIdx}-${fIdx}" checked onchange="toggleFieldIsGroup(${sIdx}, ${fIdx}, this.checked)">
+                                        <label class="form-check-label small text-muted" for="isgrp-${sIdx}-${fIdx}">Режим группы</label>
+                                    </div>
+                                    <div class="flex-grow-1 min-w-200">
+                                        <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка к группе (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                                    </div>`;
+                            } else if (f.type === 'select') {
                                 controlsHtml = `
                                     <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-list-ul me-1"></i>${f.dictionary_name || 'Шаблон списка'}</span>
                                 <div class="form-check mb-0 ms-2">
                                     <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
+                                <div class="form-check form-switch mb-0 border-start ps-4">
+                                    <input class="form-check-input" type="checkbox" id="isgrp-${sIdx}-${fIdx}" onchange="toggleFieldIsGroup(${sIdx}, ${fIdx}, this.checked)">
+                                    <label class="form-check-label small text-muted" for="isgrp-${sIdx}-${fIdx}">В группу</label>
+                                </div>
                                 <div class="flex-grow-1 min-w-200">
                                     <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>`;
                             } else {
                                 let extraCheckbox = `
-                                <div class="form-check mb-0 border-start ps-3" style="display: ${f.type === 'group' ? 'none' : 'block'}">
+                                <div class="form-check mb-0 border-start ps-3">
                                     <input class="form-check-input" type="checkbox" id="mult-${sIdx}-${fIdx}" ${f.is_multiple ? 'checked' : ''} onchange="updateFieldMultiple(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="mult-${sIdx}-${fIdx}">Множественное</label>
                                 </div>`;
@@ -704,16 +832,20 @@
                                     <option value="number" ${f.type === 'number' || f.type === 'Числовое' ? 'selected' : ''}>Числовое</option>
                                     <option value="text" ${f.type === 'text' || f.type === 'Текстовое' ? 'selected' : ''}>Текстовое</option>
                                 </select>
-                                <div class="form-check mb-0 ms-2" style="display: ${f.type === 'group' ? 'none' : 'block'}">
+                                <div class="form-check mb-0 ms-2">
                                     <input class="form-check-input" type="checkbox" id="req-${sIdx}-${fIdx}" ${f.required ? 'checked' : ''} onchange="updateFieldRequired(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="req-${sIdx}-${fIdx}">Обязательно</label>
                                 </div>
-                                <div class="form-check mb-0 border-start ps-3" style="display: ${f.type === 'text' || f.type === 'group' ? 'none' : 'block'}">
+                                <div class="form-check mb-0 border-start ps-3" style="display: ${f.type === 'text' ? 'none' : 'block'}">
                                     <input class="form-check-input" type="checkbox" id="valsum-${sIdx}-${fIdx}" ${validateSum ? 'checked' : ''} onchange="updateFieldValidateSum(${sIdx}, ${fIdx}, this.checked)">
                                     <label class="form-check-label small text-dark" for="valsum-${sIdx}-${fIdx}">Строгая проверка суммы</label>
                                 </div>
                                 ${extraCheckbox}
-                                <div class="flex-grow-1" style="min-width: 200px; ${f.type === 'group' ? 'display:none;' : ''}">
+                                <div class="form-check form-switch mb-0 border-start ps-4">
+                                    <input class="form-check-input" type="checkbox" id="isgrp-${sIdx}-${fIdx}" onchange="toggleFieldIsGroup(${sIdx}, ${fIdx}, this.checked)">
+                                    <label class="form-check-label small text-muted" for="isgrp-${sIdx}-${fIdx}">В группу</label>
+                                </div>
+                                <div class="flex-grow-1" style="min-width: 200px;">
                                     <textarea class="form-control form-control-sm border-light-subtle text-muted constructor-textarea" rows="1" placeholder="Подсказка (необязательно)" oninput="updateFieldHint(${sIdx}, ${fIdx}, this.value)">${String(f.hint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                                 </div>`;
                             }
@@ -738,6 +870,9 @@
                                     ${controlsHtml}
                                     <div class="d-flex align-items-center gap-3 flex-shrink-0 ms-auto">
                                         <span class="badge bg-light border text-muted font-monospace constructor-badge">${f.name || f.id}</span>
+                                        ${isFieldGroup ? `
+                                        <button onclick="insertChildFieldAt(${sIdx}, ${fIdx})" class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-bold" title="Добавить подстолбец в эту группу"><i class="bi bi-node-plus me-1"></i>+ Подстолбец</button>
+                                        ` : ''}
                                         <button onclick="insertFieldAt(${sIdx}, ${fIdx})" class="btn btn-sm btn-link text-success p-0 text-decoration-none fw-bold" title="Вставить поле ниже"><i class="bi bi-plus-circle me-1"></i>Добавить</button>
                                         <button onclick="removeField(${sIdx}, ${fIdx})" class="btn btn-sm btn-link text-danger p-0 text-decoration-none fw-bold">Удалить</button>
                                     </div>
@@ -780,6 +915,12 @@
                                     <input class="form-check-input" type="checkbox" id="mult-${sIdx}">
                                     <label class="form-check-label small text-dark" for="mult-${sIdx}">Множественное</label>
                                 </div>
+                                <div class="form-check form-switch mb-0 border-start ps-4 me-2">
+                                    <input class="form-check-input" type="checkbox" id="groupMode-${sIdx}" onchange="toggleGroupMode(${sIdx})">
+                                    <label class="form-check-label small fw-bold text-dark" for="groupMode-${sIdx}">
+                                        <i class="bi bi-folder2-open me-1 text-primary"></i>Общий заголовок (Группа)
+                                    </label>
+                                </div>
                             </div>
                             
 
@@ -788,6 +929,16 @@
                         <div class="d-flex align-items-start gap-2 mt-1">
                             <textarea id="hint-${sIdx}" class="form-control form-control-sm flex-grow-1 constructor-textarea" rows="2" placeholder="Подсказка (необязательно)"></textarea>
                             <button type="button" onclick="addFieldToSheet(${sIdx})" class="btn btn-sm btn-copp px-4 flex-shrink-0 mt-1 shadow-sm">Добавить</button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-2">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small fw-bold text-dark"><i class="bi bi-table me-2 text-primary"></i>Предпросмотр шапки таблицы листа "${sheet.sheet_title}"</span>
+                            <span class="badge bg-white text-muted border small"><i class="bi bi-eye me-1"></i>Живой предпросмотр объединения ячеек</span>
+                        </div>
+                        <div class="table-responsive rounded border shadow-sm">
+                            ${renderHeaderPreviewHtml(sheet.fields)}
                         </div>
                     </div>
                 </div>

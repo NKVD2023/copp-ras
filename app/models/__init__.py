@@ -4,7 +4,7 @@ app/models/__init__.py
 Весь остальной код проекта продолжает делать: from app.models import User
 """
 from app.models.user import User, user_template_access
-from app.models.report import ReportTemplate, ReportSubmission, ReportDraft, report_attachments
+from app.models.report import ReportTemplate, ReportSubmission, ReportDraft, ManualRow, report_attachments
 from app.models.files import UploadedFile
 from app.models.logs import ActionLog
 from app.models.tasks import BackgroundTask
@@ -19,6 +19,7 @@ __all__ = [
     'ReportTemplate',
     'ReportSubmission',
     'ReportDraft',
+    'ManualRow',
     'report_attachments',
     'UploadedFile',
     'ActionLog',

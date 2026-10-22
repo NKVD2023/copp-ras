@@ -51,3 +51,24 @@ class ReportDraft(db.Model):
     __table_args__ = (db.UniqueConstraint('template_id', 'user_id', name='uq_draft_template_user'),)
     template = db.relationship('ReportTemplate', backref='drafts')
     user = db.relationship('User', backref='drafts')
+
+class ManualRow(db.Model):
+    """
+    Ручные строки в сводной таблице для организаций, которых нет в системе.
+    Не привязаны к учётной записи пользователя.
+    """
+    __tablename__ = 'manual_rows'
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('report_templates.id'), nullable=False)
+    org_name = db.Column(db.String(256), nullable=False)
+    subgroup = db.Column(db.String(100), nullable=True)
+    data = db.Column(JSON, default=dict)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    template = db.relationship('ReportTemplate', backref=db.backref('manual_rows', cascade='all, delete-orphan'))
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+    updated_by = db.relationship('User', foreign_keys=[updated_by_id])
+

@@ -120,17 +120,26 @@
                 {% set sheet_is_multiple = sheet.get('is_multiple', False) %}
                 
                 {% if is_active %}
-                {% if lvl == 0 and not loop.first %}
-                    <hr class="hr-dashed-neg">
-                {% endif %}
-                <div class="mb-4 {% if lvl > 0 %}ps-4 position-relative border-start border-2{% endif %}" {% if lvl > 0 %}style="border-color: rgba(0, 51, 78, 0.1) !important;"{% endif %}>
-                    {% if lvl > 0 %}
-                    <!-- Tree branch horizontal line -->
-                    <div class="field-branch-h-line"></div>
+                {% set is_group = field.get('type') == 'group' %}
+                {% if is_group %}
+                    <div class="mt-4 mb-3 p-3 rounded-2 bg-light border-start border-4" style="border-color: #00334e !important;">
+                        <div class="fw-bold text-dark fs-6">{{ field.numbering|default('') }} {{ field.label }}</div>
+                        {% if field.hint %}
+                        <div class="text-muted small mt-1"><i class="bi bi-info-circle me-1"></i>{{ field.hint }}</div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    {% if lvl == 0 and not loop.first %}
+                        <hr class="hr-dashed-neg">
                     {% endif %}
-                    <label class="form-label small d-flex align-items-center gap-1 flex-wrap">
-                        {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
-                    </label>
+                    <div class="mb-4 {% if lvl > 0 %}ps-4 position-relative border-start border-2{% endif %}" {% if lvl > 0 %}style="border-color: rgba(0, 51, 78, 0.1) !important;"{% endif %}>
+                        {% if lvl > 0 %}
+                        <!-- Tree branch horizontal line -->
+                        <div class="field-branch-h-line"></div>
+                        {% endif %}
+                        <label class="form-label small d-flex align-items-center gap-1 flex-wrap">
+                            {{ field.numbering|default('') }} {{ field.label }} {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
                     
                     {% if field.is_multiple and not sheet_is_multiple %}
                         {% set raw_val = submission.data.get(field.name) if submission else None %}
@@ -193,6 +202,7 @@
                     <div class="form-text small text-muted mt-1"><i class="bi bi-info-circle"></i> {{ field.hint }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
                 {% endif %}
                 {% endfor %}
             </div>

@@ -247,8 +247,35 @@
                         {% set lvl = field.level|default(0)|int %}
                         {% set is_active = field.get('is_active', True) %}
                         {% set effective_locked = is_locked or not is_active %}
+                        {% set is_group = field.get('type') == 'group' %}
                         
                         {% if is_active %}
+                            {% if is_group %}
+                                <div class="group-section-card mb-4 border rounded-3 overflow-hidden shadow-sm bg-white w-100">
+                                    <div class="group-section-header px-4 py-3 bg-light border-bottom d-flex align-items-center justify-content-between" style="border-left: 4px solid #00334e;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if field.numbering %}
+                                            <span class="badge bg-copp text-white rounded-pill px-2 py-1 small fw-normal">{{ field.numbering }}</span>
+                                            {% endif %}
+                                            <span class="fw-bold text-dark fs-6">{{ field.label }}</span>
+                                        </div>
+                                        {% if field.hint %}
+                                        <span class="text-muted small ms-2"><i class="bi bi-info-circle me-1"></i>{{ field.hint }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="group-section-body p-4">
+                                        {% if node.children %}
+                                            <div class="fields-grid">
+                                                {% for child in node.children %}
+                                                    {{ render_field_node(child, submission, is_locked, group_index, sheet_is_multiple) }}
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <div class="text-muted small italic">В этой группе пока нет подстолбцов</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% else %}
                                 <div class="mb-4 grid-item">
                                     <div class="grid-label">
                                         <label class="form-label text-dark d-flex align-items-start gap-2 mb-1 {% if lvl == 0 %}fw-bold fs-6{% else %}small fw-semibold{% endif %}">
@@ -269,7 +296,7 @@
                                             <div class="mt-4">
                                                 <div class="fields-grid">
                                                     {% for child in node.children %}
-                                                        {{ render_field_node(child, submission, is_locked, group_index) }}
+                                                        {{ render_field_node(child, submission, is_locked, group_index, sheet_is_multiple) }}
                                                     {% endfor %}
                                                 </div>
                                             </div>
@@ -285,6 +312,7 @@
                                         {% endif %}
                                     </div>
                                 </div>
+                            {% endif %}
                         {% endif %}
                     {% endmacro %}
 

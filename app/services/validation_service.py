@@ -47,7 +47,7 @@ def _validate_nodes(nodes, json_data):
             continue
             
         # Пропускаем узлы-группы и текстовые узлы, а также если валидация отключена
-        if field.get('type') in ('text', 'Текстовое', 'select') or field.get('validateSum') is False:
+        if field.get('type') in ('text', 'Текстовое', 'select', 'group') or field.get('validateSum') is False:
             continue
             
         parent_val_raw = json_data.get(field.get('name'))

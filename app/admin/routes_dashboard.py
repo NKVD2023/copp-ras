@@ -47,23 +47,27 @@ def _get_users_tab_context(user):
     dept = _get_manager_dept(user)
     if user.role == 'manager':
         if dept:
-            users = dept.members.options(joinedload(User.department)).filter(User.id != user.id).all()
+            users = dept.members.options(joinedload(User.department)).filter(User.id != user.id).order_by(User.id.asc()).all()
             templates = dept.templates.order_by(ReportTemplate.id.desc()).all()
             dept_users = dept.members.all()
             all_groups = sorted(list(set([u.group for u in dept_users if u.group])))
+            all_subgroups = sorted(list(set([u.subgroup for u in dept_users if u.subgroup])))
         else:
             users = []
             templates = []
             all_groups = []
+            all_subgroups = []
         departments = [dept] if dept else []
     else:
         from app.models import Department
-        users = User.query.options(joinedload(User.department)).filter(User.id != user.id).all()
+        users = User.query.options(joinedload(User.department)).filter(User.id != user.id).order_by(User.id.asc()).all()
         templates = ReportTemplate.query.order_by(ReportTemplate.id.desc()).all()
         groups_query = db.session.query(User.group).filter(User.group.isnot(None), User.group != '').distinct().all()
         all_groups = sorted([g[0] for g in groups_query if g[0]])
         if not all_groups:
             all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+        subgroups_query = db.session.query(User.subgroup).filter(User.subgroup.isnot(None), User.subgroup != '').distinct().all()
+        all_subgroups = sorted([sg[0] for sg in subgroups_query if sg[0]])
         departments = Department.query.order_by(Department.name).all()
 
     user_assigned_pairs = set(
@@ -77,6 +81,7 @@ def _get_users_tab_context(user):
         'users': users,
         'templates': templates,
         'all_groups': all_groups,
+        'all_subgroups': all_subgroups,
         'departments': departments,
         'user_assigned_pairs': user_assigned_pairs,
         'user_assigned_dict': user_assigned_dict,
@@ -135,6 +140,7 @@ def _get_reports_tab_context(user, sort_param=None):
     all_groups = sorted(list(set([u.group for u in users if u.group])))
     if not all_groups:
         all_groups = ['СПО', 'ВУЗ', 'Школы', 'Работодатели']
+    all_subgroups = sorted(list(set([u.subgroup for u in users if u.subgroup])))
 
     template_assigned_dict = {}
     for uid, tid in user_assigned_pairs:
@@ -143,6 +149,7 @@ def _get_reports_tab_context(user, sort_param=None):
     return {
         'templates': all_templates,
         'all_groups': all_groups,
+        'all_subgroups': all_subgroups,
         'pure_templates': pure_templates,
         'published_templates': published_templates,
         'revision_templates': revision_templates,

@@ -131,29 +131,29 @@
 
                     <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                         {% if is_revision_tab %}
-                        <span class="badge text-white px-2 py-1 badge-status" style="background-color: #ff0072;"><i class="bi bi-arrow-repeat me-1"></i>На доработке</span>
+                        <span class="badge text-white badge-status" style="background-color: #ff0072;" title="Отчет отправлен на доработку"><i class="bi bi-arrow-repeat me-1"></i>На доработке</span>
                         {% elif is_fully_completed %}
-                        <span class="badge bg-light text-copp border border-secondary-subtle px-2 py-1 badge-status">Сбор завершен</span>
+                        <span class="badge badge-status-info badge-status" title="Все назначенные организации сдали отчет"><i class="bi bi-check2-all me-1"></i>Сбор завершен</span>
                         {% elif t.is_published %}
-                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 badge-status">Опубликовано</span>
+                        <span class="badge badge-status-success badge-status" title="Отчет опубликован, идет прием данных"><i class="bi bi-broadcast me-1"></i>Опубликовано</span>
                         {% elif t.is_template %}
-                        <span class="badge bg-copp bg-opacity-10 text-copp border border-copp-subtle px-2 py-1 badge-status">Шаблон</span>
+                        <span class="badge badge-status-info badge-status" title="Чистый шаблон отчета"><i class="bi bi-file-earmark-code me-1"></i>Шаблон</span>
                         {% else %}
-                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 badge-status">Черновик</span>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle badge-status" title="Черновик отчета"><i class="bi bi-pencil me-1"></i>Черновик</span>
                         {% endif %}
                         
                         {% if current_user.role == 'admin' %}
                             {% set t_dept_names = template_departments_map.get(t.id, []) if template_departments_map is defined else [] %}
                             {% if t_dept_names %}
                                 {% for dname in t_dept_names %}
-                                    <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1" title="Отчет принадлежит отделу: {{ dname }}"><i class="bi bi-diagram-3 me-1 text-muted"></i>{{ dname }}</span>
+                                    <span class="badge bg-light text-dark border border-secondary-subtle badge-status" title="Отчет принадлежит отделу: {{ dname }}"><i class="bi bi-diagram-3 me-1 text-muted"></i>{{ dname }}</span>
                                 {% endfor %}
                             {% elif template_departments_map is not defined and t.departments.all() %}
                                 {% for d in t.departments.all() %}
-                                    <span class="badge bg-light text-dark border border-secondary-subtle px-2 py-1" title="Отчет принадлежит отделу: {{ d.name }}"><i class="bi bi-diagram-3 me-1 text-muted"></i>{{ d.name }}</span>
+                                    <span class="badge bg-light text-dark border border-secondary-subtle badge-status" title="Отчет принадлежит отделу: {{ d.name }}"><i class="bi bi-diagram-3 me-1 text-muted"></i>{{ d.name }}</span>
                                 {% endfor %}
                             {% else %}
-                                <span class="badge bg-light text-muted border border-secondary-subtle px-2 py-1" title="Отчет не привязан ни к одному отделу"><i class="bi bi-diagram-3 me-1"></i>Без отдела</span>
+                                <span class="badge bg-light text-muted border border-secondary-subtle badge-status" title="Отчет не привязан ни к одному отделу"><i class="bi bi-diagram-3 me-1"></i>Без отдела</span>
                             {% endif %}
                         {% endif %}
                     </div>
